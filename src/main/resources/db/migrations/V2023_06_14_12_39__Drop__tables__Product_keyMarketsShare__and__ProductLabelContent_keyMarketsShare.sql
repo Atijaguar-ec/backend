@@ -1,2 +1,2 @@
-DROP TABLE Product_keyMarketsShare;
-DROP TABLE ProductLabelContent_keyMarketsShare;
+DROP TABLE IF EXISTS `Product_keyMarketsShare`;
+DROP TABLE IF EXISTS `ProductLabelContent_keyMarketsShare`;
