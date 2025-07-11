@@ -64,7 +64,13 @@ public class CurrencyTypeService extends BaseService {
     @Scheduled(cron = "0 1 0 * * *")
     @EventListener(ApplicationReadyEvent.class)
     public void updateCurrencies() {
-        WebClient webClientSymbols = WebClient.create("http://api.exchangeratesapi.io/v1/symbols?access_key=" + apiKey);
+    // Evita llamadas automáticas en desarrollo
+    String activeProfile = System.getProperty("spring.profiles.active", "");
+    if ("dev".equalsIgnoreCase(activeProfile) || "local".equalsIgnoreCase(activeProfile)) {
+        System.out.println("[INFO] updateCurrencies() ignorado en entorno de desarrollo ('" + activeProfile + "').");
+        return;
+    }
+        WebClient webClientSymbols = WebClient.create("https://api.exchangerate.host/symbols");
         ApiCurrencySymbolsResponse apiCurrencySymbolsResponse = webClientSymbols
                 .get()
                 .accept(MediaType.APPLICATION_JSON)
@@ -85,7 +91,7 @@ public class CurrencyTypeService extends BaseService {
             }
         }
 
-        WebClient webClientRates = WebClient.create("http://api.exchangeratesapi.io/v1/latest?access_key=" + apiKey + "&base=EUR");
+        WebClient webClientRates = WebClient.create("https://api.exchangerate.host/latest?base=EUR");
         ApiCurrencyRatesResponse apiCurrencyResponse = webClientRates
                 .get()
                 .accept(MediaType.APPLICATION_JSON)

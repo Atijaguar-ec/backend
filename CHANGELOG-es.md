@@ -4,6 +4,10 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 ## [2025-07-10] - Correcciones de Estabilidad y Documentación
 
+### Cambios importantes
+- Migración del proveedor de tasas de cambio de `exchangeratesapi.io` a `exchangerate.host`. 
+- Se modificó el código fuente para actualizar las URLs de la API y eliminar la necesidad de clave API (`INAtrace.exchangerate.apiKey`).
+
 ### Corregido (Fixed)
 
 -   **Errores de Migración de Flyway**: Se han modificado múltiples scripts de migración de base de datos para garantizar la idempotencia, especialmente en operaciones destructivas (`DROP TABLE`, `DROP COLUMN`, `DROP FOREIGN KEY`). Se ha adoptado el uso de la sintaxis `IF EXISTS` para prevenir fallos cuando se intentan ejecutar las migraciones sobre una base de datos que ya ha sido parcialmente migrada. Esto resuelve los fallos críticos que impedían el arranque de la aplicación.

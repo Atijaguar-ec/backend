@@ -2,20 +2,38 @@
 
 ---
 
-## Solución de Problemas Comunes (Troubleshooting)
+## Notas sobre tasas de cambio
 
-Esta sección documenta errores comunes encontrados durante el desarrollo y sus soluciones.
+A partir de julio 2025, el backend utiliza el proveedor [exchangerate.host](https://exchangerate.host) para obtener tasas de cambio de monedas. **No es necesario configurar ninguna clave API** para esta funcionalidad.
 
-### 1. Errores de Migración con Flyway
+- La configuración anterior con `exchangeratesapi.io` y la propiedad `INAtrace.exchangerate.apiKey` ya no es necesaria.
+- El sistema es compatible y transparente para el usuario; las tasas se actualizan automáticamente (ver detalles en el código).
+- **Importante:** El cambio de proveedor implicó modificar el código fuente para actualizar las URLs y eliminar la necesidad de clave API. Estos cambios ya están implementados en este repositorio.
 
--   **Síntoma**: La aplicación no arranca y los logs muestran errores de Flyway, a menudo relacionados con sentencias SQL que intentan eliminar objetos (tablas, columnas, claves foráneas) que no existen. Por ejemplo: `Error: Can't DROP 'constraint_name'; check that column/key exists`.
--   **Causa**: Los scripts de migración destructivos no son idempotentes. Un script idempotente puede ejecutarse múltiples veces sin cambiar el resultado después de la ejecución inicial.
--   **Solución**: Modificar los scripts SQL para que sean idempotentes. Para MySQL, la forma más robusta es usar la sintaxis `IF EXISTS`.
+---
 
-    **Ejemplos:**
-    ```sql
-    -- Para eliminar tablas
-    DROP TABLE IF EXISTS nombre_de_la_tabla;
+## Integración opcional con Beyco
+
+INATrace permite integrarse con la plataforma [Beyco](https://beyco.nl) para que los usuarios puedan crear ofertas de Beyco automáticamente a partir de pedidos de stock en INATrace. **Esta integración es completamente opcional.**
+
+- Si deseas usar Beyco, deberás solicitar a Beyco los siguientes datos y configurarlos en tu `application.properties`:
+  - `beyco.oauth2.clientId`
+  - `beyco.oauth2.clientSecret`
+  - `beyco.oauth2.url`
+- Si **no necesitas** la integración con Beyco, simplemente deja estos campos vacíos:
+  ```properties
+  beyco.oauth2.clientId =
+  beyco.oauth2.clientSecret =
+  beyco.oauth2.url =
+  ```
+- El resto de funcionalidades de INATrace no se ven afectadas si no configuras Beyco.
+
+---
+
+## Ayuda y Solución de Problemas
+
+Para ver la lista de errores comunes y sus soluciones, consulta el archivo [TROUBLESHOOTING-ES.md](./TROUBLESHOOTING-ES.md).
+
 
     -- Para eliminar columnas (Requiere MySQL 8.0.33+ o MariaDB 10.5+)
     ALTER TABLE nombre_de_la_tabla DROP COLUMN IF EXISTS nombre_de_la_columna;

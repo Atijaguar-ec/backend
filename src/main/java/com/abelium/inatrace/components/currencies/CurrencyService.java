@@ -96,9 +96,15 @@ public class CurrencyService extends BaseService {
     }
 
     public void fetchRates(Date date) {
+    // Evita llamadas automáticas en desarrollo
+    String activeProfile = System.getProperty("spring.profiles.active", "");
+    if ("dev".equalsIgnoreCase(activeProfile) || "local".equalsIgnoreCase(activeProfile)) {
+        System.out.println("[INFO] fetchRates() ignorado en entorno de desarrollo ('" + activeProfile + "').");
+        return;
+    }
 
         String isoDate = DateTimeFormatter.ISO_LOCAL_DATE.format(date.toInstant().atZone(ZoneId.of("GMT")));
-        WebClient webClient = WebClient.create("http://api.exchangeratesapi.io/v1/" + isoDate + "?access_key=" + apiKey + "&base=EUR");
+        WebClient webClient = WebClient.create("https://api.exchangerate.host/" + isoDate + "?base=EUR");
         ApiCurrencyRatesResponse apiCurrencyRatesResponse = webClient
                 .get()
                 .accept(MediaType.APPLICATION_JSON)
