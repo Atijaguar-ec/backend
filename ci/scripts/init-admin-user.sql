@@ -6,7 +6,7 @@
 SET @User_count = (SELECT COUNT(*) FROM User);
 
 -- Solo crear usuario administrador si no hay usuarios existentes
-INSERT INTO User (email, password, name, surname, role, status, created)
+INSERT INTO User (email, password, name, surname, role, status, creationTimestamp)
 SELECT 
     'admin@inatrace.com',
     '$2a$10$N.zmdr9k7uOsaVQoQvdOde7FZmYnZAhHkOmMlGGKJNM.jO2LJWLHy',
@@ -25,6 +25,6 @@ SELECT
     END as resultado;
 
 -- Mostrar usuarios existentes
-SELECT id, email, name, surname, role, status, created 
+SELECT id, email, name, surname, role, status, creationTimestamp 
 FROM User 
-ORDER BY created ASC;
+ORDER BY creationTimestamp ASC;

@@ -71,7 +71,7 @@ if [ "$user_count" -eq 0 ]; then
     echo "🔧 Creando usuario administrador..."
     
     execute_sql "
-        INSERT INTO User (email, password, name, surname, role, status, created) 
+        INSERT INTO User (email, password, name, surname, role, status, creationTimestamp) 
         VALUES ('$ADMIN_EMAIL', '$ADMIN_PASSWORD_HASH', '$ADMIN_NAME', '$ADMIN_SURNAME', 'SYSTEM_ADMIN', 'ACTIVE', NOW());
     "
     
@@ -100,7 +100,7 @@ execute_sql "
     SELECT 
         CONCAT('ID: ', id, ' | Email: ', email, ' | Nombre: ', name, ' ', surname, ' | Rol: ', role, ' | Estado: ', status) as usuario_info
     FROM User 
-    ORDER BY created ASC;
+    ORDER BY creationTimestamp ASC;
 "
 
 echo ""

@@ -81,7 +81,7 @@ create_admin_user() {
         echo "No hay usuarios en el sistema. Creando usuario administrador..."
         
         mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -e "
-            INSERT INTO User (email, password, name, surname, role, status, created) 
+            INSERT INTO User (email, password, name, surname, role, status, creationTimestamp) 
             VALUES ('$ADMIN_EMAIL', '$ADMIN_PASSWORD_HASH', '$ADMIN_NAME', '$ADMIN_SURNAME', 'SYSTEM_ADMIN', 'ACTIVE', NOW());
         "
         
@@ -102,9 +102,9 @@ show_users() {
     echo ""
     echo "=== Usuarios en el sistema ==="
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -e "
-        SELECT id, email, name, surname, role, status, created 
+        SELECT id, email, name, surname, role, status, creationTimestamp 
         FROM User 
-        ORDER BY created ASC;
+        ORDER BY creationTimestamp ASC;
     "
 }
 

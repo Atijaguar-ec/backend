@@ -81,20 +81,20 @@ wait_for_tables() {
         local table_count=$(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -sN -e "
             SELECT COUNT(*) 
             FROM information_schema.tables 
-            WHERE table_schema = '$DB_NAME' AND table_name = 'user';
+            WHERE table_schema = '$DB_NAME' AND table_name = 'User';
         " 2>/dev/null || echo "0")
         
         if [ "$table_count" -eq 1 ]; then
-            echo "✅ Tabla 'user' encontrada. Migraciones completadas."
+            echo "✅ Tabla 'User' encontrada. Migraciones completadas."
             return 0
         fi
         
-        echo "Intento $attempt/$max_attempts: Tabla 'user' no encontrada, esperando 5 segundos..."
+        echo "Intento $attempt/$max_attempts: Tabla 'User' no encontrada, esperando 5 segundos..."
         sleep 5
         attempt=$((attempt + 1))
     done
     
-    echo "❌ ERROR: Tabla 'user' no encontrada después de $max_attempts intentos."
+    echo "❌ ERROR: Tabla 'User' no encontrada después de $max_attempts intentos."
     echo "Las migraciones de Flyway pueden no haberse ejecutado correctamente."
     exit 1
 }
@@ -104,7 +104,7 @@ create_admin_user() {
     echo "Verificando usuarios existentes..."
     
     local user_count=$(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -sN -e "
-        SELECT COUNT(*) FROM user;
+        SELECT COUNT(*) FROM User;
     " 2>/dev/null || echo "0")
     
     echo "Usuarios existentes en el sistema: $user_count"
@@ -113,7 +113,7 @@ create_admin_user() {
         echo "No hay usuarios en el sistema. Creando usuario administrador..."
         
         mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -e "
-            INSERT INTO user (email, password, name, surname, role, status, created) 
+            INSERT INTO User (email, password, name, surname, role, status, creationTimestamp) 
             VALUES ('$ADMIN_EMAIL', '$ADMIN_PASSWORD_HASH', '$ADMIN_NAME', '$ADMIN_SURNAME', 'SYSTEM_ADMIN', 'ACTIVE', NOW());
         " 2>/dev/null
         
@@ -143,9 +143,9 @@ show_users() {
     echo ""
     echo "=== Usuarios en el sistema ==="
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -e "
-        SELECT id, email, name, surname, role, status, DATE_FORMAT(created, '%Y-%m-%d %H:%i:%s') as created
-        FROM user 
-        ORDER BY created ASC;
+        SELECT id, email, name, surname, role, status, DATE_FORMAT(creationTimestamp, '%Y-%m-%d %H:%i:%s') as creationTimestamp
+        FROM User 
+        ORDER BY creationTimestamp ASC;
     " 2>/dev/null || echo "No se pudieron obtener los usuarios."
 }
 
