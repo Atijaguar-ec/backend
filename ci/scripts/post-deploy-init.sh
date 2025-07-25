@@ -71,8 +71,8 @@ if [ "$user_count" -eq 0 ]; then
     echo "🔧 Creando usuario administrador..."
     
     execute_sql "
-        INSERT INTO User (email, password, name, surname, role, status, creationTimestamp) 
-        VALUES ('$ADMIN_EMAIL', '$ADMIN_PASSWORD_HASH', '$ADMIN_NAME', '$ADMIN_SURNAME', 'SYSTEM_ADMIN', 'ACTIVE', NOW());
+        INSERT INTO User (email, password, name, surname, role, status, creationTimestamp, entityVersion, language) 
+        VALUES ('$ADMIN_EMAIL', '$ADMIN_PASSWORD_HASH', '$ADMIN_NAME', '$ADMIN_SURNAME', 'SYSTEM_ADMIN', 'ACTIVE', NOW(), 0, 'ES');
     "
     
     echo ""
@@ -98,7 +98,7 @@ echo "👥 Usuarios actuales en el sistema:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 execute_sql "
     SELECT 
-        CONCAT('ID: ', id, ' | Email: ', email, ' | Nombre: ', name, ' ', surname, ' | Rol: ', role, ' | Estado: ', status) as usuario_info
+        CONCAT('ID: ', id, ' | Email: ', email, ' | Nombre: ', name, ' ', surname, ' | Rol: ', role, ' | Estado: ', status, ' | entityVersion: ', entityVersion, ' | language: ', language) as usuario_info
     FROM User 
     ORDER BY creationTimestamp ASC;
 "
