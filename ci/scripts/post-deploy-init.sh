@@ -43,26 +43,26 @@ execute_sql() {
     docker exec -i "$CONTAINER_NAME" mysql -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -e "$1"
 }
 
-# Verificar que la tabla user existe
+# Verificar que la tabla User existe
 echo "🔍 Verificando estructura de base de datos..."
 table_exists=$(execute_sql "
     SELECT COUNT(*) 
     FROM information_schema.tables 
-    WHERE table_schema = '$DB_NAME' AND table_name = 'user';
+    WHERE table_schema = '$DB_NAME' AND table_name = 'User';
 " | tail -n 1)
 
 if [ "$table_exists" -eq 0 ]; then
-    echo "❌ ERROR: La tabla 'user' no existe."
+    echo "❌ ERROR: La tabla 'User' no existe."
     echo "   Las migraciones de Flyway pueden no haberse ejecutado."
     echo "   Verifica los logs del backend: docker logs inatrace-be"
     exit 1
 fi
 
-echo "✅ Tabla 'user' encontrada."
+echo "✅ Tabla 'User' encontrada."
 
 # Verificar usuarios existentes
 echo "👥 Verificando usuarios existentes..."
-user_count=$(execute_sql "SELECT COUNT(*) FROM user;" | tail -n 1)
+user_count=$(execute_sql "SELECT COUNT(*) FROM User;" | tail -n 1)
 
 echo "   Usuarios en el sistema: $user_count"
 
@@ -71,7 +71,7 @@ if [ "$user_count" -eq 0 ]; then
     echo "🔧 Creando usuario administrador..."
     
     execute_sql "
-        INSERT INTO user (email, password, name, surname, role, status, created) 
+        INSERT INTO User (email, password, name, surname, role, status, created) 
         VALUES ('$ADMIN_EMAIL', '$ADMIN_PASSWORD_HASH', '$ADMIN_NAME', '$ADMIN_SURNAME', 'SYSTEM_ADMIN', 'ACTIVE', NOW());
     "
     
@@ -99,7 +99,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 execute_sql "
     SELECT 
         CONCAT('ID: ', id, ' | Email: ', email, ' | Nombre: ', name, ' ', surname, ' | Rol: ', role, ' | Estado: ', status) as usuario_info
-    FROM user 
+    FROM User 
     ORDER BY created ASC;
 "
 

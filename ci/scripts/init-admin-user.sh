@@ -56,15 +56,15 @@ check_tables() {
     local table_count=$(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -sN -e "
         SELECT COUNT(*) 
         FROM information_schema.tables 
-        WHERE table_schema = '$DB_NAME' AND table_name = 'user';
+        WHERE table_schema = '$DB_NAME' AND table_name = 'User';
     ")
     
     if [ "$table_count" -eq 0 ]; then
-        echo "ERROR: La tabla 'user' no existe. Las migraciones de Flyway pueden no haberse ejecutado."
+        echo "ERROR: La tabla 'User' no existe. Las migraciones de Flyway pueden no haberse ejecutado."
         exit 1
     fi
     
-    echo "Tabla 'user' encontrada."
+    echo "Tabla 'User' encontrada."
 }
 
 # Función para crear usuario administrador
@@ -72,7 +72,7 @@ create_admin_user() {
     echo "Verificando usuarios existentes..."
     
     local user_count=$(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -sN -e "
-        SELECT COUNT(*) FROM user;
+        SELECT COUNT(*) FROM User;
     ")
     
     echo "Usuarios existentes en el sistema: $user_count"
@@ -81,7 +81,7 @@ create_admin_user() {
         echo "No hay usuarios en el sistema. Creando usuario administrador..."
         
         mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -e "
-            INSERT INTO user (email, password, name, surname, role, status, created) 
+            INSERT INTO User (email, password, name, surname, role, status, created) 
             VALUES ('$ADMIN_EMAIL', '$ADMIN_PASSWORD_HASH', '$ADMIN_NAME', '$ADMIN_SURNAME', 'SYSTEM_ADMIN', 'ACTIVE', NOW());
         "
         
@@ -103,7 +103,7 @@ show_users() {
     echo "=== Usuarios en el sistema ==="
     mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -D"$DB_NAME" -e "
         SELECT id, email, name, surname, role, status, created 
-        FROM user 
+        FROM User 
         ORDER BY created ASC;
     "
 }
