@@ -6,6 +6,12 @@
 
 set -e
 
+# Cargar variables de entorno desde .env si existe
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+fi
+
 echo "🚀 INATrace - Inicialización Post-Despliegue"
 echo "=============================================="
 echo "Fecha: $(date)"
@@ -19,9 +25,9 @@ DB_PASS="${DB_PASS:-inatrace}"
 
 # Configuración del usuario administrador
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@inatrace.com}"
-ADMIN_NAME="${ADMIN_NAME:-System}"
-ADMIN_SURNAME="${ADMIN_SURNAME:-Administrator}"
-ADMIN_PASSWORD_HASH='$2a$10$N.zmdr9k7uOsaVQoQvdOde7FZmYnZAhHkOmMlGGKJNM.jO2LJWLHy'
+ADMIN_NAME="${ADMIN_NAME:-Administrador}"
+ADMIN_SURNAME="${ADMIN_SURNAME:-del Sistema}"
+ADMIN_PASSWORD_HASH='$2a$10$rv3NiLCnUdlCS8.anVr1Z.4itfvjpWx4CIS8TGXEUEQh5gqBFwxRm'
 
 echo "📋 Configuración:"
 echo "   Contenedor MySQL: $CONTAINER_NAME"
@@ -79,18 +85,23 @@ if [ "$user_count" -eq 0 ]; then
     echo "🎉 ¡Usuario administrador creado exitosamente!"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "   📧 Email:    $ADMIN_EMAIL"
-    echo "   🔑 Password: admin123"
+    echo "   🔑 Password: Admin123"
     echo "   👤 Rol:      SYSTEM_ADMIN"
     echo "   ✅ Estado:   ACTIVE"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo "💡 Ahora puedes acceder al sistema con estas credenciales."
+
+    
     
 else
     echo ""
     echo "⚠️  Ya existen $user_count usuarios en el sistema."
     echo "   No se creará usuario administrador adicional."
 fi
+
+# Crear empresa y asignar usuario admin como COMPANY_ADMIN
+. "$SCRIPT_DIR/scripts/init-company-and-admin.sh"
 
 # Mostrar usuarios existentes
 echo ""
