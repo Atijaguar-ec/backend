@@ -2,7 +2,7 @@
 services:
 
   inatrace-mysql:
-    image: mysql:8.0.26
+    image: mysql:8.0.35
     container_name: inatrace-mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
@@ -13,6 +13,8 @@ services:
       - ${DB_VOLUME}:/var/lib/mysql
     networks:
       - backend
+    ports:
+      - "3306:3306"
     restart: always
 
   inatrace-backend:
@@ -39,38 +41,6 @@ services:
     ports:
       - "8080:8080"
     restart: always
-
-  # Servicio de inicialización automática de usuario administrador
-  inatrace-init:
-    image: mysql:8.0.26
-    container_name: inatrace-init
-    depends_on:
-      - inatrace-backend
-      - inatrace-mysql
-    environment:
-      - DB_HOST=inatrace-mysql
-      - DB_PORT=3306
-      - DB_NAME=${DATABASE_NAME}
-      - DB_USER=${DATASOURCE_USERNAME}
-      - DB_PASS=${DATASOURCE_PASSWORD}
-      - BACKEND_HOST=inatrace-backend
-      - BACKEND_PORT=8080
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@inatrace.com}
-      - ADMIN_NAME=${ADMIN_NAME:-System}
-      - ADMIN_SURNAME=${ADMIN_SURNAME:-Administrator}
-      - CONTAINER_NAME=inatrace-mysql
-    volumes:
-      - ./scripts:/scripts:ro
-    networks:
-      - backend
-    command: >
-      bash -c "
-        # Instalar curl para health checks
-        apt-get update && apt-get install -y curl &&
-        # Ejecutar script de inicialización
-        /scripts/docker-init.sh
-      "
-    restart: "no"  # Solo ejecutar una vez
 
 networks:
   backend:
