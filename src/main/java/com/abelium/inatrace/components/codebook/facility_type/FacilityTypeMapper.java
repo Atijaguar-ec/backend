@@ -20,6 +20,7 @@ public final class FacilityTypeMapper {
 		apiFacilityType.setId(entity.getId());
 		apiFacilityType.setCode(entity.getCode());
 		apiFacilityType.setLabel(entity.getLabel());
+		apiFacilityType.setOrder(entity.getOrder());
 
 		return apiFacilityType;
 	}
