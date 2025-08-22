@@ -25,11 +25,33 @@ CREATE TABLE IF NOT EXISTS CompanyProcessingAction (
 
 -- Create indexes for efficient querying
 -- Note: These are also defined in the entity @Index annotations for consistency
-CREATE INDEX IF NOT EXISTS idx_company_processing_action_company_enabled 
-    ON CompanyProcessingAction (company_id, enabled, order_override);
+-- MySQL doesn't support CREATE INDEX IF NOT EXISTS, so we use conditional logic
 
-CREATE INDEX IF NOT EXISTS idx_company_processing_action_processing_action 
-    ON CompanyProcessingAction (processing_action_id);
+-- Check and create first index
+SET @index_exists = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CompanyProcessingAction' 
+    AND INDEX_NAME = 'idx_company_processing_action_company_enabled');
+
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX idx_company_processing_action_company_enabled ON CompanyProcessingAction (company_id, enabled, order_override)', 
+    'SELECT "Index idx_company_processing_action_company_enabled already exists" as Info');
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Check and create second index
+SET @index_exists = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CompanyProcessingAction' 
+    AND INDEX_NAME = 'idx_company_processing_action_processing_action');
+
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX idx_company_processing_action_processing_action ON CompanyProcessingAction (processing_action_id)', 
+    'SELECT "Index idx_company_processing_action_processing_action already exists" as Info');
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Initialize CompanyProcessingAction for all existing company-processing action combinations
 -- Set enabled=true and order_override=null (uses global sortOrder)

@@ -21,7 +21,22 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- Create index for better performance (only if it doesn't exist)
-CREATE INDEX IF NOT EXISTS idx_facility_type_order ON FacilityType (`order`);
+SET @index_exists = (
+    SELECT COUNT(1) 
+    FROM information_schema.statistics 
+    WHERE table_schema = DATABASE() 
+      AND table_name = 'FacilityType' 
+      AND index_name = 'idx_facility_type_order'
+);
+
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX idx_facility_type_order ON FacilityType (`order`)',
+    'SELECT "Index idx_facility_type_order already exists" as message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Initialize order values for existing facility types if they are null
 UPDATE FacilityType 
