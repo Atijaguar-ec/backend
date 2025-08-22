@@ -3,14 +3,14 @@
 
 CREATE TABLE IF NOT EXISTS CompanyProcessingAction (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    entity_version BIGINT NOT NULL DEFAULT 0,
+    entityVersion BIGINT NOT NULL DEFAULT 0,
     company_id BIGINT NOT NULL,
     processing_action_id BIGINT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     order_override INT NULL,
     alias_label VARCHAR(255) NULL,
-    creation_timestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
-    update_timestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    creationTimestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
+    updateTimestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     
     -- Foreign key constraints
     CONSTRAINT fk_company_processing_action_company 
@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_company_processing_action_processing_action
 -- Initialize CompanyProcessingAction for all existing company-processing action combinations
 -- Set enabled=true and order_override=null (uses global sortOrder)
 -- Only insert if the combination doesn't already exist to avoid conflicts
-INSERT IGNORE INTO CompanyProcessingAction (company_id, processing_action_id, enabled, order_override, entity_version)
+INSERT IGNORE INTO CompanyProcessingAction (company_id, processing_action_id, enabled, order_override, entityVersion)
 SELECT c.id, pa.id, TRUE, NULL, 0
 FROM company c
 CROSS JOIN processing_action pa

@@ -4,7 +4,6 @@ import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.company.Company;
 import jakarta.persistence.*;
 import java.util.Objects;
-import java.time.Instant;
 
 /**
  * Company-specific configuration for processing actions.
@@ -25,7 +24,6 @@ import java.time.Instant;
 public class CompanyProcessingAction extends TimestampEntity {
 
     @Version
-    @Column(name = "entity_version")
     private Long entityVersion;
 
     @ManyToOne(fetch = FetchType.LAZY)
