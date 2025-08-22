@@ -104,7 +104,7 @@ public class CurrencyService extends BaseService {
     }
 
         String isoDate = DateTimeFormatter.ISO_LOCAL_DATE.format(date.toInstant().atZone(ZoneId.of("GMT")));
-        WebClient webClient = WebClient.create("https://api.exchangerate.host/" + isoDate + "?base=EUR");
+        WebClient webClient = WebClient.create("https://api.exchangerate.host/" + isoDate + "?access_key=" + apiKey + "&base=EUR");
         ApiCurrencyRatesResponse apiCurrencyRatesResponse = webClient
                 .get()
                 .accept(MediaType.APPLICATION_JSON)

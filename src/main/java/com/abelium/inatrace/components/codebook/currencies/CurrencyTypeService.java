@@ -70,7 +70,7 @@ public class CurrencyTypeService extends BaseService {
         System.out.println("[INFO] updateCurrencies() ignorado en entorno de desarrollo ('" + activeProfile + "').");
         return;
     }
-        WebClient webClientSymbols = WebClient.create("https://api.exchangerate.host/symbols");
+        WebClient webClientSymbols = WebClient.create("https://api.exchangerate.host/symbols?access_key=" + apiKey);
         ApiCurrencySymbolsResponse apiCurrencySymbolsResponse = webClientSymbols
                 .get()
                 .accept(MediaType.APPLICATION_JSON)
@@ -91,7 +91,7 @@ public class CurrencyTypeService extends BaseService {
             }
         }
 
-        WebClient webClientRates = WebClient.create("https://api.exchangerate.host/latest?base=EUR");
+        WebClient webClientRates = WebClient.create("https://api.exchangerate.host/latest?access_key=" + apiKey + "&base=EUR");
         ApiCurrencyRatesResponse apiCurrencyResponse = webClientRates
                 .get()
                 .accept(MediaType.APPLICATION_JSON)

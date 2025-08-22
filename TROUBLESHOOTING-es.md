@@ -1,6 +1,6 @@
 # Solución de Problemas Comunes (Troubleshooting)
 
-> **Nota importante:** El cambio a [exchangerate.host](https://exchangerate.host) implicó modificar el código fuente para actualizar las URLs de la API y eliminar la necesidad de clave API. Si tienes una versión antigua, revisa que estés usando la última versión del código.
+> **Nota importante:** El cambio a [exchangerate.host](https://exchangerate.host) implicó modificar el código fuente para actualizar las URLs de la API. Actualmente, exchangerate.host requiere una clave API que debe configurarse en la propiedad `INAtrace.exchangerate.apiKey`. Si tienes una versión antigua, revisa que estés usando la última versión del código.
 
 Esta sección documenta errores comunes encontrados durante el desarrollo y sus soluciones.
 
@@ -38,7 +38,7 @@ Esta sección documenta errores comunes encontrados durante el desarrollo y sus 
 ## 3. Error 401 Unauthorized con API de tasas de cambio
 
 - **Síntoma**: Al consultar tasas de cambio, el backend muestra `401 Unauthorized` o `429 Too Many Requests`.
-- **Causa**: Clave API inválida o límites de uso superados (exchangeratesapi.io). Ahora se recomienda usar exchangerate.host, que no requiere clave y no tiene límites estrictos.
+- **Causa**: Clave API inválida o límites de uso superados. Asegúrate de tener una clave API válida para exchangerate.host configurada en la propiedad `INAtrace.exchangerate.apiKey`.
 - **Solución**: Asegúrate de usar exchangerate.host. Si usas otro proveedor, revisa la clave y los límites de uso.
 
 ---
@@ -58,8 +58,25 @@ Esta sección documenta errores comunes encontrados durante el desarrollo y sus 
 
 ## 6. Problemas con DNS en MacOS
 
-- **Síntoma**: Advertencias relacionadas con Netty DNS resolver en consola.
-- **Solución**: Puedes agregar la dependencia `io.netty:netty-resolver-dns-native-macos` en el `pom.xml` para suprimir el warning (opcional).
+- **Síntoma**: Advertencias como `Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS.`
+- **Causa**: La aplicación utiliza Netty para conexiones HTTP (a través de Spring WebFlux) pero falta la dependencia nativa para resolver DNS en MacOS.
+- **Solución**: Agregar las siguientes dependencias en el `pom.xml` para soportar tanto Mac con procesadores Intel como Apple Silicon:
+
+  ```xml
+  <!-- MacOS DNS resolver for Netty -->
+  <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-resolver-dns-native-macos</artifactId>
+      <classifier>osx-x86_64</classifier>
+  </dependency>
+  <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-resolver-dns-native-macos</artifactId>
+      <classifier>osx-aarch_64</classifier>
+  </dependency>
+  ```
+  
+  Después ejecuta `mvn clean install` y reinicia la aplicación.
 
 ---
 

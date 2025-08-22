@@ -1717,8 +1717,16 @@ public class CompanyService extends BaseService {
 		List<Long> valueChainIds = Torpedo.select(companyValueChainProxy.getValueChain().getId()).list(em);
 
 		ValueChain valueChainProxy = Torpedo.from(ValueChain.class);
-		OnGoingLogicalCondition valueChainCondition = Torpedo.condition().and(valueChainProxy.getId()).in(valueChainIds);
-		Torpedo.where(valueChainCondition);
+		
+		// Si no hay cadenas de valor asociadas, devolvemos un proxy con una condición que siempre será falsa
+		// para asegurar que la consulta no devuelva resultados
+		if (valueChainIds.isEmpty()) {
+			OnGoingLogicalCondition emptyCondition = Torpedo.condition(valueChainProxy.getId()).eq(-1L); // ID imposible
+			Torpedo.where(emptyCondition);
+		} else {
+			OnGoingLogicalCondition valueChainCondition = Torpedo.condition().and(valueChainProxy.getId()).in(valueChainIds);
+			Torpedo.where(valueChainCondition);
+		}
 
 		switch (request.sortBy) {
 			case "name":

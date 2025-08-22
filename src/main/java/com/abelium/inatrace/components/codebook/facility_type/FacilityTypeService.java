@@ -75,6 +75,7 @@ public class FacilityTypeService extends BaseService {
 			entity.setCode(apiFacilityType.getCode());
 		}
 		entity.setLabel(apiFacilityType.getLabel());
+		entity.setOrder(apiFacilityType.getOrder());
 
 		if (entity.getId() == null) {
 			em.persist(entity);
