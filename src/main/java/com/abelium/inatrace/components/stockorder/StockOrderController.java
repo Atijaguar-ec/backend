@@ -41,7 +41,7 @@ public class StockOrderController {
             @Valid @Parameter(description = "StockOrder ID", required = true) @PathVariable("id") Long id,
             @Valid @Parameter(description = "Return the processing order base data") @RequestParam(value = "withProcessingOrder", required = false) Boolean withProcessingOrder,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiResponse<>(stockOrderService.getStockOrder(id, authUser, language, withProcessingOrder));
     }
@@ -51,7 +51,7 @@ public class StockOrderController {
     public ApiResponse<ApiProcessingOrder> getStockOrderProcessingOrder(
             @Valid @Parameter(description = "StockOrder ID", required = true) @PathVariable("id") Long id,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
     ) throws ApiException {
 
         return new ApiResponse<>(stockOrderService.getStockOrderProcessingOrder(id, authUser, language));
@@ -70,7 +70,7 @@ public class StockOrderController {
             @Valid @Parameter(description = "Production date range start") @RequestParam(value = "productionDateStart", required = false) LocalDate productionDateStart,
             @Valid @Parameter(description = "Production date range end") @RequestParam(value = "productionDateEnd", required = false) LocalDate productionDateEnd,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiPaginatedResponse<>(stockOrderService.getAvailableStockOrderListForFacility(
                 request,
@@ -104,7 +104,7 @@ public class StockOrderController {
             @Valid @Parameter(description = "Production date range end") @RequestParam(value = "productionDateEnd", required = false) LocalDate productionDateEnd,
             @Valid @Parameter(description = "Search by ProducerUserCustomer name") @RequestParam(value = "query", required = false) String producerUserCustomerName,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiPaginatedResponse<>(stockOrderService.getStockOrderListForCompany(
                 request,
@@ -137,7 +137,7 @@ public class StockOrderController {
             @Valid @Parameter(description = "Company customer ID") @RequestParam(value = "companyCustomerId", required = false) Long companyCustomerId,
             @Valid @Parameter(description = "Return only open stock orders") @RequestParam(value = "openOnly", required = false) Boolean openOnly,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiPaginatedResponse<>(stockOrderService.getStockOrderListForCompany(request,
                 new StockOrderQueryRequest(
@@ -159,7 +159,7 @@ public class StockOrderController {
             @Valid @Parameter(description = "Semi-product ID") @RequestParam(value = "semiProductId", required = false) Long semiProductId,
             @Valid @Parameter(description = "Return only open stock orders") @RequestParam(value = "openOnly", required = false) Boolean openOnly,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiPaginatedResponse<>(stockOrderService.getStockOrderListForCompany(request,
                 new StockOrderQueryRequest(
@@ -191,7 +191,7 @@ public class StockOrderController {
             @Valid @Parameter(description = "Production date range end") @RequestParam(value = "productionDateEnd", required = false) LocalDate productionDateEnd,
             @Valid @Parameter(description = "Search by ProducerUserCustomer name") @RequestParam(value = "query", required = false) String producerUserCustomerName,
             @AuthenticationPrincipal CustomUserDetails authUser,
-        @RequestHeader(value = "language" ,defaultValue = "EN", required = false) Language language) throws ApiException {
+        @RequestHeader(value = "language" ,defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiPaginatedResponse<>(stockOrderService.getStockOrderListForCompany(
                 request,
@@ -247,7 +247,7 @@ public class StockOrderController {
     public ApiResponse<ApiStockOrderHistory> getStockOrderAggregatedHistory(
             @Valid @Parameter(description = "StockOrder ID", required = true) @PathVariable("id") Long id,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
     ) throws ApiException {
         return new ApiResponse<>(stockOrderService.getStockOrderAggregatedHistoryList(id, language, authUser, true));
     }
@@ -262,7 +262,7 @@ public class StockOrderController {
     public @ResponseBody byte[] exportGeoData(
             @AuthenticationPrincipal CustomUserDetails authUser,
             @Valid @Parameter(description = "StockOrder ID", required = true) @PathVariable("id") Long id,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         ApiStockOrderHistory apiStockOrderHistory =
                 stockOrderService.getStockOrderAggregatedHistoryList(id, language, authUser, true);
@@ -280,7 +280,7 @@ public class StockOrderController {
     public ResponseEntity<byte[]> exportDeliveriesByCompany(
             @AuthenticationPrincipal CustomUserDetails authUser,
             @Valid @Parameter(description = "Company ID", required = true) @PathVariable("companyId") Long companyId,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         byte[] response;
         try {

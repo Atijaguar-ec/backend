@@ -45,7 +45,7 @@ public class ValueChainController {
 	@Operation(summary ="Get a single value chain with the provided ID.")
 	public ApiResponse<ApiValueChain> getValueChain(
 			@Valid @Parameter(description = "Value chain ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiResponse<>(valueChainService.getValueChain(id, language));
 	}

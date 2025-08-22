@@ -35,7 +35,7 @@ public class SemiProductController {
 	@Operation(summary ="Get a paginated list of semi products.")
 	public ApiPaginatedResponse<ApiSemiProduct> getSemiProductList(
 			@Valid ApiPaginatedRequest request,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(semiProductService.getSemiProductList(request, language));
 	}
@@ -45,7 +45,7 @@ public class SemiProductController {
 	public ApiPaginatedResponse<ApiSemiProduct> getSemiProductListByValueChains(
 			@Parameter(description = "Value chain IDs", required = true) @RequestParam(value = "valueChainIds") List<Long> valueChainIds,
 			@Valid ApiPaginatedRequest request,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(semiProductService.getSemiProductListByValueChains(request, valueChainIds, language));
 	}
@@ -54,7 +54,7 @@ public class SemiProductController {
 	@Operation(summary ="Get a single semi product with the provided ID.")
 	public ApiResponse<ApiSemiProduct> getSemiProduct(
 			@Valid @Parameter(description = "Semi product ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiResponse<>(semiProductService.getSemiProduct(id, language));
 	}
@@ -63,7 +63,7 @@ public class SemiProductController {
 	@Operation(summary ="Get a single semi product with details with the provided ID.")
 	public ApiResponse<ApiSemiProduct> getSemiProductDetails(
 			@Valid @Parameter(description = "Semi product ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 		return new ApiResponse<>(semiProductService.getSemiProductDetails(id, language));
 	}
 

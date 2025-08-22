@@ -71,7 +71,7 @@ public class PublicController {
 	public ApiResponse<ApiQRTagPublic> getQRTagPublicData(
 			@Valid @Parameter(description = "QR code tag", required = true) @PathVariable("qrTag") String qrTag,
 			@Valid @Parameter(description = "Return aggregated history") @RequestParam(value = "withHistory", required = false) Boolean withHistory,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 		return new ApiResponse<>(stockOrderService.getQRTagPublicData(qrTag, withHistory, language));
 	}
     

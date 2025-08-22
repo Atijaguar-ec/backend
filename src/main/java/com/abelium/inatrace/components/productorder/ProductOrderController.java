@@ -34,7 +34,7 @@ public class ProductOrderController {
 	@Operation(summary = "Get a single product order with the provided ID.")
 	public ApiResponse<ApiProductOrder> getProductOrder(
 			@Valid @Parameter(description = "Product order ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiResponse<>(productOrderService.getProductOrder(id, language));
 	}
@@ -44,7 +44,7 @@ public class ProductOrderController {
 	public ApiResponse<ApiBaseEntity> createProductOrder(
 			@Valid @RequestBody ApiProductOrder apiProductOrder,
 			@AuthenticationPrincipal CustomUserDetails authUser,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiResponse<>(productOrderService.createProductOrder(apiProductOrder, authUser, language));
 	}

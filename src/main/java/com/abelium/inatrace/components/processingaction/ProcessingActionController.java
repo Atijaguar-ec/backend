@@ -37,7 +37,7 @@ public class ProcessingActionController {
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,
 			@Valid @Parameter(description = "Processing action type") @RequestParam(value = "actionType", required = false) ProcessingActionType actionType,
 			@Valid @Parameter(description = "Only final product actions") @RequestParam(value = "onlyFinalProducts", required = false) Boolean onlyFinalProducts,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@Valid ApiPaginatedRequest request) throws ApiException {
 
 		return new ApiPaginatedResponse<>(
@@ -50,7 +50,7 @@ public class ProcessingActionController {
 	public ApiResponse<ApiProcessingAction> getProcessingAction(
 			@AuthenticationPrincipal CustomUserDetails authUser,
 			@Valid @Parameter(description = "ProcessingAction ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiResponse<>(processingActionService.getProcessingAction(id, authUser, language));
 	}
@@ -60,7 +60,7 @@ public class ProcessingActionController {
 	public ApiResponse<ApiProcessingAction> getProcessingActionDetail(
 			@AuthenticationPrincipal CustomUserDetails authUser,
 			@Valid @Parameter(description = "ProcessingAction ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 		return new ApiResponse<>(processingActionService.getProcessingActionDetail(id, authUser, language));
 	}
 

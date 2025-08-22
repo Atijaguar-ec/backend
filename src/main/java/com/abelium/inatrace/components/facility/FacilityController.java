@@ -32,7 +32,7 @@ public class FacilityController {
 	@GetMapping("list/company/{id}/all")
 	public ApiPaginatedResponse<ApiFacility> listAllFacilitiesByCompany(
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@Valid ApiPaginatedRequest request,
 			@AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
@@ -46,7 +46,7 @@ public class FacilityController {
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,
 			@Valid @Parameter(description = "Semi product ID") @RequestParam(value = "semiProductId", required = false) Long semiProductId,
 			@Valid @Parameter(description = "Final product ID") @RequestParam(value = "finalProductId", required = false) Long finalProductId,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@Valid ApiPaginatedRequest request,
 			@AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
@@ -58,7 +58,7 @@ public class FacilityController {
 	@GetMapping("list/company/{id}/available-selling")
 	@Operation(summary ="Get a list of public (selling) facilities that the provided company can see")
 	public ApiPaginatedResponse<ApiFacility> listAvailableSellingFacilitiesForCompany(
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,
 			@Valid @Parameter(description = "Semi product ID") @RequestParam(value = "semiProductId", required = false) Long semiProductId,
 			@Valid @Parameter(description = "Final product ID") @RequestParam(value = "finalProductId", required = false) Long finalProductId,
@@ -74,7 +74,7 @@ public class FacilityController {
 	@Operation(summary ="Get a list of collecting facilities by company ID.")
 	public ApiPaginatedResponse<ApiFacility> listCollectingFacilitiesByCompany(
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@Valid ApiPaginatedRequest request,
 			@AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
@@ -85,7 +85,7 @@ public class FacilityController {
 	@Operation(summary ="Get a single facility with the provided ID.")
 	public ApiResponse<ApiFacility> getFacility(
 			@Valid @Parameter(description = "Facility ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
 		return new ApiResponse<>(facilityService.getFacility(id, authUser, language));
@@ -96,7 +96,7 @@ public class FacilityController {
 	@Operation(summary ="Get a single facility with translations for the provided ID.")
 	public ApiResponse<ApiFacility> getFacilityDetail(
 			@Valid @Parameter(description = "Facility ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
 		return new ApiResponse<>(facilityService.getFacilityDetail(id, authUser, language));

@@ -33,7 +33,7 @@ public class ProductTypeController {
     @GetMapping
     @Operation(summary = "Get a list of product types")
     public ApiPaginatedResponse<ApiProductType> getProductTypes(
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
     ) {
         return productTypeService.getProductTypes(language);
     }
@@ -42,7 +42,7 @@ public class ProductTypeController {
     @Operation(summary = "Get product type details")
     public ApiResponse<ApiProductType> getProductType(
             @RequestParam(value = "id") Long id,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
     ) throws ApiException {
         return productTypeService.getProductType(id, language);
     }

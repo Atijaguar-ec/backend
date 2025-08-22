@@ -35,7 +35,7 @@ public class ProcessingEvidenceTypeController {
 	@Operation(summary ="Get a paginated list of processing evidence types.")
 	public ApiPaginatedResponse<ApiProcessingEvidenceType> getProcessingEvidenceTypeList(
 			@Valid ApiPaginatedRequest request,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(processingEvidenceTypeService.getProcEvidenceTypeList(request, language));
 	}
@@ -46,7 +46,7 @@ public class ProcessingEvidenceTypeController {
 	public ApiPaginatedResponse<ApiProcessingEvidenceType> listProcessingEvidenceTypesByValueChain(
 			@Valid @Parameter(description = "Value chain ID", required = true) @PathVariable("id") Long valueChainId,
 			@Valid ApiPaginatedRequest request,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(processingEvidenceTypeService.listProcessingEvidenceTypesByValueChain(valueChainId, request, language));
 	}
@@ -56,7 +56,7 @@ public class ProcessingEvidenceTypeController {
 	public ApiPaginatedResponse<ApiProcessingEvidenceType> listProcessingEvidenceTypesByValueChains(
 			@Parameter(description = "Value chain IDs", required = true) @RequestParam(value = "valueChainIds") List<Long> valueChainIds,
 			@Valid ApiPaginatedRequest request,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(processingEvidenceTypeService.listProcessingEvidenceTypesByValueChainList(valueChainIds, request, language));
 	}
@@ -65,7 +65,7 @@ public class ProcessingEvidenceTypeController {
 	@Operation(summary ="Get a single processing evidence type with the provided ID.")
 	public ApiResponse<ApiProcessingEvidenceType> getProcessingEvidenceType(
 			@Valid @Parameter(description = "Processing evidence type ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiResponse<>(processingEvidenceTypeService.getProcessingEvidenceType(id, language));
 	}

@@ -36,7 +36,7 @@ public class TransactionController {
 	public ApiPaginatedResponse<ApiTransaction> getStockOrderInputTransactions(
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("stockOrderId") Long stockOrderId,
 			@AuthenticationPrincipal CustomUserDetails authUser,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiPaginatedResponse<>(transactionService.getStockOrderInputTransactions(stockOrderId, authUser, language));
 	}
@@ -46,7 +46,7 @@ public class TransactionController {
 	public ApiDefaultResponse approveTransaction(
 			@Valid @Parameter(description = "Transaction ID", required = true) @PathVariable("id") Long id,
 			@AuthenticationPrincipal CustomUserDetails authUser,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		transactionService.approveTransaction(id, authUser, language);
 		return new ApiDefaultResponse();
@@ -58,7 +58,7 @@ public class TransactionController {
 			@Valid @Parameter(description = "Transaction ID", required = true) @PathVariable("id") Long id,
 			@Valid @RequestBody ApiTransaction apiTransaction,
 			@AuthenticationPrincipal CustomUserDetails authUser,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		if (apiTransaction == null || !id.equals(apiTransaction.getId())) {
 			throw new ApiException(ApiStatus.INVALID_REQUEST, "Data integrity violation!");

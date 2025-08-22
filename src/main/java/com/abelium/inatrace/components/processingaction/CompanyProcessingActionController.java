@@ -47,7 +47,7 @@ public class CompanyProcessingActionController {
             @Parameter(description = "Company ID", required = true)
             @PathVariable Long companyId,
             @Parameter(description = "Language for translations")
-            @RequestParam(value = "language", defaultValue = "EN") Language language,
+            @RequestParam(value = "language", defaultValue = "ES") Language language,
             @AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
         List<ApiCompanyProcessingAction> processingActions = companyProcessingActionService
@@ -71,7 +71,7 @@ public class CompanyProcessingActionController {
             @Parameter(description = "Company ID", required = true)
             @PathVariable Long companyId,
             @Parameter(description = "Language for translations")
-            @RequestParam(value = "language", defaultValue = "EN") Language language,
+            @RequestParam(value = "language", defaultValue = "ES") Language language,
             @AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
         List<ApiCompanyProcessingAction> processingActions = companyProcessingActionService
@@ -97,7 +97,7 @@ public class CompanyProcessingActionController {
             @Parameter(description = "Processing Action ID", required = true)
             @PathVariable Long processingActionId,
             @Parameter(description = "Language for translations")
-            @RequestParam(value = "language", defaultValue = "EN") Language language,
+            @RequestParam(value = "language", defaultValue = "ES") Language language,
             @Valid @RequestBody ApiCompanyProcessingAction request,
             @AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
