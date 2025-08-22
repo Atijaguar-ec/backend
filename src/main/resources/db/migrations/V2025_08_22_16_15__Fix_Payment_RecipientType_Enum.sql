@@ -21,4 +21,15 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- Add index for better query performance on recipientType
-CREATE INDEX IF NOT EXISTS idx_payment_recipient_type ON Payment (recipientType);
+-- MySQL doesn't support CREATE INDEX IF NOT EXISTS, so we use conditional logic
+SET @index_exists = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Payment' 
+    AND INDEX_NAME = 'idx_payment_recipient_type');
+
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX idx_payment_recipient_type ON Payment (recipientType)', 
+    'SELECT "Index idx_payment_recipient_type already exists" as Info');
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
