@@ -3,20 +3,18 @@
 
 CREATE TABLE IF NOT EXISTS CompanyProcessingAction (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    entityVersion BIGINT NOT NULL DEFAULT 0,
+    entity_version BIGINT NOT NULL DEFAULT 0,
     company_id BIGINT NOT NULL,
     processing_action_id BIGINT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     order_override INT NULL,
     alias_label VARCHAR(255) NULL,
-    creationTimestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
-    updateTimestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     
     -- Foreign key constraints
     CONSTRAINT fk_company_processing_action_company 
-        FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE,
+        FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
     CONSTRAINT fk_company_processing_action_processing_action 
-        FOREIGN KEY (processing_action_id) REFERENCES processing_action(id) ON DELETE CASCADE,
+        FOREIGN KEY (processing_action_id) REFERENCES ProcessingAction(id) ON DELETE CASCADE,
     
     -- Unique constraint to prevent duplicate entries per company-action pair
     CONSTRAINT uk_company_processing_action_company_action 
@@ -56,9 +54,18 @@ DEALLOCATE PREPARE stmt;
 -- Initialize CompanyProcessingAction for all existing company-processing action combinations
 -- Set enabled=true and order_override=null (uses global sortOrder)
 -- Only insert if the combination doesn't already exist to avoid conflicts
-INSERT IGNORE INTO CompanyProcessingAction (company_id, processing_action_id, enabled, order_override, entityVersion)
-SELECT c.id, pa.id, TRUE, NULL, 0
-FROM company c
-CROSS JOIN processing_action pa
-WHERE EXISTS (SELECT 1 FROM company c2 WHERE c2.id = c.id)
-  AND EXISTS (SELECT 1 FROM processing_action pa2 WHERE pa2.id = pa.id);
+-- Check if both tables exist before attempting to insert data
+
+SET @company_table_exists = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Company');
+
+SET @processing_action_table_exists = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ProcessingAction');
+
+SET @insert_sql = IF(@company_table_exists > 0 AND @processing_action_table_exists > 0,
+    'INSERT IGNORE INTO CompanyProcessingAction (company_id, processing_action_id, enabled, order_override, entityVersion) SELECT c.id, pa.id, TRUE, NULL, 0 FROM Company c CROSS JOIN ProcessingAction pa WHERE EXISTS (SELECT 1 FROM Company c2 WHERE c2.id = c.id) AND EXISTS (SELECT 1 FROM ProcessingAction pa2 WHERE pa2.id = pa.id)',
+    'SELECT "Skipping data initialization - Company or ProcessingAction tables do not exist yet" as Info');
+
+PREPARE stmt FROM @insert_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
