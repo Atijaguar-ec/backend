@@ -14,11 +14,11 @@ import java.time.Instant;
 public class TimestampEntity extends BaseEntity {
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(name = "creation_timestamp", updatable = false)
     private Instant creationTimestamp;
     
     @UpdateTimestamp
-    @Column
+    @Column(name = "update_timestamp")
     private Instant updateTimestamp;
     
     public Instant getCreationTimestamp() {

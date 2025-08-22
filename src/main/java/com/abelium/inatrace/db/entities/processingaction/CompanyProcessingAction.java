@@ -3,16 +3,29 @@ package com.abelium.inatrace.db.entities.processingaction;
 import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.company.Company;
 import jakarta.persistence.*;
+import java.util.Objects;
+import java.time.Instant;
 
 /**
  * Company-specific configuration for processing actions.
  * Allows companies to enable/disable and override order of global processing actions.
  */
 @Entity
-@Table(name = "company_processing_action")
+@Table(name = "CompanyProcessingAction", 
+       uniqueConstraints = @UniqueConstraint(
+           name = "uk_company_processing_action_company_action",
+           columnNames = {"company_id", "processing_action_id"}
+       ),
+       indexes = {
+           @Index(name = "idx_company_processing_action_company_enabled", 
+                  columnList = "company_id, enabled, order_override"),
+           @Index(name = "idx_company_processing_action_processing_action", 
+                  columnList = "processing_action_id")
+       })
 public class CompanyProcessingAction extends TimestampEntity {
 
     @Version
+    @Column(name = "entity_version")
     private Long entityVersion;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -24,7 +37,7 @@ public class CompanyProcessingAction extends TimestampEntity {
     private ProcessingAction processingAction;
 
     @Column(nullable = false)
-    private Boolean enabled = true;
+    private Boolean enabled = Boolean.TRUE;
 
     @Column(name = "order_override")
     private Integer orderOverride;
@@ -38,9 +51,9 @@ public class CompanyProcessingAction extends TimestampEntity {
 
     public CompanyProcessingAction(Company company, ProcessingAction processingAction) {
         this();
-        this.company = company;
-        this.processingAction = processingAction;
-        this.enabled = true;
+        this.company = Objects.requireNonNull(company, "Company cannot be null");
+        this.processingAction = Objects.requireNonNull(processingAction, "ProcessingAction cannot be null");
+        this.enabled = Boolean.TRUE;
     }
 
     public Long getEntityVersion() {
@@ -56,7 +69,7 @@ public class CompanyProcessingAction extends TimestampEntity {
     }
 
     public void setCompany(Company company) {
-        this.company = company;
+        this.company = Objects.requireNonNull(company, "Company cannot be null");
     }
 
     public ProcessingAction getProcessingAction() {
@@ -64,7 +77,7 @@ public class CompanyProcessingAction extends TimestampEntity {
     }
 
     public void setProcessingAction(ProcessingAction processingAction) {
-        this.processingAction = processingAction;
+        this.processingAction = Objects.requireNonNull(processingAction, "ProcessingAction cannot be null");
     }
 
     public Boolean getEnabled() {
@@ -72,7 +85,7 @@ public class CompanyProcessingAction extends TimestampEntity {
     }
 
     public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
+        this.enabled = enabled != null ? enabled : Boolean.TRUE;
     }
 
     public Integer getOrderOverride() {
@@ -88,7 +101,7 @@ public class CompanyProcessingAction extends TimestampEntity {
     }
 
     public void setAliasLabel(String aliasLabel) {
-        this.aliasLabel = aliasLabel;
+        this.aliasLabel = aliasLabel != null ? aliasLabel.trim() : null;
     }
 
     /**
@@ -112,9 +125,34 @@ public class CompanyProcessingAction extends TimestampEntity {
      */
     public String getEffectiveLabel() {
         if (aliasLabel != null && !aliasLabel.trim().isEmpty()) {
-            return aliasLabel;
+            return aliasLabel.trim();
         }
         // Note: ProcessingAction name comes from translations, this is a fallback
         return processingAction != null ? processingAction.getPrefix() : "";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CompanyProcessingAction that = (CompanyProcessingAction) o;
+        return Objects.equals(company, that.company) &&
+               Objects.equals(processingAction, that.processingAction);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(company, processingAction);
+    }
+
+    @Override
+    public String toString() {
+        return "CompanyProcessingAction{" +
+               "id=" + getId() +
+               ", company=" + (company != null ? company.getId() : null) +
+               ", processingAction=" + (processingAction != null ? processingAction.getId() : null) +
+               ", enabled=" + enabled +
+               ", orderOverride=" + orderOverride +
+               '}';
     }
 }

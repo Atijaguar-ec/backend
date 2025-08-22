@@ -1,15 +1,16 @@
 -- Create CompanyProcessingAction table for company-specific processing action configuration
 -- Allows companies to enable/disable and override order of global processing actions
 
-CREATE TABLE IF NOT EXISTS company_processing_action (
+CREATE TABLE IF NOT EXISTS CompanyProcessingAction (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    entity_version BIGINT NOT NULL DEFAULT 0,
     company_id BIGINT NOT NULL,
     processing_action_id BIGINT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     order_override INT NULL,
     alias_label VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creation_timestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
+    update_timestamp TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     
     -- Foreign key constraints
     CONSTRAINT fk_company_processing_action_company 
@@ -22,38 +23,20 @@ CREATE TABLE IF NOT EXISTS company_processing_action (
         UNIQUE (company_id, processing_action_id)
 );
 
--- Index for efficient querying by company and enabled status
--- Check if first index exists and create it if not
-SET @index_exists = (SELECT COUNT(1) FROM information_schema.statistics 
-                     WHERE table_schema = DATABASE() 
-                     AND table_name = 'company_processing_action' 
-                     AND index_name = 'idx_company_processing_action_company_enabled_order');
+-- Create indexes for efficient querying
+-- Note: These are also defined in the entity @Index annotations for consistency
+CREATE INDEX IF NOT EXISTS idx_company_processing_action_company_enabled 
+    ON CompanyProcessingAction (company_id, enabled, order_override);
 
-SET @sql = IF(@index_exists = 0, 'CREATE INDEX idx_company_processing_action_company_enabled_order ON company_processing_action (company_id, enabled, order_override)', 'SELECT 1');
-
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Check if second index exists and create it if not
-SET @index_exists = (SELECT COUNT(1) FROM information_schema.statistics 
-                     WHERE table_schema = DATABASE() 
-                     AND table_name = 'company_processing_action' 
-                     AND index_name = 'idx_company_processing_action_processing_action');
-
-SET @sql = IF(@index_exists = 0, 'CREATE INDEX idx_company_processing_action_processing_action ON company_processing_action (processing_action_id)', 'SELECT 1');
-
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+CREATE INDEX IF NOT EXISTS idx_company_processing_action_processing_action 
+    ON CompanyProcessingAction (processing_action_id);
 
 -- Initialize CompanyProcessingAction for all existing company-processing action combinations
 -- Set enabled=true and order_override=null (uses global sortOrder)
-INSERT INTO company_processing_action (company_id, processing_action_id, enabled, order_override)
-SELECT c.id, pa.id, TRUE, NULL
+-- Only insert if the combination doesn't already exist to avoid conflicts
+INSERT IGNORE INTO CompanyProcessingAction (company_id, processing_action_id, enabled, order_override, entity_version)
+SELECT c.id, pa.id, TRUE, NULL, 0
 FROM company c
 CROSS JOIN processing_action pa
-WHERE NOT EXISTS (
-    SELECT 1 FROM company_processing_action cpa 
-    WHERE cpa.company_id = c.id AND cpa.processing_action_id = pa.id
-);
+WHERE EXISTS (SELECT 1 FROM company c2 WHERE c2.id = c.id)
+  AND EXISTS (SELECT 1 FROM processing_action pa2 WHERE pa2.id = pa.id);
