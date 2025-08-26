@@ -36,16 +36,16 @@ class SchemaVerificationTest {
         assertEquals(1, singleInt(creationCol), "Columna creationTimestamp faltante");
         assertEquals(1, singleInt(updateCol), "Columna updateTimestamp faltante");
 
-        String idxCompanyEnabled = "SELECT COUNT(*) FROM information_schema.statistics " +
+        String idxCompanyEnabled = "SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics " +
                 "WHERE table_schema = (" + schema + ") AND table_name = 'CompanyProcessingAction' " +
                 "AND index_name = 'idx_company_processing_action_company_enabled' AND non_unique = 1";
-        String idxProcessingAction = "SELECT COUNT(*) FROM information_schema.statistics " +
+        String idxProcessingAction = "SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics " +
                 "WHERE table_schema = (" + schema + ") AND table_name = 'CompanyProcessingAction' " +
                 "AND index_name = 'idx_company_processing_action_processing_action' AND non_unique = 1";
         assertEquals(1, singleInt(idxCompanyEnabled), "Índice idx_company_processing_action_company_enabled no encontrado o es único");
         assertEquals(1, singleInt(idxProcessingAction), "Índice idx_company_processing_action_processing_action no encontrado o es único");
 
-        String uniqueUk = "SELECT COUNT(*) FROM information_schema.table_constraints tc " +
+        String uniqueUk = "SELECT COUNT(DISTINCT tc.constraint_name) FROM information_schema.table_constraints tc " +
                 "JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name " +
                 "AND tc.table_schema = kcu.table_schema AND tc.table_name = kcu.table_name " +
                 "WHERE tc.table_schema = (" + schema + ") AND tc.table_name = 'CompanyProcessingAction' " +

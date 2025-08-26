@@ -63,7 +63,7 @@ SET @processing_action_table_exists = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.T
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ProcessingAction');
 
 SET @insert_sql = IF(@company_table_exists > 0 AND @processing_action_table_exists > 0,
-    'INSERT IGNORE INTO CompanyProcessingAction (company_id, processing_action_id, enabled, order_override, entityVersion) SELECT c.id, pa.id, TRUE, NULL, 0 FROM Company c CROSS JOIN ProcessingAction pa WHERE EXISTS (SELECT 1 FROM Company c2 WHERE c2.id = c.id) AND EXISTS (SELECT 1 FROM ProcessingAction pa2 WHERE pa2.id = pa.id)',
+    'INSERT IGNORE INTO CompanyProcessingAction (company_id, processing_action_id, enabled, order_override) SELECT c.id, pa.id, TRUE, NULL FROM Company c CROSS JOIN ProcessingAction pa WHERE EXISTS (SELECT 1 FROM Company c2 WHERE c2.id = c.id) AND EXISTS (SELECT 1 FROM ProcessingAction pa2 WHERE pa2.id = pa.id)',
     'SELECT "Skipping data initialization - Company or ProcessingAction tables do not exist yet" as Info');
 
 PREPARE stmt FROM @insert_sql;
