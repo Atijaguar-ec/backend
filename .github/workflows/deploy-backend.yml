@@ -161,6 +161,20 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
+      - name: Run database backup
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd /opt/inatrace/backend
+            COMPOSE="docker-compose -f ci/docker-compose.yml --env-file ci/.env"
+            # Dump DB using container env vars; write dump file on host
+            $COMPOSE exec -T inatrace-mysql sh -lc 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' > backup-$(date +%Y%m%d-%H%M%S).sql
+            # Keep only last 7 days of backups
+            find . -name "backup-*.sql" -mtime +7 -delete
+
       - name: Deploy to Hetzner
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -186,20 +200,6 @@ jobs:
             
             # Cleanup old images
             docker image prune -f
-
-      - name: Run database backup
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          script: |
-            cd /opt/inatrace/backend
-            COMPOSE="docker-compose -f ci/docker-compose.yml --env-file ci/.env"
-            # Dump DB using container env vars; write dump file on host
-            $COMPOSE exec -T inatrace-mysql sh -lc 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' > backup-$(date +%Y%m%d-%H%M%S).sql
-            # Keep only last 7 days of backups
-            find . -name "backup-*.sql" -mtime +7 -delete
 
       - name: Skip Slack notification
         if: always()

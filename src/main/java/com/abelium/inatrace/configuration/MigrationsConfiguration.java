@@ -11,19 +11,19 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
 @Configuration
-@ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "inatrace.flyway.custom", havingValue = "true", matchIfMissing = false)
 public class MigrationsConfiguration {
     
     // Override default Flyway initializer to do nothing
     @Bean
-    @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(name = "inatrace.flyway.custom", havingValue = "true", matchIfMissing = false)
     FlywayMigrationInitializer flywayInitializer(Flyway flyway) {
         return new FlywayMigrationInitializer(flyway, f -> { /* empty */ });
     }
     
     // Create a second Flyway initializer to run after EntityManagerFactory was initialized
     @Bean
-    @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(name = "inatrace.flyway.custom", havingValue = "true", matchIfMissing = false)
     DelayedFlywayMigrationInitializer delayedFlywayInitializer(Flyway flyway, EntityManagerFactory entityManagerFactory, Environment environment) {
         return new DelayedFlywayMigrationInitializer(flyway, new JpaMigrationStrategy(entityManagerFactory, environment));
     }
