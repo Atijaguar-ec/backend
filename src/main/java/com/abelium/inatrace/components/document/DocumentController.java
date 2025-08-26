@@ -75,13 +75,5 @@ public class DocumentController {
         }
     }
     
-    /**
-     * Handle legacy /api/document requests by redirecting to /api/documents
-     */
-    @RequestMapping("/api/document/**")
-    public ResponseEntity<Void> redirectLegacyDocument() {
-        return ResponseEntity.status(301)
-                .header(HttpHeaders.LOCATION, "/api/documents/")
-                .build();
-    }
+    
 }

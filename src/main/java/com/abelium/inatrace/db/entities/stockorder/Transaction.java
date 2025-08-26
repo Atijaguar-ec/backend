@@ -29,7 +29,7 @@ public class Transaction extends TimestampEntity {
 	@Column
 	private Long initiationUserId;
 	
-	@OneToOne
+	@ManyToOne
 	private StockOrder sourceStockOrder;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -56,7 +56,7 @@ public class Transaction extends TimestampEntity {
 	@Column
 	private Long shipmentId;
 
-	@OneToOne
+	@ManyToOne
 	private MeasureUnitType inputMeasureUnitType;
 	
 	@Column
