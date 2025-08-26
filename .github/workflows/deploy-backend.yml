@@ -161,31 +161,19 @@ jobs:
           script: |
             cd /opt/inatrace/backend
             
+            # Compute lowercase image path for GHCR (requires lowercase)
+            IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+            
             # Pull latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker pull "$IMAGE:latest"
             
-            # Run database migrations
-            docker-compose run --rm backend-migration
+            # Export variables used by compose file
+            export IMAGE_NAME="$IMAGE"
+            export TAG=latest
+            COMPOSE="docker-compose -f ci/docker-compose.yml --env-file ci/.env"
             
-            # Blue-Green deployment
-            export IMAGE_TAG=latest
-            docker-compose up -d backend-blue
-            
-            # Health check on blue
-            sleep 30
-            if curl -f http://localhost:8081/actuator/health; then
-              # Switch traffic to blue
-              docker-compose up -d traefik
-              # Stop green
-              docker-compose stop backend-green
-              # Rename blue to green for next deployment
-              docker-compose stop backend-blue
-              docker-compose up -d backend-green
-            else
-              echo "Health check failed on blue deployment"
-              docker-compose stop backend-blue
-              exit 1
-            fi
+            # Deploy/update backend service
+            $COMPOSE up -d inatrace-backend || $COMPOSE up -d backend || true
             
             # Cleanup old images
             docker image prune -f
@@ -198,7 +186,9 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           script: |
             cd /opt/inatrace/backend
-            docker-compose exec -T mysql mysqldump -u root -p$MYSQL_ROOT_PASSWORD inatrace > backup-$(date +%Y%m%d-%H%M%S).sql
+            COMPOSE="docker-compose -f ci/docker-compose.yml --env-file ci/.env"
+            # Dump DB using container env vars; write dump file on host
+            $COMPOSE exec -T inatrace-mysql sh -lc 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' > backup-$(date +%Y%m%d-%H%M%S).sql
             # Keep only last 7 days of backups
             find . -name "backup-*.sql" -mtime +7 -delete
 
@@ -209,4 +199,4 @@ jobs:
           status: ${{ job.status }}
           fields: repo,message,commit,author,action,eventName,ref,workflow
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
