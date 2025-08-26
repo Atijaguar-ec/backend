@@ -180,17 +180,18 @@ jobs:
             export IMAGE_NAME="$IMAGE"
             export TAG=latest
             # Create override to inject DDL auto env for this deploy (idempotent)
-            cat > ci/extra.env << 'EOF'
-            SPRING_JPA_HIBERNATE_DDL_AUTO=update
-            SPRING_JPA_PROPERTIES_HIBERNATE_HBM2DDL_AUTO=update
-            EOF
+            mkdir -p ci
+            printf "%s\n" \
+              "SPRING_JPA_HIBERNATE_DDL_AUTO=update" \
+              "SPRING_JPA_PROPERTIES_HIBERNATE_HBM2DDL_AUTO=update" \
+              > ci/extra.env
 
-            cat > ci/docker-compose.override.yml << 'EOF'
-services:
-  inatrace-backend:
-    env_file:
-      - ci/extra.env
-            EOF
+            printf "%s\n" \
+              "services:" \
+              "  inatrace-backend:" \
+              "    env_file:" \
+              "      - ci/extra.env" \
+              > ci/docker-compose.override.yml
 
             COMPOSE="docker-compose -f ci/docker-compose.yml -f ci/docker-compose.override.yml --env-file ci/.env"
             
