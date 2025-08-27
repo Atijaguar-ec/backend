@@ -1,25 +1,55 @@
 -- Create CompanyProcessingAction table for company-specific processing action configuration
 -- Allows companies to enable/disable and override order of global processing actions
 
-CREATE TABLE IF NOT EXISTS CompanyProcessingAction (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    entity_version BIGINT NOT NULL DEFAULT 0,
-    company_id BIGINT NOT NULL,
-    processing_action_id BIGINT NOT NULL,
-    enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    order_override INT NULL,
-    alias_label VARCHAR(255) NULL,
-    
-    -- Foreign key constraints
-    CONSTRAINT fk_company_processing_action_company 
-        FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
-    CONSTRAINT fk_company_processing_action_processing_action 
-        FOREIGN KEY (processing_action_id) REFERENCES ProcessingAction(id) ON DELETE CASCADE,
-    
-    -- Unique constraint to prevent duplicate entries per company-action pair
-    CONSTRAINT uk_company_processing_action_company_action 
-        UNIQUE (company_id, processing_action_id)
+-- Create table with conditional FKs depending on referenced tables availability
+SET @table_exists = (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CompanyProcessingAction'
 );
+
+SET @company_exists = (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Company'
+);
+
+SET @processing_action_exists = (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ProcessingAction'
+);
+
+SET @sql = IF(
+    @table_exists = 0,
+    IF(
+        @company_exists = 1 AND @processing_action_exists = 1,
+        'CREATE TABLE CompanyProcessingAction (\n\
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,\n\
+            entity_version BIGINT NOT NULL DEFAULT 0,\n\
+            company_id BIGINT NOT NULL,\n\
+            processing_action_id BIGINT NOT NULL,\n\
+            enabled BOOLEAN NOT NULL DEFAULT TRUE,\n\
+            order_override INT NULL,\n\
+            alias_label VARCHAR(255) NULL,\n\
+            CONSTRAINT fk_company_processing_action_company FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,\n\
+            CONSTRAINT fk_company_processing_action_processing_action FOREIGN KEY (processing_action_id) REFERENCES ProcessingAction(id) ON DELETE CASCADE,\n\
+            CONSTRAINT uk_company_processing_action_company_action UNIQUE (company_id, processing_action_id)\n\
+        )',
+        'CREATE TABLE CompanyProcessingAction (\n\
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,\n\
+            entity_version BIGINT NOT NULL DEFAULT 0,\n\
+            company_id BIGINT NOT NULL,\n\
+            processing_action_id BIGINT NOT NULL,\n\
+            enabled BOOLEAN NOT NULL DEFAULT TRUE,\n\
+            order_override INT NULL,\n\
+            alias_label VARCHAR(255) NULL,\n\
+            CONSTRAINT uk_company_processing_action_company_action UNIQUE (company_id, processing_action_id)\n\
+        )'
+    ),
+    'SELECT "Table CompanyProcessingAction already exists" as Info'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Create indexes for efficient querying
 -- Note: These are also defined in the entity @Index annotations for consistency
@@ -47,6 +77,37 @@ SET @sql = IF(@index_exists = 0,
     'CREATE INDEX idx_company_processing_action_processing_action ON CompanyProcessingAction (processing_action_id)', 
     'SELECT "Index idx_company_processing_action_processing_action already exists" as Info');
 
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Conditionally add missing foreign keys if referenced tables are now present
+SET @fk_company_exists = (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CompanyProcessingAction'
+      AND CONSTRAINT_NAME = 'fk_company_processing_action_company'
+      AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+);
+
+SET @sql = IF(@company_exists = 1 AND @fk_company_exists = 0,
+    'ALTER TABLE CompanyProcessingAction ADD CONSTRAINT fk_company_processing_action_company FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE',
+    'SELECT "Skipping: Company table missing or FK already exists" as Info'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @fk_pa_exists = (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CompanyProcessingAction'
+      AND CONSTRAINT_NAME = 'fk_company_processing_action_processing_action'
+      AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+);
+
+SET @sql = IF(@processing_action_exists = 1 AND @fk_pa_exists = 0,
+    'ALTER TABLE CompanyProcessingAction ADD CONSTRAINT fk_company_processing_action_processing_action FOREIGN KEY (processing_action_id) REFERENCES ProcessingAction(id) ON DELETE CASCADE',
+    'SELECT "Skipping: ProcessingAction table missing or FK already exists" as Info'
+);
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
