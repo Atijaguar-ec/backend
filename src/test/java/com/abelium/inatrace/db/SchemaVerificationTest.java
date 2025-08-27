@@ -88,4 +88,23 @@ class SchemaVerificationTest {
         assertEquals(1, singleInt(fkSource), "FK sourceStockOrder_id -> StockOrder(id) faltante");
         assertEquals(1, singleInt(fkMeasure), "FK inputMeasureUnitType_id -> MeasureUnitType(id) faltante");
     }
+
+    @Test
+    @DisplayName("FacilityType: columna 'order' e índice no único")
+    void facilityTypeOrderColumnAndIndex() {
+        String schema = "SELECT DATABASE()";
+
+        String tableExists = "SELECT COUNT(*) FROM information_schema.tables " +
+                "WHERE table_schema = (" + schema + ") AND table_name = 'FacilityType'";
+        assertEquals(1, singleInt(tableExists), "Tabla FacilityType debe existir");
+
+        String columnExists = "SELECT COUNT(*) FROM information_schema.columns " +
+                "WHERE table_schema = (" + schema + ") AND table_name = 'FacilityType' AND column_name = 'order'";
+        assertEquals(1, singleInt(columnExists), "Columna 'order' en FacilityType faltante");
+
+        String indexExists = "SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics " +
+                "WHERE table_schema = (" + schema + ") AND table_name = 'FacilityType' " +
+                "AND index_name = 'idx_facility_type_order' AND non_unique = 1";
+        assertEquals(1, singleInt(indexExists), "Índice no único idx_facility_type_order faltante");
+    }
 }
