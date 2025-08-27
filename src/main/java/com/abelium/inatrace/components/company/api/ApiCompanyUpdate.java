@@ -16,7 +16,7 @@ public class ApiCompanyUpdate extends ApiCompany {
 	public List<ApiBaseEntity> users;
 	
 	@Schema(description = "Language")
-	public Language language = Language.EN;
+	public Language language = Language.ES;
 
 	public List<ApiBaseEntity> getUsers() {
 		return users;

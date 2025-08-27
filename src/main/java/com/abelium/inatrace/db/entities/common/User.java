@@ -60,7 +60,7 @@ public class User extends TimestampEntity {
 	 */
 	@Enumerated(EnumType.STRING)
     @Column(nullable = false, length = Lengths.ENUM)
-	private Language language = Language.EN;
+	private Language language = Language.ES;
 
 	/**
 	 * user role
