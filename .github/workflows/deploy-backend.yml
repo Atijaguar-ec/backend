@@ -57,11 +57,6 @@ jobs:
 
       - name: Run tests
         run: |
-          cp src/main/resources/application.properties.template src/main/resources/application-test.properties
-          sed -i 's/localhost/127.0.0.1/g' src/main/resources/application-test.properties
-          sed -i 's/INATrace.database.name =/INATrace.database.name = inatrace_test/g' src/main/resources/application-test.properties
-          sed -i 's/spring.datasource.username =/spring.datasource.username = root/g' src/main/resources/application-test.properties
-          sed -i 's/spring.datasource.password =/spring.datasource.password = root/g' src/main/resources/application-test.properties
           mvn clean test -Dspring.profiles.active=test
 
       - name: Run integration tests
@@ -171,9 +166,10 @@ jobs:
             cd /opt/inatrace/backend
             COMPOSE="docker-compose -f ci/docker-compose.yml --env-file ci/.env"
             # Dump DB using container env vars; write dump file on host
-            $COMPOSE exec -T inatrace-mysql sh -lc 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' > backup-$(date +%Y%m%d-%H%M%S).sql
+            BACKUP_NAME="backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+            $COMPOSE exec -T inatrace-mysql sh -lc 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' | gzip -9 > "$BACKUP_NAME"
             # Keep only last 7 days of backups
-            find . -name "backup-*.sql" -mtime +7 -delete
+            find . -name "backup-*.sql.gz" -mtime +7 -delete
 
       - name: Deploy to Hetzner
         uses: appleboy/ssh-action@v1.0.0
