@@ -114,7 +114,7 @@ INATrace.import.path = import/
 INATrace.documents.root = documents/
 
 # file storage location (local path)
-INATrace.fileStorage.root = inatrace_file_storage_path
+INATrace.fileStorage.root = documents/
 
 # url (prefix) for email confirmation after registration
 INATrace.emailConfirmation.url = http://localhost:4200/confirm-email/

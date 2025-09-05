@@ -149,6 +149,13 @@
             <version>5.3.0</version>
         </dependency>
 
+        <!-- Ensure compatible Commons IO version for Apache POI 5.3.0 -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.16.1</version>
+        </dependency>
+
         <!-- PDF Creation and manipulation -->
         <dependency>
             <groupId>fr.opensagres.xdocreport</groupId>
