@@ -44,6 +44,9 @@ public class FacilityTypeService extends BaseService {
 			case "label":
 				QueryTools.orderBy(request.sort, facilityTypeProxy.getLabel());
 				break;
+			case "order":
+				QueryTools.orderBy(request.sort, facilityTypeProxy.getOrder());
+				break;
 			default:
 				QueryTools.orderBy(request.sort, facilityTypeProxy.getId());
 		}

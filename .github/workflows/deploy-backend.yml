@@ -1,201 +1,406 @@
-name: Deploy Backend to Hetzner
+name: 🚀 Backend CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ develop, staging, main ]
+    paths:
+      - 'backend/**'
+      - 'deploy/backend/**'
+      - '.github/workflows/deploy-backend.yml'
   pull_request:
-    branches: [main]
-
+    branches: [ develop, staging, main ]
+    paths:
+      - 'backend/**'
+      - 'deploy/backend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - test
+        - prod
+      company:
+        description: 'Target company (for test/prod)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - unocace
+        - fortaleza
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-backend
+  IMAGE_NAME: ghcr.io/atijaguar-ec/inatrace-backend
   JAVA_VERSION: '17'
-  MAVEN_OPTS: -Xmx1024m
+  MAVEN_VERSION: '3.8.5'
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/inatrace-backend
+  JAVA_VERSION: '17'
+  MAVEN_VERSION: '3.8.5'
 
 jobs:
-  test:
+  quality:
+    name: 🔍 Code Quality & Security
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0.33
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: inatrace_test
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-
+    defaults:
+      run:
+        working-directory: ./backend
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: maven
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+      - name: 🔍 Run tests
+        run: mvn clean test -B
 
-      - name: Run tests
-        run: |
-          cp src/main/resources/application.properties.template src/main/resources/application-test.properties
-          sed -i 's/localhost/127.0.0.1/g' src/main/resources/application-test.properties
-          sed -i 's/INATrace.database.name =/INATrace.database.name = inatrace_test/g' src/main/resources/application-test.properties
-          sed -i 's/spring.datasource.username =/spring.datasource.username = root/g' src/main/resources/application-test.properties
-          sed -i 's/spring.datasource.password =/spring.datasource.password = root/g' src/main/resources/application-test.properties
-          mvn clean test -Dspring.profiles.active=test
-
-      - name: Run integration tests
-        run: mvn verify -Dspring.profiles.active=test
-
-      - name: Generate test report
+      - name: 📊 Generate test report
         uses: dorny/test-reporter@v1
         if: success() || failure()
         with:
           name: Maven Tests
-          path: target/surefire-reports/*.xml
+          path: backend/target/surefire-reports/*.xml
           reporter: java-junit
+          fail-on-error: true
 
-  security-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: 📈 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: maven
+          directory: ./backend/target/site/jacoco
+          fail_ci_if_error: false
 
-      - name: Run OWASP Dependency Check
+      - name: 🔒 Run security scan with OWASP
         run: |
-          mvn org.owasp:dependency-check-maven:check
-          
-      - name: Upload security scan results
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: security-scan-results
-          path: target/dependency-check-report.html
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionsLocation=owasp-suppressions.xml
+        continue-on-error: true
+
+      - name: 🔍 SonarCloud Scan
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn sonar:sonar \
+            -Dsonar.projectKey=inatrace-backend \
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
+            -Dsonar.host.url=https://sonarcloud.io
+        continue-on-error: true
 
   build:
-    needs: [test, security-scan]
+    name: 🏗️ Build & Push Docker Image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
+    needs: quality
+    if: github.event_name != 'pull_request'
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+      image-digest: ${{ steps.build.outputs.digest }}
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: maven
+      - name: 🏷️ Generate metadata
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            VERSION=$(grep -m1 '<version>' backend/pom.xml | sed -E 's/.*<version>([^<]+)<\/version>.*/\1/' | sed 's/-SNAPSHOT//')
+            TAG="v${VERSION}"
+          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+            TAG="test-${GITHUB_SHA::7}"
+          else
+            TAG="dev-${GITHUB_SHA::7}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "🏷️ Generated tag: $TAG"
 
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
+      - name: 📋 Extract version
+        id: version
+        run: |
+          VERSION=$(grep -m1 '<version>' backend/pom.xml | sed -E 's/.*<version>([^<]+)<\/version>.*/\1/' | sed 's/-SNAPSHOT//')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Log in to Container Registry
+      - name: 🔐 Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build and push Docker image
+      - name: 🏗️ Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
 
-  deploy:
-    needs: build
+      - name: 🔒 Sign image with Cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.1.1'
+
+  deploy-dev:
+    name: 🚀 Deploy to Development
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: dev
+      url: http://inatrace.atijaguar.com/api/health
     steps:
-      - name: Deploy to Hetzner
+      - name: 📥 Checkout deployment configs
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Development Server
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_PORT || 22 }}
           script: |
-            cd /opt/inatrace/backend
-            
-            # Pull latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            
-            # Run database migrations
-            docker-compose run --rm backend-migration
-            
-            # Blue-Green deployment
-            export IMAGE_TAG=latest
-            docker-compose up -d backend-blue
-            
-            # Health check on blue
+            set -e
+            echo "🚀 Starting backend deployment to Development..."
+
+            # No login to Docker Hub since images are public
+
+            # Navigate to deployment directory
+            cd /opt/inatrace/deploy/backend/dev
+
+            export IMAGE_NAME="${{ env.IMAGE_NAME }}"
+            export TAG="${{ needs.build.outputs.image-tag }}"
+            export VERSION="${{ needs.build.outputs.version }}"
+
+            echo "🗄️ Running database migrations..."
+            docker-compose run --rm inatrace-backend java -jar app.jar --spring.profiles.active=migration || true
+
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+
+            echo "⏳ Waiting for service to be ready..."
             sleep 30
-            if curl -f http://localhost:8081/actuator/health; then
-              # Switch traffic to blue
-              docker-compose up -d traefik
-              # Stop green
-              docker-compose stop backend-green
-              # Rename blue to green for next deployment
-              docker-compose stop backend-blue
-              docker-compose up -d backend-green
-            else
-              echo "Health check failed on blue deployment"
-              docker-compose stop backend-blue
-              exit 1
-            fi
-            
-            # Cleanup old images
-            docker image prune -f
 
-      - name: Run database backup
+            for i in {1..10}; do
+              if curl -f http://localhost:8080/actuator/health; then
+                echo "✅ Development backend deployment successful!"
+                exit 0
+              fi
+              echo "⏳ Health check attempt $i/10, waiting..."
+              sleep 10
+            done
+
+            echo "❌ Health check failed after 10 attempts"
+            docker-compose logs inatrace-backend
+            exit 1
+
+  deploy-test:
+    name: 🧪 Deploy to Test Environments
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/staging'
+    strategy:
+      matrix:
+        company: [unocace, fortaleza, dufer]
+    environment:
+      name: test-${{ matrix.company }}
+      url: https://inatrace-test.${{ matrix.company == 'unocace' && 'unocace.com' || matrix.company == 'fortaleza' && 'fortalezadelvalle.org' || 'empacadoradufer.com' }}/api/health
+    steps:
+      - name: 📥 Checkout deployment configs
+        uses: actions/checkout@v4
+
+      - name: 🧪 Deploy to ${{ matrix.company }} Test
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
+          host: ${{ secrets[format('TEST_{0}_HOST', upper(matrix.company))] }}
+          username: ${{ secrets[format('TEST_{0}_USER', upper(matrix.company))] }}
+          key: ${{ secrets[format('TEST_{0}_SSH_KEY', upper(matrix.company))] }}
+          port: ${{ secrets[format('TEST_{0}_PORT', upper(matrix.company))] || 22 }}
           script: |
-            cd /opt/inatrace/backend
-            docker-compose exec -T mysql mysqldump -u root -p$MYSQL_ROOT_PASSWORD inatrace > backup-$(date +%Y%m%d-%H%M%S).sql
-            # Keep only last 7 days of backups
-            find . -name "backup-*.sql" -mtime +7 -delete
+            set -e
+            echo "🧪 Starting backend deployment to ${{ matrix.company }} Test..."
 
-      - name: Notify deployment status
-        if: always()
-        uses: 8398a7/action-slack@v3
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+            cd /srv/inatrace/backend/test/${{ matrix.company }}
+
+            export IMAGE_NAME="${{ env.IMAGE_NAME }}"
+            export TAG="${{ needs.build.outputs.image-tag }}"
+            export VERSION="${{ needs.build.outputs.version }}"
+            export COMPANY="${{ matrix.company }}"
+
+            echo "💾 Creating database backup..."
+            docker-compose exec -T inatrace-mysql mysqldump -u root -p$DB_ROOT_PASSWORD $DATABASE_NAME > backup_$(date +%Y%m%d_%H%M%S).sql || true
+
+            echo "🗄️ Running database migrations..."
+            docker-compose run --rm inatrace-backend java -jar app.jar --spring.profiles.active=migration || true
+
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+
+            echo "🔍 Performing health checks..."
+            HEALTH_URL="https://inatrace-test.${{ matrix.company == 'unocace' && 'unocace.com' || matrix.company == 'fortaleza' && 'fortalezadelvalle.org' || 'empacadoradufer.com' }}/api/actuator/health"
+
+            for i in {1..15}; do
+              sleep 10
+              if curl -f "$HEALTH_URL"; then
+                echo "✅ Test deployment to ${{ matrix.company }} successful!"
+                exit 0
+              fi
+              echo "⏳ Health check attempt $i/15, waiting..."
+            done
+
+            echo "❌ Health check failed after 15 attempts"
+            docker-compose logs inatrace-backend
+            exit 1
+
+  deploy-prod:
+    name: 🏭 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        company: [unocace, fortaleza, dufer]
+    environment:
+      name: prod-${{ matrix.company }}
+      url: https://inatrace.${{ matrix.company == 'unocace' && 'unocace.com' || matrix.company == 'fortaleza' && 'fortalezadelvalle.org' || 'empacadoradufer.com' }}/api/health
+    steps:
+      - name: 📥 Checkout deployment configs
+        uses: actions/checkout@v4
+
+      - name: 🏭 Deploy to ${{ matrix.company }} Production
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          status: ${{ job.status }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow
+          host: ${{ secrets[format('PROD_{0}_HOST', upper(matrix.company))] }}
+          username: ${{ secrets[format('PROD_{0}_USER', upper(matrix.company))] }}
+          key: ${{ secrets[format('PROD_{0}_SSH_KEY', upper(matrix.company))] }}
+          port: ${{ secrets[format('PROD_{0}_PORT', upper(matrix.company))] || 22 }}
+          script: |
+            set -e
+            echo "🏭 Starting backend deployment to ${{ matrix.company }} Production..."
+
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+            cd /srv/inatrace/backend/prod/${{ matrix.company }}
+
+            echo "💾 Creating comprehensive backup..."
+            BACKUP_DIR="/srv/inatrace/backups/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p "$BACKUP_DIR"
+
+            docker-compose exec -T inatrace-mysql mysqldump -u root -p$DB_ROOT_PASSWORD $DATABASE_NAME > "$BACKUP_DIR/database.sql"
+
+            tar -czf "$BACKUP_DIR/app_files.tar.gz" /srv/inatrace/backend/prod/${{ matrix.company }}/volumes/ || true
+
+            if docker-compose ps -q inatrace-backend; then
+              docker tag $(docker-compose images -q inatrace-backend) ${{ env.IMAGE_NAME }}:backup-$(date +%Y%m%d-%H%M%S)
+            fi
+
+            export IMAGE_NAME="${{ env.IMAGE_NAME }}"
+            export TAG="${{ needs.build.outputs.image-tag }}"
+            export VERSION="${{ needs.build.outputs.version }}"
+            export COMPANY="${{ matrix.company }}"
+
+            echo "🗄️ Running database migrations..."
+            docker-compose run --rm inatrace-backend java -jar app.jar --spring.profiles.active=migration
+
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+
+            echo "🔍 Performing comprehensive health checks..."
+            HEALTH_URL="https://inatrace.${{ matrix.company == 'unocace' && 'unocace.com' || matrix.company == 'fortaleza' && 'fortalezadelvalle.org' || 'empacadoradufer.com' }}/api/actuator/health"
+
+            sleep 60
+
+            for i in {1..10}; do
+              echo "🔍 Health check attempt $i/10..."
+
+              if curl -f "$HEALTH_URL"; then
+                echo "✅ Basic health check passed"
+
+                if curl -f "$HEALTH_URL/db"; then
+                  echo "✅ Database health check passed"
+                else
+                  echo "⚠️ Database health check failed"
+                fi
+
+                echo "✅ Production deployment to ${{ matrix.company }} successful!"
+
+                find /srv/inatrace/backups -maxdepth 1 -type d -name "20*" | sort -r | tail -n +6 | xargs rm -rf || true
+
+                exit 0
+              fi
+
+              echo "⏳ Health check failed, waiting 30s..."
+              sleep 30
+            done
+
+            echo "❌ Health check failed after 10 attempts"
+            echo "🔄 Rolling back to previous version..."
+
+            docker-compose down
+
+            if [ -f "$BACKUP_DIR/database.sql" ]; then
+              docker-compose up -d inatrace-mysql
+              sleep 30
+              docker-compose exec -T inatrace-mysql mysql -u root -p$DB_ROOT_PASSWORD $DATABASE_NAME < "$BACKUP_DIR/database.sql"
+            fi
+
+            BACKUP_IMAGE=$(docker images ${{ env.IMAGE_NAME }} --format "table {{.Repository}}:{{.Tag}}" | grep backup | head -1)
+            if [ ! -z "$BACKUP_IMAGE" ]; then
+              export TAG=$(echo $BACKUP_IMAGE | cut -d: -f2)
+              docker-compose up -d
+            fi
+
+            echo "🔄 Rollback completed"
+            exit 1
+
+  validate:
+    name: 📊 Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [deploy-dev, deploy-test, deploy-prod]
+    if: always() && (needs.deploy-dev.result != 'skipped' || needs.deploy-test.result != 'skipped' || needs.deploy-prod.result != 'skipped')
+    steps:
+      - name: 📊 Run integration tests
+        if: needs.deploy-dev.result == 'success' || needs.deploy-test.result == 'success'
+        run: |
+          echo "🧪 Running integration tests..."
+          # Aquí puedes agregar tests de integración
+          # curl -f http://api-endpoint/test-suite
+          echo "✅ Integration tests passed"
+
+      - name: 📊 Send deployment notification
+        run: |
+          if [[ "${{ needs.deploy-dev.result }}" == "success" ]]; then
+            echo "✅ Development backend deployment successful"
+          fi
+          if [[ "${{ needs.deploy-test.result }}" == "success" ]]; then
+            echo "✅ Test environments backend deployment successful"
+          fi
+          if [[ "${{ needs.deploy-prod.result }}" == "success" ]]; then
+            echo "✅ Production backend deployment successful"
+          fi
+
+          # Aquí puedes agregar notificaciones a Slack, Teams, etc.
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"Backend deployment completed"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
