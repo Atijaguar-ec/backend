@@ -239,7 +239,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Preflight: validate required secrets (SSH & App)
+      - name: Preflight - validate required secrets (SSH & App)
         run: |
           missing=0
           [ -z "${{ secrets.TEST_UNOCACE_HOST }}" ] && echo "Missing secret: TEST_UNOCACE_HOST" && missing=1
