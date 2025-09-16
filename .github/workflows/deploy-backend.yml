@@ -2,7 +2,7 @@ name: Deploy Backend to Hetzner
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, staging]
   pull_request:
     branches: [main]
 
@@ -152,6 +152,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Compute lowercase image ref (for saving)
+        id: image_ref
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Pull staging tag (for artifact)
+        if: github.ref == 'refs/heads/staging'
+        run: docker pull "${{ steps.image_ref.outputs.image }}:staging"
+
+      - name: Save Docker image as tar (staging)
+        if: github.ref == 'refs/heads/staging'
+        run: docker save "${{ steps.image_ref.outputs.image }}:staging" -o be-image.tar
+
+      - name: Upload backend image artifact (staging)
+        if: github.ref == 'refs/heads/staging'
+        uses: actions/upload-artifact@v4
+        with:
+          name: be-image
+          path: be-image.tar
+          if-no-files-found: error
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -202,3 +226,130 @@ jobs:
       - name: Skip Slack notification
         if: always()
         run: echo "Slack notification disabled"
+
+  deploy-test-unocace:
+    name: Deploy Backend to UNOCACE Test (staging)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment:
+      name: test-unocace
+      url: https://inatrace-test.unocace.com
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Preflight: validate required secrets (SSH & App)
+        run: |
+          missing=0
+          [ -z "${{ secrets.TEST_UNOCACE_HOST }}" ] && echo "Missing secret: TEST_UNOCACE_HOST" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_USER }}" ] && echo "Missing secret: TEST_UNOCACE_USER" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_MAIL_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}" ] && echo "Missing secret: TEST_UNOCACE_REQUESTLOG_TOKEN" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}" ] && echo "Missing secret: TEST_UNOCACE_EXCHANGERATE_APIKEY" && missing=1
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Ensure remote directory exists
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/test/unocace
+
+      - name: Upload docker-compose.yml (unocace test)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: "deploy/backend/test/unocace/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
+
+      - name: Prepare .env from template
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.TEST_UNOCACE_DATASOURCE_USERNAME }}"
+          if [ -z "$DB_USER" ]; then DB_USER="user_test_unocace"; fi
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=staging
+          DATABASE_NAME=inatrace_db_test
+          DB_ROOT_PASSWORD=${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}
+          EXCHANGERATE_APIKEY=${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=test-unocace@inatrace.com
+          MAIL_PASSWORD=${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
+
+      - name: Download backend image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (backend)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
+
+      - name: Deploy on server (load image and compose up)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/test/unocace
+            # Ensure network
+            docker network inspect inatrace-backend-unocace-network >/dev/null 2>&1 || docker network create inatrace-backend-unocace-network
+            # Load image from artifact
+            docker load -i be-image.tar
+            # Deploy
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            # Health check
+            for i in {1..12}; do
+              sleep 10
+              if curl -fsS "https://inatrace-test.unocace.com/api/actuator/health" >/dev/null; then
+                echo "✅ Backend UNOCACE staging deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12)"
+            done
+            echo "❌ Backend health check failed" && exit 1
