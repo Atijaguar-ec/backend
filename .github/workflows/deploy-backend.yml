@@ -261,6 +261,7 @@ jobs:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          debug: true
           script: |
             mkdir -p /opt/inatrace/deploy/backend/test/unocace
 
@@ -339,6 +340,7 @@ jobs:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          debug: true
           script: |
             set -e
             cd /opt/inatrace/deploy/backend/test/unocace
