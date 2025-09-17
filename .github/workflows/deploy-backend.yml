@@ -760,6 +760,12 @@ jobs:
           script: |
             mkdir -p /srv/inatrace/backend/dev
 
+      - name: Verify local compose path (dev)
+        run: |
+          set -e
+          ls -lah deploy/backend/dev || true
+          test -f deploy/backend/dev/docker-compose.yml || { echo "Missing deploy/backend/dev/docker-compose.yml"; exit 1; }
+
       - name: Upload docker-compose.yml (dev)
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -768,6 +774,7 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           source: "deploy/backend/dev/docker-compose.yml"
           target: "/srv/inatrace/backend/dev"
+          debug: true
 
       - name: Prepare .env (dev)
         run: |
@@ -796,6 +803,12 @@ jobs:
           MAIL_PASSWORD=$MAIL_PASS
           EOF
 
+      - name: Verify .env exists (dev)
+        run: |
+          set -e
+          ls -lah .
+          test -s .env || { echo ".env is missing or empty"; exit 1; }
+
       - name: Upload .env (dev)
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -804,6 +817,7 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           source: ".env"
           target: "/srv/inatrace/backend/dev"
+          debug: true
 
       - name: Download backend image artifact (dev)
         uses: actions/download-artifact@v4
@@ -826,6 +840,7 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           source: "be-image.tar"
           target: "/srv/inatrace/backend/dev"
+          debug: true
 
       - name: Deploy on server (dev)
         uses: appleboy/ssh-action@v1.0.0
