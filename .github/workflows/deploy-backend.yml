@@ -248,8 +248,9 @@ jobs:
           [ -z "${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DB_ROOT_PASSWORD" && missing=1
           [ -z "${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DATASOURCE_PASSWORD" && missing=1
           [ -z "${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_MAIL_PASSWORD" && missing=1
-          [ -z "${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}" ] && echo "Missing secret: TEST_UNOCACE_REQUESTLOG_TOKEN" && missing=1
-          [ -z "${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}" ] && echo "Missing secret: TEST_UNOCACE_EXCHANGERATE_APIKEY" && missing=1
+          # Optional secrets: warn if missing; defaults will be used later
+          [ -z "${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}" ] && echo "Warning: Missing optional secret: TEST_UNOCACE_REQUESTLOG_TOKEN (will use default)"
+          [ -z "${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}" ] && echo "Warning: Missing optional secret: TEST_UNOCACE_EXCHANGERATE_APIKEY (will use default)"
           if [ "$missing" -ne 0 ]; then
             exit 1
           fi
@@ -278,6 +279,11 @@ jobs:
           IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
           DB_USER="${{ secrets.TEST_UNOCACE_DATASOURCE_USERNAME }}"
           if [ -z "$DB_USER" ]; then DB_USER="user_test_unocace"; fi
+          # Optional values with defaults if secrets are missing
+          REQ_TOKEN="${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}"
+          if [ -z "$REQ_TOKEN" ]; then REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"; fi
+          EXR_KEY="${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}"
+          if [ -z "$EXR_KEY" ]; then EXR_KEY="dummy-test-key"; fi
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=staging
@@ -288,8 +294,8 @@ jobs:
           FILE_STORAGE_ROOT=/app/files
           IMPORT_PATH=/app/import
           DOCUMENTS_ROOT=/app/documents
-          REQUESTLOG_TOKEN=${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}
-          EXCHANGERATE_APIKEY=${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
           MAIL_HOST=smtp.gmail.com
           MAIL_PORT=587
           MAIL_USERNAME=test-unocace@inatrace.com
