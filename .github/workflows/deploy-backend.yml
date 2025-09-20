@@ -260,7 +260,13 @@ jobs:
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           debug: true
           script: |
-            mkdir -p /opt/inatrace/deploy/backend/test/unocace
+            mkdir -p /opt/inatrace/deploy/test/unocace
+
+      - name: Verify local compose path (unocace test)
+        run: |
+          set -e
+          ls -lah /opt/inatrace/deploy/test/unocace || true
+          test -f /opt/inatrace/deploy/test/unocace/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/test/unocace/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (unocace test)
         uses: appleboy/scp-action@v0.1.7
@@ -268,8 +274,9 @@ jobs:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
-          source: "deploy/backend/test/unocace/docker-compose.yml"
-          target: "/opt/inatrace/deploy/backend/test/unocace"
+          source: "/opt/inatrace/deploy/test/unocace/docker-compose.yml"
+          target: "/opt/inatrace/deploy/test/unocace"
+          debug: true
 
       - name: Prepare .env from template
         run: |
@@ -307,7 +314,8 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: ".env"
-          target: "/opt/inatrace/deploy/backend/test/unocace"
+          target: "/opt/inatrace/deploy/test/unocace"
+          debug: true
 
       - name: Download backend image artifact
         uses: actions/download-artifact@v4
@@ -329,7 +337,8 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: "be-image.tar"
-          target: "/opt/inatrace/deploy/backend/test/unocace"
+          target: "/opt/inatrace/deploy/test/unocace"
+          debug: true
 
       - name: Deploy on server (load image and compose up)
         uses: appleboy/ssh-action@v1.0.0
@@ -340,7 +349,7 @@ jobs:
           debug: true
           script: |
             set -e
-            cd /opt/inatrace/deploy/backend/test/unocace
+            cd /opt/inatrace/deploy/test/unocace
             # Ensure network
             docker network inspect inatrace-backend-unocace-network >/dev/null 2>&1 || docker network create inatrace-backend-unocace-network
             # Load image from artifact
@@ -391,14 +400,21 @@ jobs:
           script: |
             mkdir -p /opt/inatrace/deploy/backend/prod/fortaleza
 
+      - name: Verify local compose path (prod fortaleza)
+        run: |
+          set -e
+          ls -lah /opt/inatrace/deploy/backend/prod/fortaleza || true
+          test -f /opt/inatrace/deploy/backend/prod/fortaleza/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/prod/fortaleza/docker-compose.yml"; exit 1; }
+
       - name: Upload docker-compose.yml (prod fortaleza)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_FORTALEZA_HOST }}
           username: ${{ secrets.PROD_FORTALEZA_USER }}
           password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
-          source: "deploy/backend/prod/fortaleza/docker-compose.yml"
+          source: "/opt/inatrace/deploy/backend/prod/fortaleza/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/prod/fortaleza"
+          debug: true
 
       - name: Prepare .env (prod fortaleza)
         run: |
@@ -432,6 +448,7 @@ jobs:
           password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
           source: ".env"
           target: "/opt/inatrace/deploy/backend/prod/fortaleza"
+          debug: true
 
       - name: Download backend image artifact (prod fortaleza)
         uses: actions/download-artifact@v4
@@ -454,6 +471,7 @@ jobs:
           password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
           source: "be-image.tar"
           target: "/opt/inatrace/deploy/backend/prod/fortaleza"
+          debug: true
 
       - name: Pre-deploy DB backup (prod fortaleza)
         uses: appleboy/ssh-action@v1.0.0
@@ -526,14 +544,21 @@ jobs:
           script: |
             mkdir -p /opt/inatrace/deploy/backend/test/dufer
 
+      - name: Verify local compose path (dufer)
+        run: |
+          set -e
+          ls -lah /opt/inatrace/deploy/backend/test/dufer || true
+          test -f /opt/inatrace/deploy/backend/test/dufer/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/test/dufer/docker-compose.yml"; exit 1; }
+
       - name: Upload docker-compose.yml (dufer)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.TEST_DUFER_HOST }}
           username: ${{ secrets.TEST_DUFER_USER }}
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
-          source: "deploy/backend/test/dufer/docker-compose.yml"
+          source: "/opt/inatrace/deploy/backend/test/dufer/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/test/dufer"
+          debug: true
 
       - name: Prepare .env (dufer)
         run: |
@@ -567,6 +592,7 @@ jobs:
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
           source: ".env"
           target: "/opt/inatrace/deploy/backend/test/dufer"
+          debug: true
 
       - name: Download backend image artifact (dufer)
         uses: actions/download-artifact@v4
@@ -589,6 +615,7 @@ jobs:
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
           source: "be-image.tar"
           target: "/opt/inatrace/deploy/backend/test/dufer"
+          debug: true
 
       - name: Deploy on server (dufer)
         uses: appleboy/ssh-action@v1.0.0
@@ -644,14 +671,21 @@ jobs:
           script: |
             mkdir -p /opt/inatrace/deploy/backend/test/fortaleza
 
+      - name: Verify local compose path (fortaleza)
+        run: |
+          set -e
+          ls -lah deploy/test/fortaleza || true
+          test -f deploy/test/fortaleza/docker-compose.yml || { echo "Missing deploy/test/fortaleza/docker-compose.yml"; exit 1; }
+
       - name: Upload docker-compose.yml (fortaleza)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.TEST_FORTALEZA_HOST }}
           username: ${{ secrets.TEST_FORTALEZA_USER }}
           password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
-          source: "deploy/backend/test/fortaleza/docker-compose.yml"
+          source: "deploy/test/fortaleza/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
 
       - name: Prepare .env (fortaleza)
         run: |
@@ -685,6 +719,7 @@ jobs:
           password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
           source: ".env"
           target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
 
       - name: Download backend image artifact (fortaleza)
         uses: actions/download-artifact@v4
@@ -707,6 +742,7 @@ jobs:
           password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
           source: "be-image.tar"
           target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
 
       - name: Deploy on server (fortaleza)
         uses: appleboy/ssh-action@v1.0.0
@@ -758,13 +794,13 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           script: |
-            mkdir -p /srv/inatrace/backend/dev
+            mkdir -p /opt/inatrace/deploy/backend/dev
 
       - name: Verify local compose path (dev)
         run: |
           set -e
-          ls -lah deploy/backend/dev || true
-          test -f deploy/backend/dev/docker-compose.yml || { echo "Missing deploy/backend/dev/docker-compose.yml"; exit 1; }
+          ls -lah /opt/inatrace/deploy/backend/dev || true
+          test -f /opt/inatrace/deploy/backend/dev/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/dev/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (dev)
         uses: appleboy/scp-action@v0.1.7
@@ -772,8 +808,8 @@ jobs:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: "deploy/backend/dev/docker-compose.yml"
-          target: "/srv/inatrace/backend/dev"
+          source: "/opt/inatrace/deploy/backend/dev/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/dev"
           debug: true
 
       - name: Prepare .env (dev)
@@ -897,14 +933,21 @@ jobs:
           script: |
             mkdir -p /opt/inatrace/deploy/backend/prod/unocace
 
+      - name: Verify local compose path (prod unocace)
+        run: |
+          set -e
+          ls -lah /opt/inatrace/deploy/backend/prod/unocace || true
+          test -f /opt/inatrace/deploy/backend/prod/unocace/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/prod/unocace/docker-compose.yml"; exit 1; }
+
       - name: Upload docker-compose.yml (prod unocace)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
-          source: "deploy/backend/prod/unocace/docker-compose.yml"
+          source: "/opt/inatrace/deploy/backend/prod/unocace/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/prod/unocace"
+          debug: true
 
       - name: Prepare .env (prod unocace)
         run: |
@@ -938,6 +981,7 @@ jobs:
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           source: ".env"
           target: "/opt/inatrace/deploy/backend/prod/unocace"
+          debug: true
 
       - name: Download backend image artifact (prod unocace)
         uses: actions/download-artifact@v4
@@ -960,6 +1004,7 @@ jobs:
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           source: "be-image.tar"
           target: "/opt/inatrace/deploy/backend/prod/unocace"
+          debug: true
 
       - name: Pre-deploy DB backup (prod unocace)
         uses: appleboy/ssh-action@v1.0.0
