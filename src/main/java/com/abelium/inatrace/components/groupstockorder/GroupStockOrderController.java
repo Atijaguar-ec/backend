@@ -30,7 +30,7 @@ public class GroupStockOrderController {
             @Valid @Parameter(description = "Available orders only") @RequestParam(value = "availableOnly", required = false) Boolean availableOnly,
             @Valid @Parameter(description = "Is purchase orders only") @RequestParam(value = "isPurchaseOrderOnly", required = false) Boolean isPurchaseOrderOnly,
             @Valid @Parameter(description = "Semi-product ID") @RequestParam(value = "semiProductId", required = false) Long semiProductId,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
     ) {
         return new ApiPaginatedResponse<>(this.groupStockOrderService.getGroupedStockOrderList(
                 request,

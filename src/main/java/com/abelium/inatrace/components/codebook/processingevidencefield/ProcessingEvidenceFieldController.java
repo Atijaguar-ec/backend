@@ -35,7 +35,7 @@ public class ProcessingEvidenceFieldController {
 	@Operation(summary ="Get a paginated list of processing evidence fields.")
 	public ApiPaginatedResponse<ApiProcessingEvidenceField> getProcessingEvidenceFieldList(
 			@Valid ApiPaginatedRequest request,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(processingEvidenceFieldService.getProcessingEvidenceFieldList(request, language));
 	}
@@ -46,7 +46,7 @@ public class ProcessingEvidenceFieldController {
 	public ApiPaginatedResponse<ApiProcessingEvidenceField> listProcessingEvidenceFieldsByValueChain(
 		@Valid @Parameter(description = "Value chain ID", required = true) @PathVariable("id") Long valueChainId,
 		@Valid ApiPaginatedRequest request,
-		@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+		@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(processingEvidenceFieldService.listProcessingEvidenceFieldsByValueChain(valueChainId, request, language));
 	}
@@ -57,7 +57,7 @@ public class ProcessingEvidenceFieldController {
 			@Parameter(description = "Value chain IDs", required = true) @RequestParam(value = "valueChainIds")
 			List<Long> valueChainIds,
 			@Valid ApiPaginatedRequest request,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
 
 		return new ApiPaginatedResponse<>(processingEvidenceFieldService.listProcessingEvidenceFieldsByValueChainList(valueChainIds, request, language));
 	}
@@ -66,7 +66,7 @@ public class ProcessingEvidenceFieldController {
 	@Operation(summary ="Get a single processing evidence field with the provided ID.")
 	public ApiResponse<ApiProcessingEvidenceField> getProcessingEvidenceField(
 			@Valid @Parameter(description = "ProcessingEvidenceField ID", required = true) @PathVariable("id") Long id,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
 		return new ApiResponse<>(processingEvidenceFieldService.getProcessingEvidenceField(id, language));
 	}

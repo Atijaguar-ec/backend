@@ -31,7 +31,7 @@ public class ProcessingOrderController {
     public ApiResponse<ApiProcessingOrder> getProcessingOrder(
             @Valid @Parameter(description = "ProcessingOrder ID", required = true) @PathVariable("id") Long id,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiResponse<>(processingOrderService.getProcessingOrder(id, authUser, language));
     }
@@ -41,7 +41,7 @@ public class ProcessingOrderController {
     public ApiResponse<ApiBaseEntity> createOrUpdateProcessingOrder(
             @Valid @RequestBody ApiProcessingOrder apiProcessingOrder,
             @AuthenticationPrincipal CustomUserDetails authUser,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
 
         return new ApiResponse<>(processingOrderService.createOrUpdateProcessingOrder(apiProcessingOrder, authUser, language));
     }

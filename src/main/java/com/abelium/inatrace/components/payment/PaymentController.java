@@ -125,7 +125,7 @@ public class PaymentController {
 	public ResponseEntity<byte[]> exportPaymentsByCompany(
 			@AuthenticationPrincipal CustomUserDetails authUser,
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
 	) throws ApiException {
 
 		byte[] response;
@@ -164,7 +164,7 @@ public class PaymentController {
 	public ResponseEntity<byte[]> exportBulkPaymentsByCompany(
 			@AuthenticationPrincipal CustomUserDetails authUser,
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
 	) throws ApiException {
 
 		byte[] response;

@@ -13,7 +13,7 @@ tag=$2
 push=$3
 
 if [ "$repoName" == "" ] || [ "$tag" == "" ]; then
-  echo "Usage: $0 <repo name (local or remote)> <tag>"
+  echo "Usage: $0 <repo name (local or remote dev)> <tag>"
   exit 1
 fi
 

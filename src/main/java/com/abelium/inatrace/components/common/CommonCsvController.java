@@ -87,7 +87,7 @@ public class CommonCsvController {
 	@PostMapping(value = "purchases/company/{id}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 	@Operation(summary ="Generate a csv file with a list of filtered purchases by companyId.")
 	public @ResponseBody byte[] generatePurchasesByCompanyCsv(
-			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language,
 			@AuthenticationPrincipal CustomUserDetails authUser,
 			@Valid ApiPaginatedRequest request,
 			@Valid @Parameter(description = "Company ID", required = true) @PathVariable("id") Long companyId,

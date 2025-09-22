@@ -80,7 +80,7 @@ public class DashboardController {
             @Valid @Parameter(description = "Production date range end") @RequestParam(value = "productionDateEnd", required = false) LocalDate productionDateEnd,
             @Valid @Parameter(description = "Aggregation type", required = true) @RequestParam(value = "aggregationType") ApiAggregationTimeUnit aggregationType,
             @Valid @Parameter(description = "Export type", required = true) @RequestParam(value = "exportType") ApiExportType exportType,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
     ) throws ApiException {
 
         byte[] response = null;
@@ -140,7 +140,7 @@ public class DashboardController {
     })
     public ResponseEntity<byte[]> exportProcessingPerformanceData(
             @Valid @RequestBody ApiProcessingPerformanceRequest processingPerformanceRequest,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
     ) throws ApiException {
 
         byte[] response = null;

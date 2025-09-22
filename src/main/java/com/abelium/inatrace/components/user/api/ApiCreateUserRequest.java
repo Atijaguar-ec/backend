@@ -34,7 +34,7 @@ public class ApiCreateUserRequest {
     public String surname = null;
     
 	@Schema(description = "language")
-	public Language language = Language.EN;
+	public Language language = Language.ES;
     
 	public String getEmail() {
 		return email;

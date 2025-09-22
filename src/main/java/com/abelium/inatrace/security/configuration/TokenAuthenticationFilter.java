@@ -41,10 +41,28 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             	}
             }
         } catch (Exception e) {
-            logger.info("Error filtering token {}", token);
+            // Only log if token was actually provided (not null/empty)
+            if (StringUtils.hasText(token)) {
+                logger.warn("Error filtering token {}", token);
+            }
         }
 
         filterChain.doFilter(httpServletRequest, httpServletResponse);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        
+        // Skip authentication for public endpoints
+        return path.startsWith("/v3/api-docs") ||
+               path.startsWith("/swagger-ui") ||
+               path.startsWith("/actuator/health") ||
+               path.equals("/") ||
+               path.startsWith("/static/") ||
+               path.startsWith("/css/") ||
+               path.startsWith("/js/") ||
+               path.startsWith("/images/");
     }
 
     private String getAccessTokenFromCookie(HttpServletRequest request) {

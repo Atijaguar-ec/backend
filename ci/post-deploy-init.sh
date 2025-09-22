@@ -103,6 +103,30 @@ fi
 # Crear empresa y asignar usuario admin como COMPANY_ADMIN
 . "$SCRIPT_DIR/scripts/init-company-and-admin.sh"
 
+# Verificar si Ecuador existe en la tabla Country y añadirlo si no existe
+echo ""
+echo "🌎 Verificando país Ecuador en la base de datos..."
+
+# Verificar si Ecuador ya existe
+ecuador_exists=$(execute_sql "
+    SELECT COUNT(*) 
+    FROM Country 
+    WHERE code = 'EC';
+" | tail -n 1)
+
+if [ "$ecuador_exists" -eq 0 ]; then
+    echo "🔧 Añadiendo Ecuador a la tabla Country..."
+    
+    execute_sql "
+        INSERT INTO Country (code, name, latitude, longitude)
+        VALUES ('EC', 'Ecuador', -1.831239, -78.183406);
+    "
+    
+    echo "✅ Ecuador añadido exitosamente a la base de datos."
+else
+    echo "ℹ️ Ecuador ya existe en la base de datos. No se realizarán cambios."
+fi
+
 # Mostrar usuarios existentes
 echo ""
 echo "👥 Usuarios actuales en el sistema:"

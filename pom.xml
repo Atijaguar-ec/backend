@@ -11,10 +11,10 @@
 	</parent>
 	
 	<groupId>com.abelium.INATrace</groupId>
-	<artifactId>coffee-backend</artifactId>
+	<artifactId>cacao-backend</artifactId>
 	<version>2.38.0-SNAPSHOT</version>
-	<name>Coffee backend</name>
-	<description>Coffee backend services</description>
+	<name>Cacao backend</name>
+	<description>Cacao backend services</description>
 
 	<properties>
 		<java.version>17</java.version>
@@ -45,6 +45,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <!-- MacOS DNS resolver for Netty -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-native-macos</artifactId>
+            <classifier>osx-x86_64</classifier>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-native-macos</artifactId>
+            <classifier>osx-aarch_64</classifier>
         </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -136,6 +147,13 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.3.0</version>
+        </dependency>
+
+        <!-- Ensure compatible Commons IO version for Apache POI 5.3.0 -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.16.1</version>
         </dependency>
 
         <!-- PDF Creation and manipulation -->

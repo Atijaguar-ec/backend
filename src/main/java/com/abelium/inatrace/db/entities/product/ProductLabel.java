@@ -51,7 +51,7 @@ public class ProductLabel extends BaseEntity {
 	 */
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = Lengths.ENUM)
-	private Language language = Language.EN;
+	private Language language = Language.ES;
 	
 	/**
 	 * product's fields displayed for this label

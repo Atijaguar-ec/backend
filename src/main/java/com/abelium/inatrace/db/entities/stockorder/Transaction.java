@@ -17,6 +17,10 @@ import java.math.BigDecimal;
 		name = "Transaction.getOutputTransactionsByStockOrderId",
 		query = "SELECT t FROM Transaction t WHERE t.sourceStockOrder.id = :stockOrderId")
 })
+@Table(name = "Transaction", indexes = {
+        @Index(name = "idx_transaction_source_stock_order", columnList = "sourceStockOrder_id"),
+        @Index(name = "idx_transaction_input_measure_unit_type", columnList = "inputMeasureUnitType_id")
+})
 @Entity
 public class Transaction extends TimestampEntity {
 	
@@ -29,7 +33,8 @@ public class Transaction extends TimestampEntity {
 	@Column
 	private Long initiationUserId;
 	
-	@OneToOne
+	@ManyToOne
+	@JoinColumn(name = "sourceStockOrder_id")
 	private StockOrder sourceStockOrder;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -56,7 +61,8 @@ public class Transaction extends TimestampEntity {
 	@Column
 	private Long shipmentId;
 
-	@OneToOne
+	@ManyToOne
+	@JoinColumn(name = "inputMeasureUnitType_id")
 	private MeasureUnitType inputMeasureUnitType;
 	
 	@Column

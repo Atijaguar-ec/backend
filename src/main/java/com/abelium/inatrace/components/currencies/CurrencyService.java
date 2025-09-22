@@ -32,6 +32,12 @@ public class CurrencyService extends BaseService {
     @Value("${INAtrace.exchangerate.apiKey}")
     private String apiKey;
 
+    @Value("${INATrace.exchangerate.enabled:true}")
+    private boolean exchangeRateEnabled;
+
+    @Value("${INATrace.exchangerate.cacheTtlMinutes:60}")
+    private int cacheTtlMinutes;
+
     public BigDecimal convertFromEur(String to, BigDecimal value) {
         return value.multiply(em.createNamedQuery("CurrencyPair.latestRate", BigDecimal.class).setParameter(CURRENCY, to).getResultList().get(0));
     }
@@ -96,41 +102,64 @@ public class CurrencyService extends BaseService {
     }
 
     public void fetchRates(Date date) {
-    // Evita llamadas automáticas en desarrollo
-    String activeProfile = System.getProperty("spring.profiles.active", "");
-    if ("dev".equalsIgnoreCase(activeProfile) || "local".equalsIgnoreCase(activeProfile)) {
-        System.out.println("[INFO] fetchRates() ignorado en entorno de desarrollo ('" + activeProfile + "').");
-        return;
-    }
+        // Check if exchange rate service is enabled
+        if (!exchangeRateEnabled) {
+            return;
+        }
 
-        String isoDate = DateTimeFormatter.ISO_LOCAL_DATE.format(date.toInstant().atZone(ZoneId.of("GMT")));
-        WebClient webClient = WebClient.create("https://api.exchangerate.host/" + isoDate + "?base=EUR");
-        ApiCurrencyRatesResponse apiCurrencyRatesResponse = webClient
-                .get()
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve().bodyToMono(ApiCurrencyRatesResponse.class)
-                .doOnError(Throwable::printStackTrace)
-                .onErrorReturn(new ApiCurrencyRatesResponse())
-                .block();
-        if (apiCurrencyRatesResponse != null && apiCurrencyRatesResponse.isSuccess()) {
-            Map<String, BigDecimal> rates = apiCurrencyRatesResponse.getRates();
-            Date current = apiCurrencyRatesResponse.getDate();
+        // Check if we have recent rates (within cache TTL)
+        if (hasRecentRates(date)) {
+            return;
+        }
 
-            List<String> enabled = currencyTypeService.getEnabledCurrencyCodes();
+        try {
+            String isoDate = DateTimeFormatter.ISO_LOCAL_DATE.format(date.toInstant().atZone(ZoneId.of("GMT")));
+            WebClient webClient = WebClient.create("https://api.exchangerate.host/" + isoDate + "?access_key=" + apiKey + "&base=EUR");
+            ApiCurrencyRatesResponse apiCurrencyRatesResponse = webClient
+                    .get()
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve().bodyToMono(ApiCurrencyRatesResponse.class)
+                    .block();
+            if (apiCurrencyRatesResponse != null && apiCurrencyRatesResponse.isSuccess()) {
+                Map<String, BigDecimal> rates = apiCurrencyRatesResponse.getRates();
+                Date current = apiCurrencyRatesResponse.getDate();
 
-            for (Map.Entry<String, BigDecimal> entry : rates.entrySet()) {
-                if (enabled.contains(entry.getKey()) && rateAtDateQuery(entry.getKey(), current).getResultList().isEmpty()) {
-                    CurrencyPair currencyPair = new CurrencyPair();
-                    CurrencyType from = currencyTypeService.getCurrencyTypeByCode("EUR");
-                    CurrencyType to = currencyTypeService.getCurrencyTypeByCode(entry.getKey());
-                    currencyPair.setFrom(from);
-                    currencyPair.setTo(to);
-                    currencyPair.setDate(current);
-                    currencyPair.setValue(entry.getValue());
-                    em.persist(currencyPair);
+                List<String> enabled = currencyTypeService.getEnabledCurrencyCodes();
+
+                for (Map.Entry<String, BigDecimal> entry : rates.entrySet()) {
+                    if (enabled.contains(entry.getKey()) && rateAtDateQuery(entry.getKey(), current).getResultList().isEmpty()) {
+                        CurrencyPair currencyPair = new CurrencyPair();
+                        CurrencyType from = currencyTypeService.getCurrencyTypeByCode("EUR");
+                        CurrencyType to = currencyTypeService.getCurrencyTypeByCode(entry.getKey());
+                        currencyPair.setFrom(from);
+                        currencyPair.setTo(to);
+                        currencyPair.setDate(current);
+                        currencyPair.setValue(entry.getValue());
+                        em.persist(currencyPair);
+                    }
                 }
             }
+        } catch (Exception e) {
+            // Log error but don't throw - graceful degradation
+            System.err.println("Error fetching exchange rates: " + e.getMessage());
         }
+    }
+
+    /**
+     * Check if we have recent exchange rates within the cache TTL period
+     */
+    private boolean hasRecentRates(Date targetDate) {
+        long cacheMillis = cacheTtlMinutes * 60 * 1000L;
+        Date cutoffDate = new Date(System.currentTimeMillis() - cacheMillis);
+        
+        TypedQuery<Long> query = em.createQuery(
+            "SELECT COUNT(cp) FROM CurrencyPair cp WHERE cp.date >= :cutoffDate AND cp.date <= :targetDate", 
+            Long.class
+        );
+        query.setParameter("cutoffDate", cutoffDate);
+        query.setParameter("targetDate", targetDate);
+        
+        return query.getSingleResult() > 0;
     }
 
     private TypedQuery<BigDecimal> rateAtDateQuery(String currency, Date date) {

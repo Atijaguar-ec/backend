@@ -106,6 +106,7 @@ public final class FacilityMapper {
 		apiFacilityType.setId(entity.getFacilityType().getId());
 		apiFacilityType.setCode(entity.getFacilityType().getCode());
 		apiFacilityType.setLabel(entity.getFacilityType().getLabel());
+		apiFacilityType.setOrder(entity.getFacilityType().getOrder());
 		apiFacility.setFacilityType(apiFacilityType);
 
 		// Map facility semi-products

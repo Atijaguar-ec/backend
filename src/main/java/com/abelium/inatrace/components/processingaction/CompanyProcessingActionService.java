@@ -6,9 +6,10 @@ import com.abelium.inatrace.components.processingaction.api.ApiCompanyProcessing
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.processingaction.CompanyProcessingAction;
 import com.abelium.inatrace.db.entities.processingaction.ProcessingAction;
-import com.abelium.inatrace.db.repositories.company.CompanyRepository;
 import com.abelium.inatrace.db.repositories.processingaction.CompanyProcessingActionRepository;
-import com.abelium.inatrace.db.repositories.processingaction.ProcessingActionRepository;
+import com.abelium.inatrace.components.company.CompanyQueries;
+import com.abelium.inatrace.components.common.BaseService;
+import com.abelium.inatrace.components.processingaction.ProcessingActionService;
 import com.abelium.inatrace.types.Language;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,16 +23,16 @@ import java.util.stream.Collectors;
  * Service for managing company-specific processing action configurations.
  */
 @Service
-public class CompanyProcessingActionService {
+public class CompanyProcessingActionService extends BaseService {
 
     @Autowired
     private CompanyProcessingActionRepository companyProcessingActionRepository;
 
     @Autowired
-    private ProcessingActionRepository processingActionRepository;
+    private ProcessingActionService processingActionService;
 
     @Autowired
-    private CompanyRepository companyRepository;
+    private CompanyQueries companyQueries;
 
     /**
      * Get all enabled processing actions for a company, ordered by effective order.
@@ -79,15 +80,18 @@ public class CompanyProcessingActionService {
      */
     @Transactional
     public ApiCompanyProcessingAction updateCompanyProcessingAction(Long companyId, Long processingActionId, 
-                                                                   ApiCompanyProcessingAction apiUpdate, Language language) {
+                                                                   ApiCompanyProcessingAction apiUpdate, Language language) throws ApiException {
         
         // Validate company exists
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ApiException(ApiStatus.INVALID_REQUEST, "Company not found"));
+        Company company = companyQueries.fetchCompany(companyId);
 
         // Validate processing action exists
-        ProcessingAction processingAction = processingActionRepository.findById(processingActionId)
-                .orElseThrow(() -> new ApiException(ApiStatus.INVALID_REQUEST, "Processing action not found"));
+        ProcessingAction processingAction;
+        try {
+            processingAction = processingActionService.fetchProcessingAction(processingActionId);
+        } catch (ApiException e) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, "Processing action not found");
+        }
 
         // Find or create company processing action configuration
         CompanyProcessingAction companyProcessingAction = companyProcessingActionRepository
@@ -116,11 +120,12 @@ public class CompanyProcessingActionService {
      * @param companyId the new company ID
      */
     @Transactional
-    public void initializeCompanyProcessingActions(Long companyId) {
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ApiException(ApiStatus.INVALID_REQUEST, "Company not found"));
+    public void initializeCompanyProcessingActions(Long companyId) throws ApiException {
+        Company company = companyQueries.fetchCompany(companyId);
 
-        List<ProcessingAction> allProcessingActions = processingActionRepository.findAll();
+        List<ProcessingAction> allProcessingActions = em.createQuery(
+                "SELECT pa FROM ProcessingAction pa", ProcessingAction.class
+        ).getResultList();
         
         for (ProcessingAction processingAction : allProcessingActions) {
             // Check if configuration already exists
@@ -141,11 +146,17 @@ public class CompanyProcessingActionService {
      * @param processingActionId the new processing action ID
      */
     @Transactional
-    public void initializeProcessingActionForAllCompanies(Long processingActionId) {
-        ProcessingAction processingAction = processingActionRepository.findById(processingActionId)
-                .orElseThrow(() -> new ApiException(ApiStatus.INVALID_REQUEST, "Processing action not found"));
+    public void initializeProcessingActionForAllCompanies(Long processingActionId) throws ApiException {
+        ProcessingAction processingAction;
+        try {
+            processingAction = processingActionService.fetchProcessingAction(processingActionId);
+        } catch (ApiException e) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, "Processing action not found");
+        }
 
-        List<Company> allCompanies = companyRepository.findAll();
+        List<Company> allCompanies = em.createQuery(
+                "SELECT c FROM Company c", Company.class
+        ).getResultList();
         
         for (Company company : allCompanies) {
             // Check if configuration already exists

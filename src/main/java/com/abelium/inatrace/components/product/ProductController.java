@@ -46,7 +46,7 @@ public class ProductController {
     public ApiPaginatedResponse<ApiProductListResponse> listProducts(
             @AuthenticationPrincipal CustomUserDetails authUser,
     		@Valid ApiListProductsRequest request,
-            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
     	return new ApiPaginatedResponse<>(productService.listUserProducts1(authUser.getUserId(), request));
     }
     

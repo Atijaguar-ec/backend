@@ -48,7 +48,7 @@ public class FacilityTypeService extends BaseService {
 				QueryTools.orderBy(request.sort, facilityTypeProxy.getOrder());
 				break;
 			default:
-				QueryTools.orderBy(request.sort, facilityTypeProxy.getId());
+				QueryTools.orderBy(request.sort, facilityTypeProxy.getOrder());
 		}
 
 		return facilityTypeProxy;
@@ -78,6 +78,7 @@ public class FacilityTypeService extends BaseService {
 			entity.setCode(apiFacilityType.getCode());
 		}
 		entity.setLabel(apiFacilityType.getLabel());
+		entity.setOrder(apiFacilityType.getOrder());
 
 		if (entity.getId() == null) {
 			em.persist(entity);
