@@ -40,6 +40,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine backend paths
+        id: paths
+        shell: bash
+        run: |
+          if [ -f backend/pom.xml ]; then
+            echo "context=./backend" >> "$GITHUB_OUTPUT"
+            if [ -f backend/Dockerfile ]; then
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            elif [ -f Dockerfile ]; then
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            else
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "context=." >> "$GITHUB_OUTPUT"
+            if [ -f Dockerfile ]; then
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            elif [ -f backend/Dockerfile ]; then
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            else
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -56,19 +80,20 @@ jobs:
 
       - name: Run tests
         run: |
+          if [ -f backend/pom.xml ]; then cd backend; fi
           mvn clean test -Dspring.profiles.active=test
-        working-directory: ./backend
 
       - name: Run integration tests
-        run: mvn verify -Dspring.profiles.active=test
-        working-directory: ./backend
+        run: |
+          if [ -f backend/pom.xml ]; then cd backend; fi
+          mvn verify -Dspring.profiles.active=test
 
       - name: Generate test report
         uses: dorny/test-reporter@v1
         if: success() || failure()
         with:
           name: Maven Tests
-          path: backend/target/surefire-reports/*.xml
+          path: '**/target/surefire-reports/*.xml'
           reporter: java-junit
 
   security-scan:
@@ -87,15 +112,15 @@ jobs:
 
       - name: Run OWASP Dependency Check
         run: |
+          if [ -f backend/pom.xml ]; then cd backend; fi
           mvn org.owasp:dependency-check-maven:check
-        working-directory: ./backend
           
       - name: Upload security scan results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-scan-results
-          path: backend/target/dependency-check-report.html
+          path: '**/target/dependency-check-report.html'
 
   build:
     needs: [test]
@@ -116,8 +141,9 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn clean package -DskipTests
-        working-directory: ./backend
+        run: |
+          if [ -f backend/pom.xml ]; then cd backend; fi
+          mvn clean package -DskipTests
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -146,8 +172,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: ${{ steps.paths.outputs.context }}
+          file: ${{ steps.paths.outputs.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
