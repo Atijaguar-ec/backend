@@ -227,10 +227,10 @@ jobs:
       - name: 🧪 Deploy to ${{ matrix.company }} Test
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets[format('TEST_{0}_HOST', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
-          username: ${{ secrets[format('TEST_{0}_USER', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
-          key: ${{ secrets[format('TEST_{0}_SSH_KEY', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
-          port: ${{ secrets[format('TEST_{0}_PORT', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] || 22 }}
+          host: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_HOST || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_HOST || secrets.TEST_DUFER_HOST }}
+          username: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_USER || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_USER || secrets.TEST_DUFER_USER }}
+          key: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_SSH_KEY || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_SSH_KEY || secrets.TEST_DUFER_SSH_KEY }}
+          port: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_PORT || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_PORT || secrets.TEST_DUFER_PORT || 22 }}
           script: |
             set -e
             echo "🧪 Starting backend deployment to ${{ matrix.company }} Test..."
@@ -287,10 +287,10 @@ jobs:
       - name: 🏭 Deploy to ${{ matrix.company }} Production
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets[format('PROD_{0}_HOST', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
-          username: ${{ secrets[format('PROD_{0}_USER', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
-          key: ${{ secrets[format('PROD_{0}_SSH_KEY', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
-          port: ${{ secrets[format('PROD_{0}_PORT', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] || 22 }}
+          host: ${{ matrix.company == 'unocace' && secrets.PROD_UNOCACE_HOST || matrix.company == 'fortaleza' && secrets.PROD_FORTALEZA_HOST || secrets.PROD_DUFER_HOST }}
+          username: ${{ matrix.company == 'unocace' && secrets.PROD_UNOCACE_USER || matrix.company == 'fortaleza' && secrets.PROD_FORTALEZA_USER || secrets.PROD_DUFER_USER }}
+          key: ${{ matrix.company == 'unocace' && secrets.PROD_UNOCACE_SSH_KEY || matrix.company == 'fortaleza' && secrets.PROD_FORTALEZA_SSH_KEY || secrets.PROD_DUFER_SSH_KEY }}
+          port: ${{ matrix.company == 'unocace' && secrets.PROD_UNOCACE_PORT || matrix.company == 'fortaleza' && secrets.PROD_FORTALEZA_PORT || secrets.PROD_DUFER_PORT || 22 }}
           script: |
             set -e
             echo "🏭 Starting backend deployment to ${{ matrix.company }} Production..."
