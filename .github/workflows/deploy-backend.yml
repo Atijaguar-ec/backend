@@ -37,10 +37,6 @@ env:
   IMAGE_NAME: ghcr.io/atijaguar-ec/inatrace-backend
   JAVA_VERSION: '17'
   MAVEN_VERSION: '3.8.5'
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/inatrace-backend
-  JAVA_VERSION: '17'
-  MAVEN_VERSION: '3.8.5'
-
 jobs:
   quality:
     name: 🔍 Code Quality & Security
@@ -231,17 +227,17 @@ jobs:
       - name: 🧪 Deploy to ${{ matrix.company }} Test
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets[format('TEST_{0}_HOST', upper(matrix.company))] }}
-          username: ${{ secrets[format('TEST_{0}_USER', upper(matrix.company))] }}
-          key: ${{ secrets[format('TEST_{0}_SSH_KEY', upper(matrix.company))] }}
-          port: ${{ secrets[format('TEST_{0}_PORT', upper(matrix.company))] || 22 }}
+          host: ${{ secrets[format('TEST_{0}_HOST', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
+          username: ${{ secrets[format('TEST_{0}_USER', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
+          key: ${{ secrets[format('TEST_{0}_SSH_KEY', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
+          port: ${{ secrets[format('TEST_{0}_PORT', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] || 22 }}
           script: |
             set -e
             echo "🧪 Starting backend deployment to ${{ matrix.company }} Test..."
 
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            cd /srv/inatrace/backend/test/${{ matrix.company }}
+            cd /opt/inatrace/backend/test/${{ matrix.company }}
 
             export IMAGE_NAME="${{ env.IMAGE_NAME }}"
             export TAG="${{ needs.build.outputs.image-tag }}"
@@ -291,25 +287,25 @@ jobs:
       - name: 🏭 Deploy to ${{ matrix.company }} Production
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets[format('PROD_{0}_HOST', upper(matrix.company))] }}
-          username: ${{ secrets[format('PROD_{0}_USER', upper(matrix.company))] }}
-          key: ${{ secrets[format('PROD_{0}_SSH_KEY', upper(matrix.company))] }}
-          port: ${{ secrets[format('PROD_{0}_PORT', upper(matrix.company))] || 22 }}
+          host: ${{ secrets[format('PROD_{0}_HOST', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
+          username: ${{ secrets[format('PROD_{0}_USER', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
+          key: ${{ secrets[format('PROD_{0}_SSH_KEY', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] }}
+          port: ${{ secrets[format('PROD_{0}_PORT', matrix.company == 'unocace' && 'UNOCACE' || matrix.company == 'fortaleza' && 'FORTALEZA' || 'DUFER')] || 22 }}
           script: |
             set -e
             echo "🏭 Starting backend deployment to ${{ matrix.company }} Production..."
 
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            cd /srv/inatrace/backend/prod/${{ matrix.company }}
+            cd /opt/inatrace/backend/prod/${{ matrix.company }}
 
             echo "💾 Creating comprehensive backup..."
-            BACKUP_DIR="/srv/inatrace/backups/$(date +%Y%m%d_%H%M%S)"
+            BACKUP_DIR="/opt/inatrace/backups/$(date +%Y%m%d_%H%M%S)"
             mkdir -p "$BACKUP_DIR"
 
             docker-compose exec -T inatrace-mysql mysqldump -u root -p$DB_ROOT_PASSWORD $DATABASE_NAME > "$BACKUP_DIR/database.sql"
 
-            tar -czf "$BACKUP_DIR/app_files.tar.gz" /srv/inatrace/backend/prod/${{ matrix.company }}/volumes/ || true
+            tar -czf "$BACKUP_DIR/app_files.tar.gz" /opt/inatrace/backend/prod/${{ matrix.company }}/volumes/ || true
 
             if docker-compose ps -q inatrace-backend; then
               docker tag $(docker-compose images -q inatrace-backend) ${{ env.IMAGE_NAME }}:backup-$(date +%Y%m%d-%H%M%S)
@@ -345,7 +341,7 @@ jobs:
 
                 echo "✅ Production deployment to ${{ matrix.company }} successful!"
 
-                find /srv/inatrace/backups -maxdepth 1 -type d -name "20*" | sort -r | tail -n +6 | xargs rm -rf || true
+                find /opt/inatrace/backups -maxdepth 1 -type d -name "20*" | sort -r | tail -n +6 | xargs rm -rf || true
 
                 exit 0
               fi
