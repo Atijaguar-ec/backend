@@ -5,7 +5,6 @@ on:
     branches: [main, develop, staging]
   pull_request:
     branches: [main]
-
   workflow_dispatch:
     inputs:
       run_security_scan:
@@ -13,13 +12,11 @@ on:
         required: false
         default: false
         type: boolean
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-backend
   JAVA_VERSION: '17'
   MAVEN_OPTS: -Xmx1024m
-
 jobs:
   test:
     permissions:
@@ -60,16 +57,18 @@ jobs:
       - name: Run tests
         run: |
           mvn clean test -Dspring.profiles.active=test
+        working-directory: ./backend
 
       - name: Run integration tests
         run: mvn verify -Dspring.profiles.active=test
+        working-directory: ./backend
 
       - name: Generate test report
         uses: dorny/test-reporter@v1
         if: success() || failure()
         with:
           name: Maven Tests
-          path: target/surefire-reports/*.xml
+          path: backend/target/surefire-reports/*.xml
           reporter: java-junit
 
   security-scan:
@@ -89,13 +88,14 @@ jobs:
       - name: Run OWASP Dependency Check
         run: |
           mvn org.owasp:dependency-check-maven:check
+        working-directory: ./backend
           
       - name: Upload security scan results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-scan-results
-          path: target/dependency-check-report.html
+          path: backend/target/dependency-check-report.html
 
   build:
     needs: [test]
@@ -117,6 +117,7 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean package -DskipTests
+        working-directory: ./backend
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -145,7 +146,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
+          file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -260,13 +262,13 @@ jobs:
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           debug: true
           script: |
-            mkdir -p /opt/inatrace/deploy/test/unocace
+            mkdir -p /opt/inatrace/deploy/backend/test/unocace
 
       - name: Verify local compose path (unocace test)
         run: |
           set -e
-          ls -lah /opt/inatrace/deploy/test/unocace || true
-          test -f /opt/inatrace/deploy/test/unocace/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/test/unocace/docker-compose.yml"; exit 1; }
+          ls -lah deploy/backend/test/unocace || true
+          test -f deploy/backend/test/unocace/docker-compose.yml || { echo "Missing deploy/backend/test/unocace/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (unocace test)
         uses: appleboy/scp-action@v0.1.7
@@ -274,8 +276,8 @@ jobs:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
-          source: "/opt/inatrace/deploy/test/unocace/docker-compose.yml"
-          target: "/opt/inatrace/deploy/test/unocace"
+          source: "deploy/backend/test/unocace/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
           debug: true
 
       - name: Prepare .env from template
@@ -314,7 +316,7 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: ".env"
-          target: "/opt/inatrace/deploy/test/unocace"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
           debug: true
 
       - name: Download backend image artifact
@@ -349,7 +351,7 @@ jobs:
           debug: true
           script: |
             set -e
-            cd /opt/inatrace/deploy/test/unocace
+            cd /opt/inatrace/deploy/backend/test/unocace
             # Ensure network
             docker network inspect inatrace-backend-unocace-network >/dev/null 2>&1 || docker network create inatrace-backend-unocace-network
             # Load image from artifact
@@ -403,8 +405,8 @@ jobs:
       - name: Verify local compose path (prod fortaleza)
         run: |
           set -e
-          ls -lah /opt/inatrace/deploy/backend/prod/fortaleza || true
-          test -f /opt/inatrace/deploy/backend/prod/fortaleza/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/prod/fortaleza/docker-compose.yml"; exit 1; }
+          ls -lah deploy/backend/prod/fortaleza || true
+          test -f deploy/backend/prod/fortaleza/docker-compose.yml || { echo "Missing deploy/backend/prod/fortaleza/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (prod fortaleza)
         uses: appleboy/scp-action@v0.1.7
@@ -412,7 +414,7 @@ jobs:
           host: ${{ secrets.PROD_FORTALEZA_HOST }}
           username: ${{ secrets.PROD_FORTALEZA_USER }}
           password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
-          source: "/opt/inatrace/deploy/backend/prod/fortaleza/docker-compose.yml"
+          source: "deploy/backend/prod/fortaleza/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/prod/fortaleza"
           debug: true
 
@@ -547,8 +549,8 @@ jobs:
       - name: Verify local compose path (dufer)
         run: |
           set -e
-          ls -lah /opt/inatrace/deploy/backend/test/dufer || true
-          test -f /opt/inatrace/deploy/backend/test/dufer/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/test/dufer/docker-compose.yml"; exit 1; }
+          ls -lah deploy/backend/test/dufer || true
+          test -f deploy/backend/test/dufer/docker-compose.yml || { echo "Missing deploy/backend/test/dufer/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (dufer)
         uses: appleboy/scp-action@v0.1.7
@@ -556,7 +558,7 @@ jobs:
           host: ${{ secrets.TEST_DUFER_HOST }}
           username: ${{ secrets.TEST_DUFER_USER }}
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
-          source: "/opt/inatrace/deploy/backend/test/dufer/docker-compose.yml"
+          source: "deploy/backend/test/dufer/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/test/dufer"
           debug: true
 
@@ -674,8 +676,8 @@ jobs:
       - name: Verify local compose path (fortaleza)
         run: |
           set -e
-          ls -lah deploy/test/fortaleza || true
-          test -f deploy/test/fortaleza/docker-compose.yml || { echo "Missing deploy/test/fortaleza/docker-compose.yml"; exit 1; }
+          ls -lah deploy/backend/test/fortaleza || true
+          test -f deploy/backend/test/fortaleza/docker-compose.yml || { echo "Missing deploy/backend/test/fortaleza/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (fortaleza)
         uses: appleboy/scp-action@v0.1.7
@@ -683,7 +685,7 @@ jobs:
           host: ${{ secrets.TEST_FORTALEZA_HOST }}
           username: ${{ secrets.TEST_FORTALEZA_USER }}
           password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
-          source: "deploy/test/fortaleza/docker-compose.yml"
+          source: "deploy/backend/test/fortaleza/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/test/fortaleza"
           debug: true
 
@@ -799,8 +801,8 @@ jobs:
       - name: Verify local compose path (dev)
         run: |
           set -e
-          ls -lah /opt/inatrace/deploy/backend/dev || true
-          test -f /opt/inatrace/deploy/backend/dev/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/dev/docker-compose.yml"; exit 1; }
+          ls -lah deploy/backend/dev || true
+          test -f deploy/backend/dev/docker-compose.yml || { echo "Missing deploy/backend/dev/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (dev)
         uses: appleboy/scp-action@v0.1.7
@@ -808,7 +810,7 @@ jobs:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: "/opt/inatrace/deploy/backend/dev/docker-compose.yml"
+          source: "deploy/backend/dev/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/dev"
           debug: true
 
@@ -852,7 +854,7 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           source: ".env"
-          target: "/srv/inatrace/backend/dev"
+          target: "/opt/inatrace/deploy/backend/dev"
           debug: true
 
       - name: Download backend image artifact (dev)
@@ -875,7 +877,7 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           source: "be-image.tar"
-          target: "/srv/inatrace/backend/dev"
+          target: "/opt/inatrace/deploy/backend/dev"
           debug: true
 
       - name: Deploy on server (dev)
@@ -886,7 +888,7 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           script: |
             set -e
-            cd /srv/inatrace/backend/dev
+            cd /opt/inatrace/deploy/backend/dev
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             docker load -i be-image.tar
             docker-compose pull || true
@@ -936,8 +938,8 @@ jobs:
       - name: Verify local compose path (prod unocace)
         run: |
           set -e
-          ls -lah /opt/inatrace/deploy/backend/prod/unocace || true
-          test -f /opt/inatrace/deploy/backend/prod/unocace/docker-compose.yml || { echo "Missing /opt/inatrace/deploy/backend/prod/unocace/docker-compose.yml"; exit 1; }
+          ls -lah deploy/backend/prod/unocace || true
+          test -f deploy/backend/prod/unocace/docker-compose.yml || { echo "Missing deploy/backend/prod/unocace/docker-compose.yml"; exit 1; }
 
       - name: Upload docker-compose.yml (prod unocace)
         uses: appleboy/scp-action@v0.1.7
@@ -945,7 +947,7 @@ jobs:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
-          source: "/opt/inatrace/deploy/backend/prod/unocace/docker-compose.yml"
+          source: "deploy/backend/prod/unocace/docker-compose.yml"
           target: "/opt/inatrace/deploy/backend/prod/unocace"
           debug: true
 
