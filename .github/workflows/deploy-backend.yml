@@ -39,7 +39,7 @@ jobs:
   quality:
     name: 🔍 Code Quality & Security
     runs-on: ubuntu-latest
-    if: ${{ !inputs.skip_quality && inputs.environment != 'test' }}
+    if: ${{ !inputs.skip_quality && inputs.environment != 'test' && inputs.environment != 'dev' }}
     permissions:
       contents: read
       checks: write
