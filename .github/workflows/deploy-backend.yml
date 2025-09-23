@@ -14,8 +14,8 @@ on:
         type: boolean
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-backend
-  JAVA_VERSION: '17'
+  IMAGE_NAME: ${{ github.repository }}-inatrace
+  JAVA_VERSION: '17'  # Java 11 or higher is required (ver documentación oficial)
   MAVEN_OPTS: -Xmx1024m
 jobs:
   test:
@@ -962,6 +962,154 @@ jobs:
     environment:
       name: prod-unocace
       url: https://inatrace.unocace.com
+
+  deploy-prod-dufer:
+    name: Deploy Backend to DUFER Production (main)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: prod-dufer
+      url: https://inatrace.empacadoradufer.com
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (DUFER prod)
+        run: |
+          missing=0
+          [ -z "${{ secrets.PROD_DUFER_HOST }}" ] && echo "Missing secret: PROD_DUFER_HOST" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_USER }}" ] && echo "Missing secret: PROD_DUFER_USER" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_MAIL_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_MAIL_PASSWORD" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (prod dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/prod/dufer
+
+      - name: Verify local compose path (prod dufer)
+        run: |
+          set -e
+          ls -lah deploy/backend/prod/dufer || true
+          if [ ! -f deploy/backend/prod/dufer/docker-compose.yml ]; then
+            echo "Missing deploy/backend/prod/dufer/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (prod dufer)
+        if: ${{ hashFiles('deploy/backend/prod/dufer/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          source: "deploy/backend/prod/dufer/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          debug: true
+
+      - name: Prepare .env (prod dufer)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.PROD_DUFER_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_prod_dufer"
+          REQ_TOKEN="${{ secrets.PROD_DUFER_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.PROD_DUFER_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-prod-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=latest
+          DATABASE_NAME=inatrace_prod_dufer
+          DB_ROOT_PASSWORD=${{ secrets.PROD_DUFER_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.PROD_DUFER_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=noreply-dufer@inatrace.com
+          MAIL_PASSWORD=${{ secrets.PROD_DUFER_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env (prod dufer)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          debug: true
+
+      - name: Download backend image artifact (prod dufer)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (prod dufer)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (prod dufer)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          debug: true
+
+      - name: Pre-deploy DB backup (prod dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          script: |
+            set -e
+            CN=inatrace-mysql-prod-dufer
+            if docker ps -a --format '{{.Names}}' | grep -q "^$CN$"; then
+              echo "Running DB backup inside $CN..."
+              docker exec "$CN" sh -lc 'BACKUP_NAME=/backups/backup-$(date +%Y%m%d-%H%M%S).sql.gz; mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | gzip -9 > "$BACKUP_NAME" && echo "Backup written to $BACKUP_NAME" || echo "Backup failed"'
+              docker exec "$CN" sh -lc 'find /backups -name "backup-*.sql.gz" -mtime +14 -delete'
+            else
+              echo "MySQL container $CN not found; skipping backup"
+            fi
+
+      - name: Deploy on server (prod dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/prod/dufer
+            docker network inspect inatrace-backend-dufer-network >/dev/null 2>&1 || docker network create inatrace-backend-dufer-network
+            docker load -i be-image.tar
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            for i in {1..12}; do
+              sleep 10
+              if curl -fsS "https://inatrace.empacadoradufer.com/api/actuator/health" >/dev/null; then
+                echo "✅ Backend DUFER production deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12)"
+            done
+            echo "❌ Backend health check failed" && exit 1
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
