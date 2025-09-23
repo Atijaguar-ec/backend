@@ -368,7 +368,7 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: "be-image.tar"
-          target: "/opt/inatrace/deploy/test/unocace"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
           debug: true
 
       - name: Deploy on server (load image and compose up)
