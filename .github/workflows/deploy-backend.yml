@@ -168,6 +168,8 @@ jobs:
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
             VERSION=$(grep -m1 '<version>' backend/pom.xml | sed -E 's/.*<version>([^<]+)<\/version>.*/\1/' | sed 's/-SNAPSHOT//')
             TAG="v${VERSION}"
+          elif [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
+            TAG="develop"
           elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
             TAG="test-${GITHUB_SHA::7}"
           else
@@ -926,7 +928,7 @@ jobs:
           EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
-          TAG=${{ needs.build.outputs.image-tag }}
+          TAG=develop
           DATABASE_NAME=inatrace
           DB_ROOT_PASSWORD=$DB_ROOT
           DATASOURCE_USERNAME=$DB_USER
@@ -996,9 +998,25 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/deploy/backend/dev
-            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+
+            # Stop any existing dev containers first
+            echo "🛑 Stopping existing dev containers..."
+            docker stop inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
+            docker rm inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
+
+            # Clean up existing networks
+            docker network rm inatrace-backend-network 2>/dev/null || true
+
+            # Create fresh network
+            echo "🔗 Creating network..."
+            docker network create inatrace-backend-network
+
+            # Load new image
+            echo "📦 Loading new backend image..."
             docker load -i be-image.tar
-            docker-compose pull || true
+
+            # Start services
+            echo "🚀 Starting dev services..."
             docker-compose up -d --remove-orphans
 
             echo "⏳ Waiting for service to be ready..."
@@ -1014,7 +1032,7 @@ jobs:
             done
 
             echo "❌ Health check failed after 10 attempts"
-            docker-compose logs inatrace-backend
+            docker-compose logs
             exit 1
 
   deploy-test:
