@@ -260,11 +260,11 @@ jobs:
 
       - name: Pull develop tag (for artifact)
         if: github.ref == 'refs/heads/develop'
-        run: docker pull "${{ steps.image_ref_dev.outputs.image }}:develop"
+        run: docker pull "${{ steps.image_ref_dev.outputs.image }}:${{ steps.meta.outputs.tag }}"
 
       - name: Save Docker image as tar (develop)
         if: github.ref == 'refs/heads/develop'
-        run: docker save "${{ steps.image_ref_dev.outputs.image }}:develop" -o be-image.tar
+        run: docker save "${{ steps.image_ref_dev.outputs.image }}:${{ steps.meta.outputs.tag }}" -o be-image.tar
 
       - name: Upload backend image artifact (develop)
         if: github.ref == 'refs/heads/develop'
