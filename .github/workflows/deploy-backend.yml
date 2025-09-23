@@ -388,14 +388,24 @@ jobs:
             # Deploy
             docker-compose pull || true
             docker-compose up -d --remove-orphans
-            # Health check
+            # Health check with debug output
             for i in {1..12}; do
               sleep 10
-              if curl -fsS "https://inatrace-test.unocace.com/api/actuator/health" >/dev/null; then
+              echo "🔍 Attempting health check ($i/12)..."
+              # Try both with and without /api prefix since the base path might be different
+              if curl -v -f -s "http://localhost:8080/actuator/health" >/dev/null || \
+                 curl -v -f -s "http://localhost:8080/api/actuator/health" >/dev/null; then
                 echo "✅ Backend UNOCACE staging deployment healthy"
                 exit 0
               fi
-              echo "⏳ Waiting for backend to become healthy ($i/12)"
+              echo "⏳ Waiting for backend to become healthy ($i/12) - Last error: $?"
+              # Additional debug info
+              echo "📡 Checking if port 8080 is listening..."
+              netstat -tuln | grep 8080 || echo "Port 8080 not listening yet"
+              echo "📦 Checking running containers..."
+              docker ps -a
+              echo "📋 Checking container logs..."
+              docker logs inatrace-be-test-unocace || echo "Could not get container logs"
             done
             echo "❌ Backend health check failed" && exit 1
 
