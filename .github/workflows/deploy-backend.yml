@@ -926,7 +926,7 @@ jobs:
           EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
-          TAG=develop
+          TAG=${{ needs.build.outputs.image-tag }}
           DATABASE_NAME=inatrace
           DB_ROOT_PASSWORD=$DB_ROOT
           DATASOURCE_USERNAME=$DB_USER
@@ -934,6 +934,11 @@ jobs:
           FILE_STORAGE_ROOT=/opt/inatrace/file_storage
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
+          # Host volume paths used by docker-compose
+          DB_VOLUME=/opt/inatrace/data
+          FILE_STORAGE_ROOT_VOL=/opt/inatrace/file_storage
+          IMPORT_PATH_VOL=/opt/inatrace/import
+          DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
           MAIL_HOST=localhost
