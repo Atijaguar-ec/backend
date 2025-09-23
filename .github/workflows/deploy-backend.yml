@@ -1004,7 +1004,8 @@ jobs:
             docker stop inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
             docker rm inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
 
-            # Clean up existing networks
+            # Clean up existing networks (force removal)
+            echo "🔗 Cleaning up networks..."
             docker network rm inatrace-backend-network 2>/dev/null || true
 
             # Create fresh network
