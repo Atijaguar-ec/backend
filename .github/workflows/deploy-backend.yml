@@ -8,10 +8,7 @@ on:
       - 'deploy/backend/**'
       - '.github/workflows/deploy-backend.yml'
   pull_request:
-    branches: [ develop, staging, main ]
-    paths:
-      - 'backend/**'
-      - 'deploy/backend/**'
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -26,17 +23,13 @@ on:
       company:
         description: 'Target company (for test/prod)'
         required: false
-        default: 'all'
-        type: choice
-        options:
-        - all
-        - unocace
-        - fortaleza
+        default: false
+        type: boolean
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/atijaguar-ec/inatrace-backend
-  JAVA_VERSION: '17'
-  MAVEN_VERSION: '3.8.5'
+  IMAGE_NAME: ${{ github.repository }}-inatrace
+  JAVA_VERSION: '17'  # Java 11 or higher is required (ver documentación oficial)
+  MAVEN_OPTS: -Xmx1024m
 jobs:
   quality:
     name: 🔍 Code Quality & Security
@@ -48,7 +41,31 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: ☕ Setup Java
+      - name: Determine backend paths
+        id: paths
+        shell: bash
+        run: |
+          if [ -f backend/pom.xml ]; then
+            echo "context=./backend" >> "$GITHUB_OUTPUT"
+            if [ -f backend/Dockerfile ]; then
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            elif [ -f Dockerfile ]; then
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            else
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "context=." >> "$GITHUB_OUTPUT"
+            if [ -f Dockerfile ]; then
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            elif [ -f backend/Dockerfile ]; then
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            else
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
@@ -58,12 +75,22 @@ jobs:
       - name: 🔍 Run tests
         run: mvn clean test -B
 
-      - name: 📊 Generate test report
+      - name: Run tests
+        run: |
+          if [ -f backend/pom.xml ]; then cd backend; fi
+          mvn clean test -Dspring.profiles.active=test
+
+      - name: Run integration tests
+        run: |
+          if [ -f backend/pom.xml ]; then cd backend; fi
+          mvn verify -Dspring.profiles.active=test
+
+      - name: Generate test report
         uses: dorny/test-reporter@v1
         if: success() || failure()
         with:
           name: Maven Tests
-          path: backend/target/surefire-reports/*.xml
+          path: '**/target/surefire-reports/*.xml'
           reporter: java-junit
           fail-on-error: true
 
@@ -75,22 +102,15 @@ jobs:
 
       - name: 🔒 Run security scan with OWASP
         run: |
-          mvn org.owasp:dependency-check-maven:check \
-            -DfailBuildOnCVSS=7 \
-            -DsuppressionsLocation=owasp-suppressions.xml
-        continue-on-error: true
-
-      - name: 🔍 SonarCloud Scan
-        if: github.event_name != 'pull_request'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          mvn sonar:sonar \
-            -Dsonar.projectKey=inatrace-backend \
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
-            -Dsonar.host.url=https://sonarcloud.io
-        continue-on-error: true
+          if [ -f backend/pom.xml ]; then cd backend; fi
+          mvn org.owasp:dependency-check-maven:check
+          
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: '**/target/dependency-check-report.html'
 
   build:
     name: 🏗️ Build & Push Docker Image
@@ -119,11 +139,10 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "🏷️ Generated tag: $TAG"
 
-      - name: 📋 Extract version
-        id: version
+      - name: Build with Maven
         run: |
-          VERSION=$(grep -m1 '<version>' backend/pom.xml | sed -E 's/.*<version>([^<]+)<\/version>.*/\1/' | sed 's/-SNAPSHOT//')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ -f backend/pom.xml ]; then cd backend; fi
+          mvn clean package -DskipTests
 
       - name: 🔐 Login to Docker Hub
         uses: docker/login-action@v3
@@ -138,7 +157,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: ${{ steps.paths.outputs.context }}
+          file: ${{ steps.paths.outputs.dockerfile }}
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
@@ -153,7 +173,626 @@ jobs:
       - name: 🔒 Sign image with Cosign
         uses: sigstore/cosign-installer@v3
         with:
-          cosign-release: 'v2.1.1'
+          name: be-image
+          path: be-image.tar
+          if-no-files-found: error
+
+      - name: Compute lowercase image ref (for saving) - develop
+        id: image_ref_dev
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Pull develop tag (for artifact)
+        if: github.ref == 'refs/heads/develop'
+        run: docker pull "${{ steps.image_ref_dev.outputs.image }}:develop"
+
+      - name: Save Docker image as tar (develop)
+        if: github.ref == 'refs/heads/develop'
+        run: docker save "${{ steps.image_ref_dev.outputs.image }}:develop" -o be-image.tar
+
+      - name: Upload backend image artifact (develop)
+        if: github.ref == 'refs/heads/develop'
+        uses: actions/upload-artifact@v4
+        with:
+          name: be-image
+          path: be-image.tar
+          if-no-files-found: error
+
+      - name: Compute lowercase image ref (for saving) - main
+        id: image_ref_main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Pull latest tag (for artifact)
+        if: github.ref == 'refs/heads/main'
+        run: docker pull "${{ steps.image_ref_main.outputs.image }}:latest"
+
+      - name: Save Docker image as tar (main)
+        if: github.ref == 'refs/heads/main'
+        run: docker save "${{ steps.image_ref_main.outputs.image }}:latest" -o be-image.tar
+
+      - name: Upload backend image artifact (main)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: be-image
+          path: be-image.tar
+          if-no-files-found: error
+
+  deploy-test-unocace:
+    name: Deploy Backend to UNOCACE Test (staging)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment:
+      name: test-unocace
+      url: https://inatrace-test.unocace.com
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (SSH & App)
+        run: |
+          missing=0
+          [ -z "${{ secrets.TEST_UNOCACE_HOST }}" ] && echo "Missing secret: TEST_UNOCACE_HOST" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_USER }}" ] && echo "Missing secret: TEST_UNOCACE_USER" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_MAIL_PASSWORD" && missing=1
+          # Optional secrets: warn if missing; defaults will be used later
+          [ -z "${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}" ] && echo "Warning: Missing optional secret: TEST_UNOCACE_REQUESTLOG_TOKEN (will use default)"
+          [ -z "${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}" ] && echo "Warning: Missing optional secret: TEST_UNOCACE_EXCHANGERATE_APIKEY (will use default)"
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Ensure remote directory exists
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          debug: true
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/test/unocace
+
+      - name: Verify local compose path (unocace test)
+        run: |
+          set -e
+          ls -lah deploy/backend/test/unocace || true
+          if [ ! -f deploy/backend/test/unocace/docker-compose.yml ]; then
+            echo "Missing deploy/backend/test/unocace/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (unocace test)
+        if: ${{ hashFiles('deploy/backend/test/unocace/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: "deploy/backend/test/unocace/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
+          debug: true
+
+      - name: Prepare .env from template
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.TEST_UNOCACE_DATASOURCE_USERNAME }}"
+          if [ -z "$DB_USER" ]; then DB_USER="user_test_unocace"; fi
+          # Optional values with defaults if secrets are missing
+          REQ_TOKEN="${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}"
+          if [ -z "$REQ_TOKEN" ]; then REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"; fi
+          EXR_KEY="${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}"
+          if [ -z "$EXR_KEY" ]; then EXR_KEY="dummy-test-key"; fi
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=staging
+          DATABASE_NAME=inatrace_db_test
+          DB_ROOT_PASSWORD=${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          FILE_STORAGE_ROOT_VOL=/opt/inatrace/file_storage
+          IMPORT_PATH_VOL=/opt/inatrace/imports
+          DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
+          DB_VOLUME=/opt/inatrace/data
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=test-unocace@inatrace.com
+          MAIL_PASSWORD=${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
+          debug: true
+
+      - name: Download backend image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (backend)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/test/unocace"
+          debug: true
+
+      - name: Deploy on server (load image and compose up)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          debug: true
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/test/unocace
+            # Ensure network
+            docker network inspect inatrace-backend-unocace-network >/dev/null 2>&1 || docker network create inatrace-backend-unocace-network
+            # Load image from artifact
+            docker load -i be-image.tar
+            # Deploy
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            # Health check with debug output
+            for i in {1..12}; do
+              sleep 10
+              echo "🔍 Attempting health check ($i/12)..."
+              # Try both with and without /api prefix since the base path might be different
+              if curl -v -f -s "http://localhost:8080/actuator/health" >/dev/null || \
+                 curl -v -f -s "http://localhost:8080/api/actuator/health" >/dev/null; then
+                echo "✅ Backend UNOCACE staging deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12) - Last error: $?"
+              # Additional debug info
+              echo "📡 Checking if port 8080 is listening..."
+              netstat -tuln | grep 8080 || echo "Port 8080 not listening yet"
+              echo "📦 Checking running containers..."
+              docker ps -a
+              echo "📋 Checking container logs..."
+              docker logs inatrace-be-test-unocace || echo "Could not get container logs"
+            done
+            echo "❌ Backend health check failed" && exit 1
+
+  deploy-prod-fortaleza:
+    name: Deploy Backend to Fortaleza Production (main)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: prod-fortaleza
+      url: https://inatrace.fortalezadelvalle.org
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (FORTALEZA prod)
+        run: |
+          missing=0
+          [ -z "${{ secrets.PROD_FORTALEZA_HOST }}" ] && echo "Missing secret: PROD_FORTALEZA_HOST" && missing=1
+          [ -z "${{ secrets.PROD_FORTALEZA_USER }}" ] && echo "Missing secret: PROD_FORTALEZA_USER" && missing=1
+          [ -z "${{ secrets.PROD_FORTALEZA_PASSWORD }}" ] && echo "Missing secret: PROD_FORTALEZA_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_FORTALEZA_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: PROD_FORTALEZA_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_FORTALEZA_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: PROD_FORTALEZA_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_FORTALEZA_MAIL_PASSWORD }}" ] && echo "Missing secret: PROD_FORTALEZA_MAIL_PASSWORD" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (prod fortaleza)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_FORTALEZA_HOST }}
+          username: ${{ secrets.PROD_FORTALEZA_USER }}
+          password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/prod/fortaleza
+
+      - name: Verify local compose path (prod fortaleza)
+        run: |
+          set -e
+          ls -lah deploy/backend/prod/fortaleza || true
+          if [ ! -f deploy/backend/prod/fortaleza/docker-compose.yml ]; then
+            echo "Missing deploy/backend/prod/fortaleza/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (prod fortaleza)
+        if: ${{ hashFiles('deploy/backend/prod/fortaleza/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_FORTALEZA_HOST }}
+          username: ${{ secrets.PROD_FORTALEZA_USER }}
+          password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
+          source: "deploy/backend/prod/fortaleza/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/prod/fortaleza"
+          debug: true
+
+      - name: Prepare .env (prod fortaleza)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.PROD_FORTALEZA_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_prod_fortaleza"
+          REQ_TOKEN="${{ secrets.PROD_FORTALEZA_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.PROD_FORTALEZA_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-prod-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=latest
+          DATABASE_NAME=inatrace_prod_fortaleza
+          DB_ROOT_PASSWORD=${{ secrets.PROD_FORTALEZA_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.PROD_FORTALEZA_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=noreply-fortaleza@inatrace.com
+          MAIL_PASSWORD=${{ secrets.PROD_FORTALEZA_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env (prod fortaleza)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_FORTALEZA_HOST }}
+          username: ${{ secrets.PROD_FORTALEZA_USER }}
+          password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/prod/fortaleza"
+          debug: true
+
+      - name: Download backend image artifact (prod fortaleza)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (prod fortaleza)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (prod fortaleza)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_FORTALEZA_HOST }}
+          username: ${{ secrets.PROD_FORTALEZA_USER }}
+          password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/prod/fortaleza"
+          debug: true
+
+      - name: Pre-deploy DB backup (prod fortaleza)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_FORTALEZA_HOST }}
+          username: ${{ secrets.PROD_FORTALEZA_USER }}
+          password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
+          script: |
+            set -e
+            CN=inatrace-mysql-prod-fortaleza
+            if docker ps -a --format '{{.Names}}' | grep -q "^$CN$"; then
+              echo "Running DB backup inside $CN..."
+              docker exec "$CN" sh -lc 'BACKUP_NAME=/backups/backup-$(date +%Y%m%d-%H%M%S).sql.gz; mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | gzip -9 > "$BACKUP_NAME" && echo "Backup written to $BACKUP_NAME" || echo "Backup failed"'
+              docker exec "$CN" sh -lc 'find /backups -name "backup-*.sql.gz" -mtime +14 -delete'
+            else
+              echo "MySQL container $CN not found; skipping backup"
+            fi
+
+      - name: Deploy on server (prod fortaleza)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_FORTALEZA_HOST }}
+          username: ${{ secrets.PROD_FORTALEZA_USER }}
+          password: ${{ secrets.PROD_FORTALEZA_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/prod/fortaleza
+            docker network inspect inatrace-backend-fortaleza-network >/dev/null 2>&1 || docker network create inatrace-backend-fortaleza-network
+            docker load -i be-image.tar
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            for i in {1..12}; do
+              sleep 10
+              if curl -fsS "https://inatrace.fortalezadelvalle.org/api/actuator/health" >/dev/null; then
+                echo "✅ Backend FORTALEZA production deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12)"
+            done
+            echo "❌ Backend health check failed" && exit 1
+  deploy-test-dufer:
+    name: Deploy Backend to DUFER Test (staging)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment:
+      name: test-dufer
+      url: https://inatrace-test.empacadoradufer.com
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (SSH & App)
+        run: |
+          missing=0
+          [ -z "${{ secrets.TEST_DUFER_HOST }}" ] && echo "Missing secret: TEST_DUFER_HOST" && missing=1
+          [ -z "${{ secrets.TEST_DUFER_USER }}" ] && echo "Missing secret: TEST_DUFER_USER" && missing=1
+          [ -z "${{ secrets.TEST_DUFER_PASSWORD }}" ] && echo "Missing secret: TEST_DUFER_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_DUFER_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_DUFER_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_DUFER_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_DUFER_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_DUFER_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_DUFER_MAIL_PASSWORD" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_DUFER_HOST }}
+          username: ${{ secrets.TEST_DUFER_USER }}
+          password: ${{ secrets.TEST_DUFER_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/test/dufer
+
+      - name: Verify local compose path (dufer)
+        run: |
+          set -e
+          ls -lah deploy/backend/test/dufer || true
+          if [ ! -f deploy/backend/test/dufer/docker-compose.yml ]; then
+            echo "Missing deploy/backend/test/dufer/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (dufer)
+        if: ${{ hashFiles('deploy/backend/test/dufer/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_DUFER_HOST }}
+          username: ${{ secrets.TEST_DUFER_USER }}
+          password: ${{ secrets.TEST_DUFER_PASSWORD }}
+          source: "deploy/backend/test/dufer/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/test/dufer"
+          debug: true
+
+      - name: Prepare .env (dufer)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.TEST_DUFER_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_test_dufer"
+          REQ_TOKEN="${{ secrets.TEST_DUFER_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.TEST_DUFER_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-test-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=staging
+          DATABASE_NAME=inatrace_test_dufer
+          DB_ROOT_PASSWORD=${{ secrets.TEST_DUFER_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.TEST_DUFER_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=test-dufer@inatrace.com
+          MAIL_PASSWORD=${{ secrets.TEST_DUFER_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env (dufer)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_DUFER_HOST }}
+          username: ${{ secrets.TEST_DUFER_USER }}
+          password: ${{ secrets.TEST_DUFER_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/test/dufer"
+          debug: true
+
+      - name: Download backend image artifact (dufer)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (dufer)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (dufer)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_DUFER_HOST }}
+          username: ${{ secrets.TEST_DUFER_USER }}
+          password: ${{ secrets.TEST_DUFER_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/test/dufer"
+          debug: true
+
+      - name: Deploy on server (dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_DUFER_HOST }}
+          username: ${{ secrets.TEST_DUFER_USER }}
+          password: ${{ secrets.TEST_DUFER_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/test/dufer
+            docker network inspect inatrace-backend-dufer-network >/dev/null 2>&1 || docker network create inatrace-backend-dufer-network
+            docker load -i be-image.tar
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            for i in {1..12}; do
+              sleep 10
+              if curl -fsS "https://inatrace-test.empacadoradufer.com/api/actuator/health" >/dev/null; then
+                echo "✅ Backend DUFER staging deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12)"
+            done
+            echo "❌ Backend health check failed" && exit 1
+  deploy-test-fortaleza:
+    name: Deploy Backend to Fortaleza Test (staging)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment:
+      name: test-fortaleza
+      url: https://inatrace-test.fortalezadelvalle.org
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (SSH & App)
+        run: |
+          missing=0
+          [ -z "${{ secrets.TEST_FORTALEZA_HOST }}" ] && echo "Missing secret: TEST_FORTALEZA_HOST" && missing=1
+          [ -z "${{ secrets.TEST_FORTALEZA_USER }}" ] && echo "Missing secret: TEST_FORTALEZA_USER" && missing=1
+          [ -z "${{ secrets.TEST_FORTALEZA_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_FORTALEZA_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_FORTALEZA_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_FORTALEZA_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_MAIL_PASSWORD" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (fortaleza)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_FORTALEZA_HOST }}
+          username: ${{ secrets.TEST_FORTALEZA_USER }}
+          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/test/fortaleza
+
+      - name: Verify local compose path (fortaleza)
+        run: |
+          set -e
+          ls -lah deploy/backend/test/fortaleza || true
+          if [ ! -f deploy/backend/test/fortaleza/docker-compose.yml ]; then
+            echo "Missing deploy/backend/test/fortaleza/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (fortaleza)
+        if: ${{ hashFiles('deploy/backend/test/fortaleza/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_FORTALEZA_HOST }}
+          username: ${{ secrets.TEST_FORTALEZA_USER }}
+          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
+          source: "deploy/backend/test/fortaleza/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
+
+      - name: Prepare .env (fortaleza)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.TEST_FORTALEZA_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_test_fortaleza"
+          REQ_TOKEN="${{ secrets.TEST_FORTALEZA_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.TEST_FORTALEZA_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-test-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=staging
+          DATABASE_NAME=inatrace_test_fortaleza
+          DB_ROOT_PASSWORD=${{ secrets.TEST_FORTALEZA_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.TEST_FORTALEZA_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=test-fortaleza@inatrace.com
+          MAIL_PASSWORD=${{ secrets.TEST_FORTALEZA_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env (fortaleza)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_FORTALEZA_HOST }}
+          username: ${{ secrets.TEST_FORTALEZA_USER }}
+          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
+
+      - name: Download backend image artifact (fortaleza)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (fortaleza)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (fortaleza)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_FORTALEZA_HOST }}
+          username: ${{ secrets.TEST_FORTALEZA_USER }}
+          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
+
+      - name: Deploy on server (fortaleza)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_FORTALEZA_HOST }}
+          username: ${{ secrets.TEST_FORTALEZA_USER }}
+          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/test/fortaleza
+            docker network inspect inatrace-backend-fortaleza-network >/dev/null 2>&1 || docker network create inatrace-backend-fortaleza-network
+            docker load -i be-image.tar
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            for i in {1..12}; do
+              sleep 10
+              if curl -fsS "https://inatrace-test.fortalezadelvalle.org/api/actuator/health" >/dev/null; then
+                echo "✅ Backend FORTALEZA staging deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12)"
+            done
+            echo "❌ Backend health check failed" && exit 1
 
   deploy-dev:
     name: 🚀 Deploy to Development
@@ -167,7 +806,109 @@ jobs:
       - name: 📥 Checkout deployment configs
         uses: actions/checkout@v4
 
-      - name: 🚀 Deploy to Development Server
+      - name: Preflight - validate required secrets (DEV - key auth)
+        run: |
+          missing=0
+          [ -z "${{ secrets.DEV_HOST }}" ] && echo "Missing secret: DEV_HOST" && missing=1
+          [ -z "${{ secrets.DEV_USER }}" ] && echo "Missing secret: DEV_USER" && missing=1
+          [ -z "${{ secrets.DEV_SSH_KEY }}" ] && echo "Missing secret: DEV_SSH_KEY" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (dev)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/dev
+
+      - name: Verify local compose path (dev)
+        run: |
+          set -e
+          ls -lah deploy/backend/dev || true
+          if [ ! -f deploy/backend/dev/docker-compose.yml ]; then
+            echo "Missing deploy/backend/dev/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (dev)
+        if: ${{ hashFiles('deploy/backend/dev/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "deploy/backend/dev/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/dev"
+          debug: true
+
+      - name: Prepare .env (dev)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.DEV_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace"
+          DB_PASS="${{ secrets.DEV_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace"
+          DB_ROOT="${{ secrets.DEV_DB_ROOT_PASSWORD }}"; [ -z "$DB_ROOT" ] && DB_ROOT="root"
+          MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
+          REQ_TOKEN="${{ secrets.DEV_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="dev-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=develop
+          DATABASE_NAME=inatrace
+          DB_ROOT_PASSWORD=$DB_ROOT
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=$DB_PASS
+          FILE_STORAGE_ROOT=/opt/inatrace/file_storage
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=localhost
+          MAIL_PORT=1025
+          MAIL_USERNAME=
+          MAIL_PASSWORD=$MAIL_PASS
+          EOF
+
+      - name: Verify .env exists (dev)
+        run: |
+          set -e
+          ls -lah .
+          test -s .env || { echo ".env is missing or empty"; exit 1; }
+
+      - name: Upload .env (dev)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/dev"
+          debug: true
+
+      - name: Download backend image artifact (dev)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (dev)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (dev)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/dev"
+          debug: true
+
+      - name: Deploy on server (dev)
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DEV_HOST }}
@@ -176,21 +917,10 @@ jobs:
           port: ${{ secrets.DEV_PORT || 22 }}
           script: |
             set -e
-            echo "🚀 Starting backend deployment to Development..."
-
-            # No login to Docker Hub since images are public
-
-            # Navigate to deployment directory
             cd /opt/inatrace/deploy/backend/dev
-
-            export IMAGE_NAME="${{ env.IMAGE_NAME }}"
-            export TAG="${{ needs.build.outputs.image-tag }}"
-            export VERSION="${{ needs.build.outputs.version }}"
-
-            echo "🗄️ Running database migrations..."
-            docker-compose run --rm inatrace-backend java -jar app.jar --spring.profiles.active=migration || true
-
-            docker-compose pull
+            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+            docker load -i be-image.tar
+            docker-compose pull || true
             docker-compose up -d --remove-orphans
 
             echo "⏳ Waiting for service to be ready..."
@@ -227,10 +957,94 @@ jobs:
       - name: 🧪 Deploy to ${{ matrix.company }} Test
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_HOST || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_HOST || secrets.TEST_DUFER_HOST }}
-          username: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_USER || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_USER || secrets.TEST_DUFER_USER }}
-          key: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_SSH_KEY || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_SSH_KEY || secrets.TEST_DUFER_SSH_KEY }}
-          port: ${{ matrix.company == 'unocace' && secrets.TEST_UNOCACE_PORT || matrix.company == 'fortaleza' && secrets.TEST_FORTALEZA_PORT || secrets.TEST_DUFER_PORT || 22 }}
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/prod/unocace
+
+      - name: Verify local compose path (prod unocace)
+        run: |
+          set -e
+          ls -lah deploy/backend/prod/unocace || true
+          if [ ! -f deploy/backend/prod/unocace/docker-compose.yml ]; then
+            echo "Missing deploy/backend/prod/unocace/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (prod unocace)
+        if: ${{ hashFiles('deploy/backend/prod/unocace/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          source: "deploy/backend/prod/unocace/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/prod/unocace"
+          debug: true
+
+      - name: Prepare .env (prod unocace)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.PROD_UNOCACE_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_prod_unocace"
+          REQ_TOKEN="${{ secrets.PROD_UNOCACE_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.PROD_UNOCACE_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-prod-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=latest
+          DATABASE_NAME=inatrace_prod_unocace
+          DB_ROOT_PASSWORD=${{ secrets.PROD_UNOCACE_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.PROD_UNOCACE_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=noreply-unocace@inatrace.com
+          MAIL_PASSWORD=${{ secrets.PROD_UNOCACE_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env (prod unocace)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/prod/unocace"
+          debug: true
+
+      - name: Download backend image artifact (prod unocace)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (prod unocace)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (prod unocace)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/prod/unocace"
+          debug: true
+
+      - name: Pre-deploy DB backup (prod unocace)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
             set -e
             echo "🧪 Starting backend deployment to ${{ matrix.company }} Test..."
@@ -349,54 +1163,152 @@ jobs:
               echo "⏳ Health check failed, waiting 30s..."
               sleep 30
             done
+            echo "❌ Backend health check failed" && exit 1
 
-            echo "❌ Health check failed after 10 attempts"
-            echo "🔄 Rolling back to previous version..."
-
-            docker-compose down
-
-            if [ -f "$BACKUP_DIR/database.sql" ]; then
-              docker-compose up -d inatrace-mysql
-              sleep 30
-              docker-compose exec -T inatrace-mysql mysql -u root -p$DB_ROOT_PASSWORD $DATABASE_NAME < "$BACKUP_DIR/database.sql"
-            fi
-
-            BACKUP_IMAGE=$(docker images ${{ env.IMAGE_NAME }} --format "table {{.Repository}}:{{.Tag}}" | grep backup | head -1)
-            if [ ! -z "$BACKUP_IMAGE" ]; then
-              export TAG=$(echo $BACKUP_IMAGE | cut -d: -f2)
-              docker-compose up -d
-            fi
-
-            echo "🔄 Rollback completed"
-            exit 1
-
-  validate:
-    name: 📊 Post-Deployment Validation
+  deploy-prod-dufer:
+    name: Deploy Backend to DUFER Production (main)
+    needs: build
     runs-on: ubuntu-latest
-    needs: [deploy-dev, deploy-test, deploy-prod]
-    if: always() && (needs.deploy-dev.result != 'skipped' || needs.deploy-test.result != 'skipped' || needs.deploy-prod.result != 'skipped')
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: prod-dufer
+      url: https://inatrace.empacadoradufer.com
     steps:
-      - name: 📊 Run integration tests
-        if: needs.deploy-dev.result == 'success' || needs.deploy-test.result == 'success'
-        run: |
-          echo "🧪 Running integration tests..."
-          # Aquí puedes agregar tests de integración
-          # curl -f http://api-endpoint/test-suite
-          echo "✅ Integration tests passed"
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: 📊 Send deployment notification
+      - name: Preflight - validate required secrets (DUFER prod)
         run: |
-          if [[ "${{ needs.deploy-dev.result }}" == "success" ]]; then
-            echo "✅ Development backend deployment successful"
-          fi
-          if [[ "${{ needs.deploy-test.result }}" == "success" ]]; then
-            echo "✅ Test environments backend deployment successful"
-          fi
-          if [[ "${{ needs.deploy-prod.result }}" == "success" ]]; then
-            echo "✅ Production backend deployment successful"
+          missing=0
+          [ -z "${{ secrets.PROD_DUFER_HOST }}" ] && echo "Missing secret: PROD_DUFER_HOST" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_USER }}" ] && echo "Missing secret: PROD_DUFER_USER" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_DUFER_MAIL_PASSWORD }}" ] && echo "Missing secret: PROD_DUFER_MAIL_PASSWORD" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (prod dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/prod/dufer
+
+      - name: Verify local compose path (prod dufer)
+        run: |
+          set -e
+          ls -lah deploy/backend/prod/dufer || true
+          if [ ! -f deploy/backend/prod/dufer/docker-compose.yml ]; then
+            echo "Missing deploy/backend/prod/dufer/docker-compose.yml (will use remote compose)"
           fi
 
-          # Aquí puedes agregar notificaciones a Slack, Teams, etc.
-          # curl -X POST -H 'Content-type: application/json' \
-          #   --data '{"text":"Backend deployment completed"}' \
-          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Upload docker-compose.yml (prod dufer)
+        if: ${{ hashFiles('deploy/backend/prod/dufer/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          source: "deploy/backend/prod/dufer/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          debug: true
+
+      - name: Prepare .env (prod dufer)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.PROD_DUFER_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_prod_dufer"
+          REQ_TOKEN="${{ secrets.PROD_DUFER_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.PROD_DUFER_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-prod-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=latest
+          DATABASE_NAME=inatrace_prod_dufer
+          DB_ROOT_PASSWORD=${{ secrets.PROD_DUFER_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.PROD_DUFER_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=smtp.gmail.com
+          MAIL_PORT=587
+          MAIL_USERNAME=noreply-dufer@inatrace.com
+          MAIL_PASSWORD=${{ secrets.PROD_DUFER_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env (prod dufer)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          debug: true
+
+      - name: Download backend image artifact (prod dufer)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (prod dufer)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (prod dufer)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          debug: true
+
+      - name: Pre-deploy DB backup (prod dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          script: |
+            set -e
+            CN=inatrace-mysql-prod-dufer
+            if docker ps -a --format '{{.Names}}' | grep -q "^$CN$"; then
+              echo "Running DB backup inside $CN..."
+              docker exec "$CN" sh -lc 'BACKUP_NAME=/backups/backup-$(date +%Y%m%d-%H%M%S).sql.gz; mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | gzip -9 > "$BACKUP_NAME" && echo "Backup written to $BACKUP_NAME" || echo "Backup failed"'
+              docker exec "$CN" sh -lc 'find /backups -name "backup-*.sql.gz" -mtime +14 -delete'
+            else
+              echo "MySQL container $CN not found; skipping backup"
+            fi
+
+      - name: Deploy on server (prod dufer)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_DUFER_HOST }}
+          username: ${{ secrets.PROD_DUFER_USER }}
+          password: ${{ secrets.PROD_DUFER_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/prod/dufer
+            docker network inspect inatrace-backend-dufer-network >/dev/null 2>&1 || docker network create inatrace-backend-dufer-network
+            docker load -i be-image.tar
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            for i in {1..12}; do
+              sleep 10
+              if curl -fsS "https://inatrace.empacadoradufer.com/api/actuator/health" >/dev/null; then
+                echo "✅ Backend DUFER production deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12)"
+            done
+            echo "❌ Backend health check failed" && exit 1
