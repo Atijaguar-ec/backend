@@ -64,6 +64,7 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
+
       - name: Determine backend paths
         id: paths
         shell: bash
@@ -201,12 +202,36 @@ jobs:
           IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
+      - name: Determine backend paths (build)
+        id: build_paths
+        shell: bash
+        run: |
+          if [ -f backend/pom.xml ]; then
+            echo "context=./backend" >> "$GITHUB_OUTPUT"
+            if [ -f backend/Dockerfile ]; then
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            elif [ -f Dockerfile ]; then
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            else
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "context=." >> "$GITHUB_OUTPUT"
+            if [ -f Dockerfile ]; then
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            elif [ -f backend/Dockerfile ]; then
+              echo "dockerfile=./backend/Dockerfile" >> "$GITHUB_OUTPUT"
+            else
+              echo "dockerfile=./Dockerfile" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
       - name: 🏗️ Build and push Docker image
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          dockerfile: ./backend/Dockerfile
+          context: ${{ steps.build_paths.outputs.context }}
+          file: ${{ steps.build_paths.outputs.dockerfile }}
           push: true
           tags: |
             ${{ steps.image_ref_push.outputs.image }}:${{ steps.meta.outputs.tag }}
