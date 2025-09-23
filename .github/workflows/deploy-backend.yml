@@ -34,9 +34,6 @@ jobs:
   quality:
     name: 🔍 Code Quality & Security
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -73,16 +70,13 @@ jobs:
           cache: maven
 
       - name: 🔍 Run tests
-        run: mvn clean test -B
-
-      - name: Run tests
         run: |
-          if [ -f backend/pom.xml ]; then cd backend; fi
-          mvn clean test -Dspring.profiles.active=test
+          cd backend
+          mvn clean test -B -Dspring.profiles.active=test
 
       - name: Run integration tests
         run: |
-          if [ -f backend/pom.xml ]; then cd backend; fi
+          cd backend
           mvn verify -Dspring.profiles.active=test
 
       - name: Generate test report
@@ -90,7 +84,7 @@ jobs:
         if: success() || failure()
         with:
           name: Maven Tests
-          path: '**/target/surefire-reports/*.xml'
+          path: 'backend/target/surefire-reports/*.xml'
           reporter: java-junit
           fail-on-error: true
 
@@ -102,7 +96,7 @@ jobs:
 
       - name: 🔒 Run security scan with OWASP
         run: |
-          if [ -f backend/pom.xml ]; then cd backend; fi
+          cd backend
           mvn org.owasp:dependency-check-maven:check
           
       - name: Upload security scan results
@@ -110,7 +104,7 @@ jobs:
         if: always()
         with:
           name: security-scan-results
-          path: '**/target/dependency-check-report.html'
+          path: 'backend/target/dependency-check-report.html'
 
   build:
     name: 🏗️ Build & Push Docker Image
@@ -141,7 +135,7 @@ jobs:
 
       - name: Build with Maven
         run: |
-          if [ -f backend/pom.xml ]; then cd backend; fi
+          cd backend
           mvn clean package -DskipTests
 
       - name: 🔐 Login to Docker Hub
@@ -157,8 +151,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ${{ steps.paths.outputs.context }}
-          file: ${{ steps.paths.outputs.dockerfile }}
+          context: ./backend
+          dockerfile: ./backend/Dockerfile
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
