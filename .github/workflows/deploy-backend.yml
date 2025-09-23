@@ -30,6 +30,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_security:
+        description: 'Skip security scan (OWASP dependency check)'
+        required: false
+        default: false
+        type: boolean
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-inatrace
@@ -39,7 +44,7 @@ jobs:
   quality:
     name: 🔍 Code Quality & Security
     runs-on: ubuntu-latest
-    if: ${{ !inputs.skip_quality && inputs.environment != 'test' && inputs.environment != 'dev' }}
+    if: ${{ !inputs.skip_quality }}
     permissions:
       contents: read
       checks: write
@@ -124,6 +129,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: 🔒 Run security scan with OWASP
+        if: ${{ !inputs.skip_security && inputs.environment == 'prod' }}
         run: |
           if [ -f backend/pom.xml ]; then
             cd backend
@@ -134,7 +140,7 @@ jobs:
           
       - name: Upload security scan results
         uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ always() && !inputs.skip_security && inputs.environment == 'prod' }}
         with:
           name: security-scan-results
           path: '**/target/dependency-check-report.html'
