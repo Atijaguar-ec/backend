@@ -294,9 +294,12 @@ jobs:
         run: |
           set -e
           ls -lah deploy/backend/test/unocace || true
-          test -f deploy/backend/test/unocace/docker-compose.yml || { echo "Missing deploy/backend/test/unocace/docker-compose.yml"; exit 1; }
+          if [ ! -f deploy/backend/test/unocace/docker-compose.yml ]; then
+            echo "Missing deploy/backend/test/unocace/docker-compose.yml (will use remote compose)"
+          fi
 
       - name: Upload docker-compose.yml (unocace test)
+        if: ${{ hashFiles('deploy/backend/test/unocace/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
@@ -432,9 +435,12 @@ jobs:
         run: |
           set -e
           ls -lah deploy/backend/prod/fortaleza || true
-          test -f deploy/backend/prod/fortaleza/docker-compose.yml || { echo "Missing deploy/backend/prod/fortaleza/docker-compose.yml"; exit 1; }
+          if [ ! -f deploy/backend/prod/fortaleza/docker-compose.yml ]; then
+            echo "Missing deploy/backend/prod/fortaleza/docker-compose.yml (will use remote compose)"
+          fi
 
       - name: Upload docker-compose.yml (prod fortaleza)
+        if: ${{ hashFiles('deploy/backend/prod/fortaleza/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_FORTALEZA_HOST }}
@@ -576,9 +582,12 @@ jobs:
         run: |
           set -e
           ls -lah deploy/backend/test/dufer || true
-          test -f deploy/backend/test/dufer/docker-compose.yml || { echo "Missing deploy/backend/test/dufer/docker-compose.yml"; exit 1; }
+          if [ ! -f deploy/backend/test/dufer/docker-compose.yml ]; then
+            echo "Missing deploy/backend/test/dufer/docker-compose.yml (will use remote compose)"
+          fi
 
       - name: Upload docker-compose.yml (dufer)
+        if: ${{ hashFiles('deploy/backend/test/dufer/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.TEST_DUFER_HOST }}
@@ -703,9 +712,12 @@ jobs:
         run: |
           set -e
           ls -lah deploy/backend/test/fortaleza || true
-          test -f deploy/backend/test/fortaleza/docker-compose.yml || { echo "Missing deploy/backend/test/fortaleza/docker-compose.yml"; exit 1; }
+          if [ ! -f deploy/backend/test/fortaleza/docker-compose.yml ]; then
+            echo "Missing deploy/backend/test/fortaleza/docker-compose.yml (will use remote compose)"
+          fi
 
       - name: Upload docker-compose.yml (fortaleza)
+        if: ${{ hashFiles('deploy/backend/test/fortaleza/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.TEST_FORTALEZA_HOST }}
@@ -828,9 +840,12 @@ jobs:
         run: |
           set -e
           ls -lah deploy/backend/dev || true
-          test -f deploy/backend/dev/docker-compose.yml || { echo "Missing deploy/backend/dev/docker-compose.yml"; exit 1; }
+          if [ ! -f deploy/backend/dev/docker-compose.yml ]; then
+            echo "Missing deploy/backend/dev/docker-compose.yml (will use remote compose)"
+          fi
 
       - name: Upload docker-compose.yml (dev)
+        if: ${{ hashFiles('deploy/backend/dev/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEV_HOST }}
@@ -965,9 +980,12 @@ jobs:
         run: |
           set -e
           ls -lah deploy/backend/prod/unocace || true
-          test -f deploy/backend/prod/unocace/docker-compose.yml || { echo "Missing deploy/backend/prod/unocace/docker-compose.yml"; exit 1; }
+          if [ ! -f deploy/backend/prod/unocace/docker-compose.yml ]; then
+            echo "Missing deploy/backend/prod/unocace/docker-compose.yml (will use remote compose)"
+          fi
 
       - name: Upload docker-compose.yml (prod unocace)
+        if: ${{ hashFiles('deploy/backend/prod/unocace/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
