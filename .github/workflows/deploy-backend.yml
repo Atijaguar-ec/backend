@@ -1008,9 +1008,9 @@ jobs:
             echo "🔗 Cleaning up networks..."
             docker network rm inatrace-backend-network 2>/dev/null || true
 
-            # Create fresh network
-            echo "🔗 Creating network..."
-            docker network create inatrace-backend-network
+            # Create fresh network (idempotent)
+            echo "🔗 Ensuring network exists..."
+            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
 
             # Load new image
             echo "📦 Loading new backend image..."
