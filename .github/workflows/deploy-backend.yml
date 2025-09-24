@@ -1014,7 +1014,7 @@ jobs:
 
             # Start services
             echo "🚀 Starting dev services..."
-            docker-compose up -d --remove-orphans
+            docker-compose up -d
 
             echo "⏳ Waiting for service to be ready..."
             sleep 30
