@@ -53,7 +53,7 @@ jobs:
       mysql:
         image: mysql:8.0.35
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ROOT_PASSWORD: inatrace
           MYSQL_DATABASE: inatrace
           MYSQL_USER: inatrace
           MYSQL_PASSWORD: inatrace
