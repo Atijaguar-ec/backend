@@ -61,6 +61,8 @@ public class SpringSecurityConfig {
 					matcherRegistry.anyRequest().authenticated();
 				});
 		http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
+		return http.build();
 	}
 
 }
