@@ -1,5 +1,5 @@
 name: 🚀 Backend CI/CD Pipeline
-
+ 
 on:
   push:
     branches: [ develop, staging, main ]
@@ -999,17 +999,13 @@ jobs:
             set -e
             cd /opt/inatrace/backend/dev
 
-            # Stop any existing dev containers first
-            echo "🛑 Stopping existing dev containers..."
+            # Stop only backend containers (preserve frontend)
+            echo "🛑 Stopping existing backend containers..."
             docker stop inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
             docker rm inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
 
-            # Clean up existing networks (force removal)
-            echo "🔗 Cleaning up networks..."
-            docker network rm inatrace-backend-network 2>/dev/null || true
-
-            # Create fresh network (idempotent)
-            echo "🔗 Ensuring network exists..."
+            # Ensure shared network exists (DO NOT remove - frontend may be using it)
+            echo "🔗 Ensuring shared network exists..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
 
             # Load new image
