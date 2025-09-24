@@ -530,9 +530,9 @@ jobs:
           DOCUMENTS_ROOT=/app/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=smtp.gmail.com
-          MAIL_PORT=587
-          MAIL_USERNAME=noreply-fortaleza@inatrace.com
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.PROD_FORTALEZA_MAIL_PASSWORD }}
           EOF
 
@@ -677,9 +677,9 @@ jobs:
           DOCUMENTS_ROOT=/app/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=smtp.gmail.com
-          MAIL_PORT=587
-          MAIL_USERNAME=test-dufer@inatrace.com
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.TEST_DUFER_MAIL_PASSWORD }}
           EOF
 
@@ -807,9 +807,9 @@ jobs:
           DOCUMENTS_ROOT=/app/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=smtp.gmail.com
-          MAIL_PORT=587
-          MAIL_USERNAME=test-fortaleza@inatrace.com
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.TEST_FORTALEZA_MAIL_PASSWORD }}
           EOF
 
@@ -943,9 +943,9 @@ jobs:
           DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=localhost
-          MAIL_PORT=1025
-          MAIL_USERNAME=
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=$MAIL_PASS
           EOF
 
@@ -1097,9 +1097,9 @@ jobs:
           DOCUMENTS_ROOT=/app/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=smtp.gmail.com
-          MAIL_PORT=587
-          MAIL_USERNAME=noreply-unocace@inatrace.com
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.PROD_UNOCACE_MAIL_PASSWORD }}
           EOF
 
@@ -1331,9 +1331,9 @@ jobs:
           DOCUMENTS_ROOT=/app/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=smtp.gmail.com
-          MAIL_PORT=587
-          MAIL_USERNAME=noreply-dufer@inatrace.com
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.PROD_DUFER_MAIL_PASSWORD }}
           EOF
 
