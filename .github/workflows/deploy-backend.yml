@@ -384,9 +384,9 @@ jobs:
           DB_VOLUME=/opt/inatrace/backend/data
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=smtp.gmail.com
-          MAIL_PORT=587
-          MAIL_USERNAME=test-unocace@inatrace.com
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}
           EOF
 
