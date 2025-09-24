@@ -914,7 +914,7 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           source: "deploy/backend/dev/docker-compose.yml"
-          target: "/opt/inatrace/deploy/backend/dev"
+          target: "/opt/inatrace/backend/dev"
           debug: true
 
       - name: Prepare .env (dev)
@@ -962,7 +962,7 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           source: ".env"
-          target: "/opt/inatrace/deploy/backend/dev"
+          target: "/opt/inatrace/backend/dev"
           debug: true
 
       - name: Download backend image artifact (dev)
@@ -985,7 +985,7 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           source: "be-image.tar"
-          target: "/opt/inatrace/deploy/backend/dev"
+          target: "/opt/inatrace/backend/dev"
           debug: true
 
       - name: Deploy on server (dev)
@@ -997,7 +997,7 @@ jobs:
           port: ${{ secrets.DEV_PORT || 22 }}
           script: |
             set -e
-            cd /opt/inatrace/deploy/backend/dev
+            cd /opt/inatrace/backend/dev
 
             # Stop any existing dev containers first
             echo "🛑 Stopping existing dev containers..."
