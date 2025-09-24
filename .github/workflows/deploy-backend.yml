@@ -896,7 +896,7 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           script: |
-            mkdir -p /opt/inatrace/deploy/backend/dev
+            mkdir -p /opt/inatrace/backend/dev
 
       - name: Verify local compose path (dev)
         run: |
