@@ -42,27 +42,25 @@ public class SpringSecurityConfig {
 
 		http
 				.cors(Customizer.withDefaults())
-				.sessionManagement(smc -> smc.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.csrf(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.exceptionHandling(ehc -> ehc.authenticationEntryPoint(new RestAuthenticationEntryPoint()))
 				.authorizeHttpRequests(matcherRegistry -> {
 					matcherRegistry.requestMatchers(
-							"/api/public/**",
-							"/api/user/login",
-							"/api/user/refresh_authentication",
-							"/api/user/register",
-							"/api/user/request_reset_password",
-							"/api/user/reset_password",
-							"/api/user/confirm_email"
+						"/api/public/**",
+						"/api/user/login",
+						"/api/user/refresh_authentication",
+						"/api/user/register",
+						"/api/user/request_reset_password",
+						"/api/user/reset_password",
+						"/api/user/confirm_email",
+						"/actuator/**"
 					).permitAll();
 					matcherRegistry.requestMatchers(SWAGGER_EXCEPTIONS).permitAll();
 					matcherRegistry.anyRequest().authenticated();
 				});
 		http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
-		return http.build();
 	}
 
 }
