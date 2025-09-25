@@ -1224,7 +1224,7 @@ jobs:
             export VERSION="${{ needs.build.outputs.version }}"
             export COMPANY="${{ matrix.company }}"
 
-            echo "🗄️ Running database migrations..."
+            echo "🗄️ Running database migrations... prod"
             docker-compose run --rm inatrace-backend java -jar app.jar --spring.profiles.active=migration
 
             docker-compose pull
