@@ -6,12 +6,12 @@ SET @columnExists := (
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE()
     AND TABLE_NAME = 'UserCustomer'
-    AND COLUMN_NAME = 'max_production_quantity'
+    AND COLUMN_NAME = 'farm_maxProductionQuantity'
 );
 
 SET @ddl := IF(
   @columnExists = 0,
-  'ALTER TABLE UserCustomer ADD COLUMN max_production_quantity DECIMAL(19,2) NULL COMMENT ''Maximum production quantity in quintals (qq)''',
+  'ALTER TABLE UserCustomer ADD COLUMN farm_maxProductionQuantity DECIMAL(19,2) NULL COMMENT ''Maximum production quantity in quintals (qq)''',
   'SELECT 1'
 );
 
