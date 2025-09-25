@@ -180,6 +180,9 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Organic")
     private Boolean organic;
 
+    @Schema(description = "Week number for cacao deliveries (1-53)")
+    private Integer weekNumber;
+
     @Schema(description = "Tare")
     private BigDecimal tare;
 
@@ -611,6 +614,14 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setOrganic(Boolean organic) {
         this.organic = organic;
+    }
+
+    public Integer getWeekNumber() {
+        return weekNumber;
+    }
+
+    public void setWeekNumber(Integer weekNumber) {
+        this.weekNumber = weekNumber;
     }
 
     public BigDecimal getTare() {

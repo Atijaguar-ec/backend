@@ -49,9 +49,10 @@ public class StockOrderMapper {
             apiStockOrder.setQrCodeTagFinalProduct(ProductApiTools.toApiFinalProductBase(entity.getQrCodeTagFinalProduct()));
         }
 
-        // Map women share and organic only
+        // Map women share, organic and week number
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
+        apiStockOrder.setWeekNumber(entity.getWeekNumber());
 
         // Farmer
         apiStockOrder.setProducerUserCustomer(
@@ -183,6 +184,7 @@ public class StockOrderMapper {
         apiStockOrder.setComments(entity.getComments());
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
+        apiStockOrder.setWeekNumber(entity.getWeekNumber());
 
         // Set price and currency for end customer (used in Quote orders for final products)
         apiStockOrder.setPricePerUnitForEndCustomer(entity.getPricePerUnitForEndCustomer());
@@ -228,6 +230,7 @@ public class StockOrderMapper {
 
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
+        apiStockOrder.setWeekNumber(entity.getWeekNumber());
 
         // Map payments
         apiStockOrder.setPayments(entity.getPayments().stream().map(payment -> PaymentMapper.toApiPayment(payment, null)).collect(Collectors.toList()));

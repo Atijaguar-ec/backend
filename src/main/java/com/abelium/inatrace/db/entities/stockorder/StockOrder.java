@@ -186,6 +186,10 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private Boolean organic;
 
+	// Week number for cacao deliveries (1-53)
+	@Column
+	private Integer weekNumber;
+
 	@Column
 	private BigDecimal cost;
 	
@@ -673,6 +677,14 @@ public class StockOrder extends TimestampEntity {
 
 	public void setOrganic(Boolean organic) {
 		this.organic = organic;
+	}
+
+	public Integer getWeekNumber() {
+		return weekNumber;
+	}
+
+	public void setWeekNumber(Integer weekNumber) {
+		this.weekNumber = weekNumber;
 	}
 
 	public BigDecimal getTare() {
