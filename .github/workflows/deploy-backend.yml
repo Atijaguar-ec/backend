@@ -176,7 +176,7 @@ jobs:
             TAG="dev-${GITHUB_SHA::7}"
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "🏷️ Generated tag: $TAG"
+          echo "🏷️ Generated tag: $TAG | ${GITHUB_REF_NAME}"
 
       - name: Build with Maven
         run: |
