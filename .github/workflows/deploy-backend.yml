@@ -897,6 +897,10 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           script: |
+            sudo mkdir -p /opt/inatrace/volumes
+            sudo mkdir -p /opt/inatrace/volumes/backend/{file_storage,import,documents,logs}
+            sudo chown -R 1000:1000 /opt/inatrace/volumes
+            sudo chmod -R 755 /opt/inatrace/volumes
             mkdir -p /opt/inatrace/backend/dev
 
       - name: Verify local compose path (dev)
@@ -939,9 +943,9 @@ jobs:
           DOCUMENTS_ROOT=/opt/inatrace/documents
           # Host volume paths used by docker-compose
           DB_VOLUME=/opt/inatrace/mysql
-          FILE_STORAGE_ROOT_VOL=/opt/inatrace/file_storage
-          IMPORT_PATH_VOL=/opt/inatrace/import
-          DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
+          FILE_STORAGE_ROOT_VOL=/opt/inatrace/volumes/file_storage
+          IMPORT_PATH_VOL=/opt/inatrace/volumes/import
+          DOCUMENTS_ROOT_VOL=/opt/inatrace/volumes/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
           MAIL_HOST=mail.atijaguar.com
