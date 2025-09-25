@@ -388,6 +388,7 @@ jobs:
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}
+          # Deploy timestamp: 2025-09-25 00:23
           EOF
 
       - name: Upload .env
