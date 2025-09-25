@@ -42,6 +42,7 @@ public class ProductMapper extends BaseService {
             userCustomer.getFarm().setOrganic(apiUserCustomer.getFarm().getOrganic());
             userCustomer.getFarm().setAreaOrganicCertified(apiUserCustomer.getFarm().getAreaOrganicCertified());
             userCustomer.getFarm().setStartTransitionToOrganic(apiUserCustomer.getFarm().getStartTransitionToOrganic());
+            userCustomer.getFarm().setMaxProductionQuantity(apiUserCustomer.getFarm().getMaxProductionQuantity());
         }
         // Cooperatives
         if (userCustomer.getCooperatives() == null) {

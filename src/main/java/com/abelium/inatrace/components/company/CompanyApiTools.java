@@ -444,6 +444,7 @@ public class CompanyApiTools {
 		apiFarmInformation.setOrganic(userCustomer.getFarm().getOrganic());
 		apiFarmInformation.setStartTransitionToOrganic(userCustomer.getFarm().getStartTransitionToOrganic());
 		apiFarmInformation.setTotalCultivatedArea(userCustomer.getFarm().getTotalCultivatedArea());
+		apiFarmInformation.setMaxProductionQuantity(userCustomer.getFarm().getMaxProductionQuantity());
 
 		if (!userCustomer.getFarmPlantInformationList().isEmpty()) {
 			apiFarmInformation.setFarmPlantInformationList(new ArrayList<>());

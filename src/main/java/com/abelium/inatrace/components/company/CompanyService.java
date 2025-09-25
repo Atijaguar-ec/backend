@@ -855,6 +855,7 @@ public class CompanyService extends BaseService {
 			userCustomer.getFarm().setOrganic(apiUserCustomer.getFarm().getOrganic());
 			userCustomer.getFarm().setStartTransitionToOrganic(apiUserCustomer.getFarm().getStartTransitionToOrganic());
 			userCustomer.getFarm().setTotalCultivatedArea(apiUserCustomer.getFarm().getTotalCultivatedArea());
+			userCustomer.getFarm().setMaxProductionQuantity(apiUserCustomer.getFarm().getMaxProductionQuantity());
 		}
 
 		UserCustomerLocation userCustomerLocation = new UserCustomerLocation();
@@ -1010,6 +1011,7 @@ public class CompanyService extends BaseService {
 		userCustomer.getFarm().setOrganic(apiUserCustomer.getFarm().getOrganic());
 		userCustomer.getFarm().setStartTransitionToOrganic(apiUserCustomer.getFarm().getStartTransitionToOrganic());
 		userCustomer.getFarm().setTotalCultivatedArea(apiUserCustomer.getFarm().getTotalCultivatedArea());
+		userCustomer.getFarm().setMaxProductionQuantity(apiUserCustomer.getFarm().getMaxProductionQuantity());
 
 		if (userCustomer.getUserCustomerLocation() == null) {
 			userCustomer.setUserCustomerLocation(new UserCustomerLocation());
