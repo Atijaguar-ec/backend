@@ -322,8 +322,8 @@ jobs:
           [ -z "${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DATASOURCE_PASSWORD" && missing=1
           [ -z "${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_MAIL_PASSWORD" && missing=1
           # Optional secrets: warn if missing; defaults will be used later
-          [ -z "${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}" ] && echo "Warning: Missing optional secret: TEST_UNOCACE_REQUESTLOG_TOKEN (will use default)"
-          [ -z "${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}" ] && echo "Warning: Missing optional secret: TEST_UNOCACE_EXCHANGERATE_APIKEY (will use default)"
+          [ -z "${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}" ] && echo "Warning: Missing  secret: TEST_UNOCACE_REQUESTLOG_TOKEN (will use default)"
+          [ -z "${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}" ] && echo "Warning: Missing secret: TEST_UNOCACE_EXCHANGERATE_APIKEY (will use default)"
           if [ "$missing" -ne 0 ]; then
             exit 1
           fi
