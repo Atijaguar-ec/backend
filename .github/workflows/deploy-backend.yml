@@ -343,7 +343,7 @@ jobs:
           set -e
           ls -lah deploy/backend/test/unocace || true
           if [ ! -f deploy/backend/test/unocace/docker-compose.yml ]; then
-            echo "Missing deploy/backend/test/unocace/docker-compose.yml (will use remote compose)"
+            echo "Error: Missing deploy/backend/test/unocace/docker-compose.yml (will use remote compose)"
           fi
 
       - name: Upload docker-compose.yml (unocace test)
