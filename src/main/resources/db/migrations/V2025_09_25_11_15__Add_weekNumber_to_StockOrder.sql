@@ -1,17 +1,24 @@
 -- Add week_number column to stock_order table for cacao deliveries
 -- This field stores the week number (1-53) for cacao traceability
 
+SET @tableExists := (
+  SELECT COUNT(*)
+  FROM information_schema.TABLES
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'StockOrder'
+);
+
 SET @columnExists := (
   SELECT COUNT(*)
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'stock_order'
-    AND COLUMN_NAME = 'week_number'
+    AND TABLE_NAME = 'StockOrder'
+    AND COLUMN_NAME = 'weekNumber'
 );
 
 SET @ddl := IF(
-  @columnExists = 0,
-  'ALTER TABLE stock_order ADD COLUMN week_number INT NULL COMMENT ''Week number for cacao deliveries (1-53)''',
+  @tableExists = 1 AND @columnExists = 0,
+  'ALTER TABLE StockOrder ADD COLUMN weekNumber INT NULL COMMENT ''Week number for cacao deliveries (1-53)''',
   'SELECT 1'
 );
 
@@ -24,13 +31,13 @@ SET @indexExists := (
   SELECT COUNT(*)
   FROM information_schema.STATISTICS
   WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'stock_order'
+    AND TABLE_NAME = 'StockOrder'
     AND INDEX_NAME = 'idx_stock_order_week_number'
 );
 
 SET @indexDdl := IF(
-  @indexExists = 0 AND @columnExists = 0,
-  'CREATE INDEX idx_stock_order_week_number ON stock_order(week_number)',
+  @tableExists = 1 AND @indexExists = 0 AND @columnExists = 0,
+  'CREATE INDEX idx_stock_order_week_number ON StockOrder(weekNumber)',
   'SELECT 1'
 );
 
@@ -43,13 +50,13 @@ SET @constraintExists := (
   SELECT COUNT(*)
   FROM information_schema.TABLE_CONSTRAINTS
   WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'stock_order'
+    AND TABLE_NAME = 'StockOrder'
     AND CONSTRAINT_NAME = 'chk_stock_order_week_number'
 );
 
 SET @constraintDdl := IF(
-  @constraintExists = 0 AND @columnExists = 0,
-  'ALTER TABLE stock_order ADD CONSTRAINT chk_stock_order_week_number CHECK (week_number IS NULL OR (week_number >= 1 AND week_number <= 53))',
+  @tableExists = 1 AND @constraintExists = 0 AND @columnExists = 0,
+  'ALTER TABLE StockOrder ADD CONSTRAINT chk_stock_order_week_number CHECK (weekNumber IS NULL OR (weekNumber >= 1 AND weekNumber <= 53))',
   'SELECT 1'
 );
 
