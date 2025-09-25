@@ -93,7 +93,7 @@ public class UserCustomer extends BaseEntity {
 	@Column
 	private BankInformation bank;
 
-	@Column
+	@Embedded
 	private FarmInformation farm;
 
 	@OneToMany(mappedBy = "userCustomer", cascade = CascadeType.ALL, orphanRemoval = true)
