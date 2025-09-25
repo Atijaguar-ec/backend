@@ -381,7 +381,7 @@ jobs:
           FILE_STORAGE_ROOT_VOL=/opt/inatrace/file_storage
           IMPORT_PATH_VOL=/opt/inatrace/imports
           DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
-          DB_VOLUME=/opt/inatrace/backend/data
+          DB_VOLUME=/opt/inatrace/mysql
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
           MAIL_HOST=mail.atijaguar.com
