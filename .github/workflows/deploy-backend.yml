@@ -368,6 +368,9 @@ jobs:
           if [ -z "$REQ_TOKEN" ]; then REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"; fi
           EXR_KEY="${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}"
           if [ -z "$EXR_KEY" ]; then EXR_KEY="dummy-test-key"; fi
+          FE_URL="${{ secrets.TEST_UNOCACE_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
+          FE_CONFIRM_URL="${{ secrets.TEST_UNOCACE_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
+          FE_RESET_URL="${{ secrets.TEST_UNOCACE_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=staging
@@ -384,6 +387,9 @@ jobs:
           DB_VOLUME=/opt/inatrace/mysql
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=$FE_CONFIRM_URL
+          FE_RESET_URL=$FE_RESET_URL
           MAIL_HOST=mail.atijaguar.com
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
@@ -519,6 +525,9 @@ jobs:
           DB_USER="${{ secrets.PROD_FORTALEZA_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_prod_fortaleza"
           REQ_TOKEN="${{ secrets.PROD_FORTALEZA_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
           EXR_KEY="${{ secrets.PROD_FORTALEZA_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-prod-key"
+          FE_URL="${{ secrets.PROD_FORTALEZA_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
+          FE_CONFIRM_URL="${{ secrets.PROD_FORTALEZA_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
+          FE_RESET_URL="${{ secrets.PROD_FORTALEZA_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=latest
@@ -531,6 +540,9 @@ jobs:
           DOCUMENTS_ROOT=/app/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=$FE_CONFIRM_URL
+          FE_RESET_URL=$FE_RESET_URL
           MAIL_HOST=mail.atijaguar.com
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
@@ -666,6 +678,9 @@ jobs:
           DB_USER="${{ secrets.TEST_DUFER_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_test_dufer"
           REQ_TOKEN="${{ secrets.TEST_DUFER_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
           EXR_KEY="${{ secrets.TEST_DUFER_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-test-key"
+          FE_URL="${{ secrets.TEST_DUFER_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
+          FE_CONFIRM_URL="${{ secrets.TEST_DUFER_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
+          FE_RESET_URL="${{ secrets.TEST_DUFER_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=staging
@@ -678,6 +693,9 @@ jobs:
           DOCUMENTS_ROOT=/app/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=$FE_CONFIRM_URL
+          FE_RESET_URL=$FE_RESET_URL
           MAIL_HOST=mail.atijaguar.com
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
