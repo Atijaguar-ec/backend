@@ -918,7 +918,7 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           script: |
             sudo mkdir -p /opt/inatrace/volumes
-            sudo mkdir -p /opt/inatrace/volumes/backend/{file_storage,import,documents,logs}
+            sudo mkdir -p /opt/inatrace/volumes/{uploads,import,documents,logs}
             sudo chown -R 1000:1000 /opt/inatrace/volumes
             sudo chmod -R 755 /opt/inatrace/volumes
             mkdir -p /opt/inatrace/backend/dev
@@ -926,19 +926,19 @@ jobs:
       - name: Verify local compose path (dev)
         run: |
           set -e
-          ls -lah deploy/backend/dev || true
-          if [ ! -f deploy/backend/dev/docker-compose.yml ]; then
-            echo "Missing deploy/backend/dev/docker-compose.yml (will use remote compose)"
+          ls -lah .ci || true
+          if [ ! -f .ci/docker-compose.yml ]; then
+            echo "Missing .ci/docker-compose.yml (will use remote compose)"
           fi
 
       - name: Upload docker-compose.yml (dev)
-        if: ${{ hashFiles('deploy/backend/dev/docker-compose.yml') != '' }}
+        if: ${{ hashFiles('.ci/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: "deploy/backend/dev/docker-compose.yml"
+          source: ".ci/docker-compose.yml"
           target: "/opt/inatrace/backend/dev"
           debug: true
 
