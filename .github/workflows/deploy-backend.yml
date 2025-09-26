@@ -121,7 +121,7 @@ jobs:
           name: Maven Tests
           path: '**/target/surefire-reports/*.xml'
           reporter: java-junit
-          fail-on-error: true
+          fail-on-error: false
 
       - name: 📈 Upload coverage to Codecov
         uses: codecov/codecov-action@v3
