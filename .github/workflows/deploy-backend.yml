@@ -375,9 +375,9 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}
-          FILE_STORAGE_ROOT=/app/files
-          IMPORT_PATH=/app/import
-          DOCUMENTS_ROOT=/app/documents
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
           FILE_STORAGE_ROOT_VOL=/opt/inatrace/file_storage
           IMPORT_PATH_VOL=/opt/inatrace/imports
           DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
@@ -931,6 +931,9 @@ jobs:
           MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
           REQ_TOKEN="${{ secrets.DEV_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="dev-requestlog-${GITHUB_RUN_ID}"
           EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
+          FE_URL="${{ secrets.DEV_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
+          FE_CONFIRM_URL="${{ secrets.DEV_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
+          FE_RESET_URL="${{ secrets.DEV_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=develop
@@ -948,6 +951,9 @@ jobs:
           DOCUMENTS_ROOT_VOL=/opt/inatrace/volumes/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=$FE_CONFIRM_URL
+          FE_RESET_URL=$FE_RESET_URL
           MAIL_HOST=mail.atijaguar.com
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
@@ -1093,9 +1099,9 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.PROD_UNOCACE_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.PROD_UNOCACE_DATASOURCE_PASSWORD }}
-          FILE_STORAGE_ROOT=/app/files
-          IMPORT_PATH=/app/import
-          DOCUMENTS_ROOT=/app/documents
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
           MAIL_HOST=mail.atijaguar.com
@@ -1327,9 +1333,9 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.PROD_DUFER_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.PROD_DUFER_DATASOURCE_PASSWORD }}
-          FILE_STORAGE_ROOT=/app/files
-          IMPORT_PATH=/app/import
-          DOCUMENTS_ROOT=/app/documents
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
           MAIL_HOST=mail.atijaguar.com
