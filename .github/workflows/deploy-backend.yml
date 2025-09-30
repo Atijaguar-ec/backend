@@ -420,7 +420,7 @@ jobs:
           set -e
           ls -lah .
           [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
-          echo "✅ be-image.tar present"
+          echo "✅ be-image.tar present | ${GITHUB_REF_NAME}"
 
       - name: Upload image tar (backend)
         uses: appleboy/scp-action@v0.1.7
