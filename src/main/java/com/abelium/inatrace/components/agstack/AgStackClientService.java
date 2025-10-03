@@ -50,8 +50,8 @@ public class AgStackClientService {
 				.post()
 				.uri(uriBuilder -> uriBuilder.path("/register-field-boundary").build())
 				.body(Mono.just(request), ApiRegisterFieldBoundaryRequest.class)
-				.header("API-KEY", apiKey)
-				.header("CLIENT-SECRET", clientSecret)
+				.header("b1e4163064bd83d7cd791859f93811b465dafc0448cfcdbb080c83bec1ea3843", apiKey)
+				.header("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1OTQyMDM4OCwianRpIjoiNWZjYmU5ZTgtZmNhMS00OWFlLTg1ZGYtNmEwNjhkZDM5NWI4IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImdtYWlsLmNvbSIsIm5iZiI6MTc1OTQyMDM4OH0.nc4shsbpu6mciVWNJnxoCcpEApw33mRlQT_t6M2iP8k", clientSecret)
 				.accept(MediaType.APPLICATION_JSON)
 				.retrieve()
 				.onStatus(
