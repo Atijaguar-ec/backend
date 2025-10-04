@@ -17,6 +17,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class GroupStockOrderService extends BaseService {
             "SELECT new com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder(" +
             "GROUP_CONCAT(SO.id), " +
             "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
-            "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), " +
+            "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, " +
             "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
             "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
             "SO.isAvailable " +
@@ -67,7 +68,7 @@ public class GroupStockOrderService extends BaseService {
 
         // Add GROUP BY query string for grouping common columns
         queryString.append(
-                " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, MUT.label, " +
+                " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, MUT.label, " +
                 "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name "
         );
 
@@ -104,7 +105,7 @@ public class GroupStockOrderService extends BaseService {
             "SELECT new com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder(" +
             "GROUP_CONCAT(SO.id), " +
             "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
-            "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), " +
+            "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, " +
             "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
             "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
             "SO.isAvailable " +
@@ -118,7 +119,7 @@ public class GroupStockOrderService extends BaseService {
             "WHERE (SPT.language IS NULL OR SPT.language = :language) " +
             "AND SO.facility.id = :facilityId " +
             "AND SO.productionDate >= :oneYearAgo " +
-            "GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, MUT.label, " +
+            "GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, MUT.label, " +
             "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name " +
             "ORDER BY SO.productionDate DESC"
         );
@@ -191,7 +192,7 @@ public class GroupStockOrderService extends BaseService {
                 createCell(row, 8, order.getAvailableQuantity() != null ? String.format("%.2f", order.getAvailableQuantity()) : "0.00", dataCellStyle);
                 createCell(row, 9, order.getUnitLabel() != null ? order.getUnitLabel() : "", dataCellStyle);
                 createCell(row, 10, order.getDeliveryTime() != null ? order.getDeliveryTime().format(dateFormatter) : "", dataCellStyle);
-                createCell(row, 11, order.getUpdateTimestamp() != null ? order.getUpdateTimestamp().format(timestampFormatter) : "", dataCellStyle);
+                createCell(row, 11, order.getUpdateTimestamp() != null ? timestampFormatter.withZone(ZoneId.systemDefault()).format(order.getUpdateTimestamp()) : "", dataCellStyle);
                 createCell(row, 12, formatAvailability(order.getAvailable(), language), dataCellStyle);
             }
             

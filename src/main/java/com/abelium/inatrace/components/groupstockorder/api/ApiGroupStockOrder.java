@@ -21,6 +21,7 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
             OrderType orderType,
             String semiProductName,
             String finalProductName,
+            Integer weekNumber,
             BigDecimal totalQuantity,
             BigDecimal fulfilledQuantity,
             BigDecimal availableQuantity,
@@ -42,6 +43,7 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         setSemiProductName(semiProductName);
         setNoOfSacs(noOfSacs);
         setFinalProductName(finalProductName);
+        setWeekNumber(weekNumber);
         setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
     }
 
@@ -86,6 +88,9 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Is stock available")
     private Boolean isAvailable;
+
+    @Schema(description = "Week number for cacao deliveries (1-53)")
+    private Integer weekNumber;
 
     public Instant getUpdateTimestamp() {
         return updateTimestamp;
@@ -165,6 +170,14 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     public void setAvailable(Boolean available) {
         isAvailable = available;
+    }
+
+    public Integer getWeekNumber() {
+        return weekNumber;
+    }
+
+    public void setWeekNumber(Integer weekNumber) {
+        this.weekNumber = weekNumber;
     }
 
     public LocalDate getProductionDate() {
