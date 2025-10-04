@@ -7,9 +7,15 @@ import com.abelium.inatrace.types.Language;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.io.ByteArrayInputStream;
 
 @RestController
 @RequestMapping("/chain/group-stock-order")
@@ -42,6 +48,23 @@ public class GroupStockOrderController {
                 ),
                 language
         ));
+    }
+
+    @GetMapping(value = "/export/facility/{facilityId}", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @Operation(summary = "Export grouped stock orders to Excel for a facility (last year)")
+    public ResponseEntity<Resource> exportGroupedStockOrdersExcel(
+            @Valid @Parameter(description = "Facility ID", required = true) @PathVariable Long facilityId,
+            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language
+    ) throws Exception {
+        
+        ByteArrayInputStream excelStream = this.groupStockOrderService.exportGroupedStockOrdersToExcel(facilityId, language);
+        
+        InputStreamResource resource = new InputStreamResource(excelStream);
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=grouped-stock-orders.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(resource);
     }
 
 }
