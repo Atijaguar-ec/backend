@@ -104,6 +104,7 @@ public class GroupStockOrderService extends BaseService {
         StringBuilder queryString = new StringBuilder(
             "SELECT new com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder(" +
             "GROUP_CONCAT(SO.id), " +
+            "FT.label AS facilityType, " +
             "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
             "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, " +
             "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
@@ -116,17 +117,17 @@ public class GroupStockOrderService extends BaseService {
             "LEFT JOIN SO.finalProduct FP " +
             "LEFT JOIN FP.product P " +
             "LEFT JOIN SP.semiProductTranslations SPT " +
+            "LEFT JOIN SO.facility F " +
+            "LEFT JOIN F.facilityType FT " +
             "WHERE (SPT.language IS NULL OR SPT.language = :language) " +
-            "AND SO.facility.id = :facilityId " +
             "AND SO.productionDate >= :oneYearAgo " +
             "GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, MUT.label, " +
-            "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name " +
+            "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name, FT.label " +
             "ORDER BY SO.productionDate DESC"
         );
         
         TypedQuery<ApiGroupStockOrder> query = em.createQuery(queryString.toString(), ApiGroupStockOrder.class);
         query.setParameter("language", language);
-        query.setParameter("facilityId", facilityId);
         query.setParameter("oneYearAgo", oneYearAgo);
         
         List<ApiGroupStockOrder> orders = query.getResultList();
@@ -177,23 +178,24 @@ public class GroupStockOrderService extends BaseService {
             for (ApiGroupStockOrder order : orders) {
                 Row row = sheet.createRow(rowIdx++);
                 
-                createCell(row, 0, order.getProductionDate() != null ? order.getProductionDate().format(dateFormatter) : "", dataCellStyle);
-                createCell(row, 1, order.getInternalLotNumber() != null ? order.getInternalLotNumber() : "", dataCellStyle);
-                createCell(row, 2, order.getNoOfSacs() != null && order.getNoOfSacs() > 0 ? order.getNoOfSacs().toString() : "0", dataCellStyle);
-                createCell(row, 3, order.getOrderType() != null ? formatOrderType(order.getOrderType().toString(), language) : "", dataCellStyle);
+                createCell(row, 0, order.getFacilityType() != null ? order.getFacilityType() : "", dataCellStyle);
+                createCell(row, 1, order.getProductionDate() != null ? order.getProductionDate().format(dateFormatter) : "", dataCellStyle);
+                createCell(row, 2, order.getInternalLotNumber() != null ? order.getInternalLotNumber() : "", dataCellStyle);
+                createCell(row, 3, order.getNoOfSacs() != null && order.getNoOfSacs() > 0 ? order.getNoOfSacs().toString() : "0", dataCellStyle);
+                createCell(row, 4, order.getOrderType() != null ? formatOrderType(order.getOrderType().toString(), language) : "", dataCellStyle);
                 
                 String productName = order.getSemiProductName() != null ? order.getSemiProductName() : 
                                     (order.getFinalProductName() != null ? order.getFinalProductName() : "");
-                createCell(row, 4, productName, dataCellStyle);
+                createCell(row, 5, productName, dataCellStyle);
                 
-                createCell(row, 5, order.getWeekNumber() != null ? order.getWeekNumber().toString() : "-", dataCellStyle);
-                createCell(row, 6, order.getTotalQuantity() != null ? String.format("%.2f", order.getTotalQuantity()) : "0.00", dataCellStyle);
-                createCell(row, 7, order.getFulfilledQuantity() != null ? String.format("%.2f", order.getFulfilledQuantity()) : "0.00", dataCellStyle);
-                createCell(row, 8, order.getAvailableQuantity() != null ? String.format("%.2f", order.getAvailableQuantity()) : "0.00", dataCellStyle);
-                createCell(row, 9, order.getUnitLabel() != null ? order.getUnitLabel() : "", dataCellStyle);
-                createCell(row, 10, order.getDeliveryTime() != null ? order.getDeliveryTime().format(dateFormatter) : "", dataCellStyle);
-                createCell(row, 11, order.getUpdateTimestamp() != null ? timestampFormatter.withZone(ZoneId.systemDefault()).format(order.getUpdateTimestamp()) : "", dataCellStyle);
-                createCell(row, 12, formatAvailability(order.getAvailable(), language), dataCellStyle);
+                createCell(row, 6, order.getWeekNumber() != null ? order.getWeekNumber().toString() : "-", dataCellStyle);
+                createCell(row, 7, order.getTotalQuantity() != null ? String.format("%.2f", order.getTotalQuantity()) : "0.00", dataCellStyle);
+                createCell(row, 8, order.getFulfilledQuantity() != null ? String.format("%.2f", order.getFulfilledQuantity()) : "0.00", dataCellStyle);
+                createCell(row, 9, order.getAvailableQuantity() != null ? String.format("%.2f", order.getAvailableQuantity()) : "0.00", dataCellStyle);
+                createCell(row, 10, order.getUnitLabel() != null ? order.getUnitLabel() : "", dataCellStyle);
+                createCell(row, 11, order.getDeliveryTime() != null ? order.getDeliveryTime().format(dateFormatter) : "", dataCellStyle);
+                createCell(row, 12, order.getUpdateTimestamp() != null ? timestampFormatter.withZone(ZoneId.systemDefault()).format(order.getUpdateTimestamp()) : "", dataCellStyle);
+                createCell(row, 13, formatAvailability(order.getAvailable(), language), dataCellStyle);
             }
             
             // Auto-size columns
@@ -215,6 +217,7 @@ public class GroupStockOrderService extends BaseService {
     private String[] getColumnHeaders(Language language) {
         if (language == Language.ES) {
             return new String[]{
+                "Área",
                 "Fecha de Producción",
                 "Número de Lote Interno",
                 "No. de Sacos",
@@ -232,6 +235,7 @@ public class GroupStockOrderService extends BaseService {
         }
         // Default English
         return new String[]{
+            "Area",
             "Production Date",
             "Internal Lot Number",
             "No. of Sacs",

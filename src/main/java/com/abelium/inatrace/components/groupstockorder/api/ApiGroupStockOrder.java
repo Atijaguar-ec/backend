@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 public class ApiGroupStockOrder extends ApiBaseEntity {
 
     public ApiGroupStockOrder() {}
+    
+    // Constructor for paginated list (without facilityType)
     public ApiGroupStockOrder(
             String groupedIds,
             LocalDate productionDate,
@@ -46,6 +48,43 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         setWeekNumber(weekNumber);
         setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
     }
+    
+    // Constructor for Excel export (with facilityType)
+    public ApiGroupStockOrder(
+            String groupedIds,
+            String facilityType,
+            LocalDate productionDate,
+            String internalLotNumber,
+            Long noOfSacs,
+            OrderType orderType,
+            String semiProductName,
+            String finalProductName,
+            Integer weekNumber,
+            BigDecimal totalQuantity,
+            BigDecimal fulfilledQuantity,
+            BigDecimal availableQuantity,
+            String unitLabel,
+            LocalDate deliveryTime,
+            Instant updateTimestamp,
+            Boolean isAvailable
+    ) {
+        setProductionDate(productionDate);
+        setInternalLotNumber(internalLotNumber);
+        setOrderType(orderType);
+        setTotalQuantity(totalQuantity);
+        setFulfilledQuantity(fulfilledQuantity);
+        setAvailableQuantity(availableQuantity);
+        setUnitLabel(unitLabel);
+        setDeliveryTime(deliveryTime);
+        setUpdateTimestamp(updateTimestamp);
+        setAvailable(isAvailable);
+        setSemiProductName(semiProductName);
+        setNoOfSacs(noOfSacs);
+        setFinalProductName(finalProductName);
+        setWeekNumber(weekNumber);
+        setFacilityType(facilityType);
+        setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
+    }
 
     @Schema(description = "List of stock order ID's, belonging to this group")
     private List<Long> groupedIds;
@@ -64,6 +103,9 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Order type")
     private OrderType orderType;
+
+    @Schema(description = "Facility type")
+    private String facilityType;
 
     @Schema(description = "Semi product name")
     private String semiProductName;
@@ -122,6 +164,14 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     public void setSemiProductName(String semiProductName) {
         this.semiProductName = semiProductName;
+    }
+
+    public String getFacilityType() {
+        return facilityType;
+    }
+
+    public void setFacilityType(String facilityType) {
+        this.facilityType = facilityType;
     }
 
     public BigDecimal getTotalQuantity() {
