@@ -96,43 +96,69 @@ public class GroupStockOrderService extends BaseService {
     }
 
     public ByteArrayInputStream exportGroupedStockOrdersToExcel(Long facilityId, Language language) throws IOException {
-        
-        // Calculate date one year ago
+        List<ApiGroupStockOrder> orders = fetchGroupedStockOrders(language, facilityId, null);
+        return generateExcelFile(orders, language);
+    }
+
+    public ByteArrayInputStream exportGroupedStockOrdersToExcelByCompany(Long companyId, Language language) throws IOException {
+        List<ApiGroupStockOrder> orders = fetchGroupedStockOrders(language, null, companyId);
+        return generateExcelFile(orders, language);
+    }
+
+    private List<ApiGroupStockOrder> fetchGroupedStockOrders(Language language, Long facilityId, Long companyId) {
+
         LocalDate oneYearAgo = LocalDate.now().minusYears(1);
-        
-        // Build query to get all records from last year
+
         StringBuilder queryString = new StringBuilder(
-            "SELECT new com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder(" +
-            "GROUP_CONCAT(SO.id), " +
-            "FT.label AS facilityType, " +
-            "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
-            "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, " +
-            "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
-            "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
-            "SO.isAvailable " +
-            ") FROM StockOrder SO " +
-            "LEFT JOIN SO.processingOrder PO " +
-            "LEFT JOIN SO.measurementUnitType MUT " +
-            "LEFT JOIN SO.semiProduct SP " +
-            "LEFT JOIN SO.finalProduct FP " +
-            "LEFT JOIN FP.product P " +
-            "LEFT JOIN SP.semiProductTranslations SPT " +
-            "LEFT JOIN SO.facility F " +
-            "LEFT JOIN F.facilityType FT " +
-            "WHERE (SPT.language IS NULL OR SPT.language = :language) " +
-            "AND SO.productionDate >= :oneYearAgo " +
-            "GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, MUT.label, " +
-            "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name, FT.label " +
-            "ORDER BY SO.productionDate DESC"
+                "SELECT new com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder(" +
+                        "GROUP_CONCAT(SO.id), " +
+                        "COALESCE(FT.name, F.name), " +
+                        "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
+                        "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, " +
+                        "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
+                        "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
+                        "SO.isAvailable " +
+                        ") FROM StockOrder SO " +
+                        "LEFT JOIN SO.processingOrder PO " +
+                        "LEFT JOIN SO.measurementUnitType MUT " +
+                        "LEFT JOIN SO.semiProduct SP " +
+                        "LEFT JOIN SO.finalProduct FP " +
+                        "LEFT JOIN FP.product P " +
+                        "LEFT JOIN SP.semiProductTranslations SPT " +
+                        "LEFT JOIN SO.facility F " +
+                        "LEFT JOIN F.facilityTranslations FT WITH FT.language = :language "
         );
-        
+
+        queryString.append(" WHERE (SPT.language IS NULL OR SPT.language = :language)");
+        queryString.append(" AND SO.productionDate >= :oneYearAgo");
+
+        if (facilityId != null) {
+            queryString.append(" AND SO.facility.id = :facilityId");
+        }
+
+        if (companyId != null) {
+            queryString.append(" AND SO.company.id = :companyId");
+        }
+
+        queryString.append(
+                " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, MUT.label, " +
+                        "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name, F.name, FT.name " +
+                        "ORDER BY SO.productionDate DESC"
+        );
+
         TypedQuery<ApiGroupStockOrder> query = em.createQuery(queryString.toString(), ApiGroupStockOrder.class);
         query.setParameter("language", language);
         query.setParameter("oneYearAgo", oneYearAgo);
-        
-        List<ApiGroupStockOrder> orders = query.getResultList();
-        
-        return generateExcelFile(orders, language);
+
+        if (facilityId != null) {
+            query.setParameter("facilityId", facilityId);
+        }
+
+        if (companyId != null) {
+            query.setParameter("companyId", companyId);
+        }
+
+        return query.getResultList();
     }
     
     private ByteArrayInputStream generateExcelFile(List<ApiGroupStockOrder> orders, Language language) throws IOException {
@@ -178,7 +204,7 @@ public class GroupStockOrderService extends BaseService {
             for (ApiGroupStockOrder order : orders) {
                 Row row = sheet.createRow(rowIdx++);
                 
-                createCell(row, 0, order.getFacilityType() != null ? order.getFacilityType() : "", dataCellStyle);
+                createCell(row, 0, order.getFacilityName() != null ? order.getFacilityName() : "", dataCellStyle);
                 createCell(row, 1, order.getProductionDate() != null ? order.getProductionDate().format(dateFormatter) : "", dataCellStyle);
                 createCell(row, 2, order.getInternalLotNumber() != null ? order.getInternalLotNumber() : "", dataCellStyle);
                 createCell(row, 3, order.getNoOfSacs() != null && order.getNoOfSacs() > 0 ? order.getNoOfSacs().toString() : "0", dataCellStyle);

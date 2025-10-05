@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 public class ApiGroupStockOrder extends ApiBaseEntity {
 
     public ApiGroupStockOrder() {}
-    
-    // Constructor for paginated list (without facilityType)
+
+    // Constructor for paginated list (without facility name)
     public ApiGroupStockOrder(
             String groupedIds,
             LocalDate productionDate,
@@ -32,27 +32,30 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
             Instant updateTimestamp,
             Boolean isAvailable
     ) {
-        setProductionDate(productionDate);
-        setInternalLotNumber(internalLotNumber);
-        setOrderType(orderType);
-        setTotalQuantity(totalQuantity);
-        setFulfilledQuantity(fulfilledQuantity);
-        setAvailableQuantity(availableQuantity);
-        setUnitLabel(unitLabel);
-        setDeliveryTime(deliveryTime);
-        setUpdateTimestamp(updateTimestamp);
-        setAvailable(isAvailable);
-        setSemiProductName(semiProductName);
-        setNoOfSacs(noOfSacs);
-        setFinalProductName(finalProductName);
-        setWeekNumber(weekNumber);
-        setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
+        this(
+                groupedIds,
+                null,
+                productionDate,
+                internalLotNumber,
+                noOfSacs,
+                orderType,
+                semiProductName,
+                finalProductName,
+                weekNumber,
+                totalQuantity,
+                fulfilledQuantity,
+                availableQuantity,
+                unitLabel,
+                deliveryTime,
+                updateTimestamp,
+                isAvailable
+        );
     }
-    
-    // Constructor for Excel export (with facilityType)
+
+    // Constructor for Excel export (with facility name)
     public ApiGroupStockOrder(
             String groupedIds,
-            String facilityType,
+            String facilityName,
             LocalDate productionDate,
             String internalLotNumber,
             Long noOfSacs,
@@ -82,7 +85,7 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         setNoOfSacs(noOfSacs);
         setFinalProductName(finalProductName);
         setWeekNumber(weekNumber);
-        setFacilityType(facilityType);
+        setFacilityName(facilityName);
         setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
     }
 
@@ -104,8 +107,8 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
     @Schema(description = "Order type")
     private OrderType orderType;
 
-    @Schema(description = "Facility type")
-    private String facilityType;
+    @Schema(description = "Facility (area) name")
+    private String facilityName;
 
     @Schema(description = "Semi product name")
     private String semiProductName;
@@ -166,12 +169,12 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         this.semiProductName = semiProductName;
     }
 
-    public String getFacilityType() {
-        return facilityType;
+    public String getFacilityName() {
+        return facilityName;
     }
 
-    public void setFacilityType(String facilityType) {
-        this.facilityType = facilityType;
+    public void setFacilityName(String facilityName) {
+        this.facilityName = facilityName;
     }
 
     public BigDecimal getTotalQuantity() {
