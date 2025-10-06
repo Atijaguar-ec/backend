@@ -21,7 +21,7 @@ on:
         - test
         - prod
       company:
-        description: 'Target company'
+        description: 'Target company (dev, test, prod)'
         required: false
         default: false
         type: boolean
