@@ -335,6 +335,7 @@ jobs:
           FE_URL=$FE_URL
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
+          SERVER_PORT=$SERVER_PORT
           MAIL_HOST=mail.atijaguar.com
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
@@ -462,6 +463,7 @@ jobs:
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.TEST_ESPAM_MAIL_PASSWORD }}
+          SERVER_PORT=$SERVER_PORT
           EOF
 
       - name: 📤 Upload .env
