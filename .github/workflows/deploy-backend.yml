@@ -14,14 +14,14 @@ on:
       environment:
         description: 'Target environment'
         required: true
-        default: 'dev'
+        default: 'develop'
         type: choice
         options:
-        - dev
-        - test
-        - prod
+        - develop
+        - staging
+        - main
       company:
-        description: 'Target company (dev, test, prod)'
+        description: 'Target company (develop, staging, main)'
         required: false
         default: false
         type: boolean
@@ -370,7 +370,7 @@ jobs:
           if [ -z "$REQ_TOKEN" ]; then REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"; fi
           EXR_KEY="${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}"
           if [ -z "$EXR_KEY" ]; then EXR_KEY="dummy-test-key"; fi
-          FE_URL="${{ secrets.TEST_UNOCACE_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
+          FE_URL="${{ secrets.TEST_UNOCACE_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace-test.unocace.com"
           FE_CONFIRM_URL="${{ secrets.TEST_UNOCACE_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
           FE_RESET_URL="${{ secrets.TEST_UNOCACE_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           cat > .env <<EOF
@@ -469,6 +469,138 @@ jobs:
               docker logs inatrace-be-test-unocace || echo "Could not get container logs"
             done
             echo "❌ Backend health check failed" && exit 1
+
+  deploy-test-fortaleza:
+    name: 🚀 Deploy Backend to Fortaleza Test (staging)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment:
+      name: test-fortaleza
+      url: https://testinatrace.espam.edu.ec
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (SSH & App)
+        run: |
+          missing=0
+          [ -z "${{ secrets.TEST_ESPAM_HOST }}" ] && echo "Missing secret: TEST_ESPAM_HOST" && missing=1
+          [ -z "${{ secrets.TEST_ESPAM_USER }}" ] && echo "Missing secret: TEST_ESPAM_USER" && missing=1
+          [ -z "${{ secrets.TEST_ESPAM_PASSWORD }}" ] && echo "Missing secret: TEST_ESPAM_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_ESPAM_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_ESPAM_DB_ROOT_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_ESPAM_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_ESPAM_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_ESPAM_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_ESPAM_MAIL_PASSWORD" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (fortaleza)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_ESPAM_HOST }}
+          username: ${{ secrets.TEST_ESPAM_USER }}
+          password: ${{ secrets.TEST_ESPAM_PASSWORD }}
+          script: |
+            mkdir -p /opt/inatrace/deploy/backend/test/fortaleza
+
+      - name: Verify local compose path (fortaleza)
+        run: |
+          set -e
+          ls -lah deploy/backend/test/fortaleza || true
+          if [ ! -f deploy/backend/test/fortaleza/docker-compose.yml ]; then
+            echo "Missing deploy/backend/test/fortaleza/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (fortaleza)
+        if: ${{ hashFiles('deploy/backend/test/fortaleza/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_ESPAM_HOST }}
+          username: ${{ secrets.TEST_ESPAM_USER }}
+          password: ${{ secrets.TEST_ESPAM_PASSWORD }}
+          source: "deploy/backend/test/fortaleza/docker-compose.yml"
+          target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
+
+      - name: Prepare .env (fortaleza)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.TEST_ESPAM_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_test_fortaleza"
+          REQ_TOKEN="${{ secrets.TEST_ESPAM_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.TEST_ESPAM_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-test-key"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=staging
+          DATABASE_NAME=inatrace_test_fortaleza
+          DB_ROOT_PASSWORD=${{ secrets.TEST_ESPAM_DB_ROOT_PASSWORD }}
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=${{ secrets.TEST_ESPAM_DATASOURCE_PASSWORD }}
+          FILE_STORAGE_ROOT=/app/files
+          IMPORT_PATH=/app/import
+          DOCUMENTS_ROOT=/app/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
+          MAIL_PASSWORD=${{ secrets.TEST_ESPAM_MAIL_PASSWORD }}
+          EOF
+
+      - name: Upload .env (fortaleza)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_ESPAM_HOST }}
+          username: ${{ secrets.TEST_ESPAM_USER }}
+          password: ${{ secrets.TEST_ESPAM_PASSWORD }}
+          source: ".env"
+          target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
+
+      - name: Download backend image artifact (fortaleza)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (fortaleza)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (fortaleza)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_ESPAM_HOST }}
+          username: ${{ secrets.TEST_ESPAM_USER }}
+          password: ${{ secrets.TEST_ESPAM_PASSWORD }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/deploy/backend/test/fortaleza"
+          debug: true
+
+      - name: Deploy on server (fortaleza)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_ESPAM_HOST }}
+          username: ${{ secrets.TEST_ESPAM_USER }}
+          password: ${{ secrets.TEST_ESPAM_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/inatrace/deploy/backend/test/fortaleza
+            docker network inspect inatrace-backend-fortaleza-network >/dev/null 2>&1 || docker network create inatrace-backend-fortaleza-network
+            docker load -i be-image.tar
+            docker-compose pull || true
+            docker-compose up -d --remove-orphans
+            for i in {1..12}; do
+              sleep 10
+              if curl -fsS "https://testinatrace.espam.edu.ec/api/actuator/health" >/dev/null; then
+                echo "✅ Backend ESPAM staging deployment healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for backend to become healthy ($i/12)"
+            done
+            echo "❌ Backend health check failed" && exit 1
+          
 
   deploy-prod-fortaleza:
     name: Deploy Backend to Fortaleza Production (main)
@@ -759,137 +891,7 @@ jobs:
               echo "⏳ Waiting for backend to become healthy ($i/12)"
             done
             echo "❌ Backend health check failed" && exit 1
-  deploy-test-fortaleza:
-    name: Deploy Backend to Fortaleza Test (staging)
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
-    environment:
-      name: test-fortaleza
-      url: https://inatrace-test.fortalezadelvalle.org
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Preflight - validate required secrets (SSH & App)
-        run: |
-          missing=0
-          [ -z "${{ secrets.TEST_FORTALEZA_HOST }}" ] && echo "Missing secret: TEST_FORTALEZA_HOST" && missing=1
-          [ -z "${{ secrets.TEST_FORTALEZA_USER }}" ] && echo "Missing secret: TEST_FORTALEZA_USER" && missing=1
-          [ -z "${{ secrets.TEST_FORTALEZA_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_PASSWORD" && missing=1
-          [ -z "${{ secrets.TEST_FORTALEZA_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_DB_ROOT_PASSWORD" && missing=1
-          [ -z "${{ secrets.TEST_FORTALEZA_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_DATASOURCE_PASSWORD" && missing=1
-          [ -z "${{ secrets.TEST_FORTALEZA_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_FORTALEZA_MAIL_PASSWORD" && missing=1
-          if [ "$missing" -ne 0 ]; then exit 1; fi
-
-      - name: Ensure remote directory exists (fortaleza)
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.TEST_FORTALEZA_HOST }}
-          username: ${{ secrets.TEST_FORTALEZA_USER }}
-          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
-          script: |
-            mkdir -p /opt/inatrace/deploy/backend/test/fortaleza
-
-      - name: Verify local compose path (fortaleza)
-        run: |
-          set -e
-          ls -lah deploy/backend/test/fortaleza || true
-          if [ ! -f deploy/backend/test/fortaleza/docker-compose.yml ]; then
-            echo "Missing deploy/backend/test/fortaleza/docker-compose.yml (will use remote compose)"
-          fi
-
-      - name: Upload docker-compose.yml (fortaleza)
-        if: ${{ hashFiles('deploy/backend/test/fortaleza/docker-compose.yml') != '' }}
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.TEST_FORTALEZA_HOST }}
-          username: ${{ secrets.TEST_FORTALEZA_USER }}
-          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
-          source: "deploy/backend/test/fortaleza/docker-compose.yml"
-          target: "/opt/inatrace/deploy/backend/test/fortaleza"
-          debug: true
-
-      - name: Prepare .env (fortaleza)
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
-          DB_USER="${{ secrets.TEST_FORTALEZA_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_test_fortaleza"
-          REQ_TOKEN="${{ secrets.TEST_FORTALEZA_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
-          EXR_KEY="${{ secrets.TEST_FORTALEZA_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-test-key"
-          cat > .env <<EOF
-          IMAGE_NAME=$IMAGE
-          TAG=staging
-          DATABASE_NAME=inatrace_test_fortaleza
-          DB_ROOT_PASSWORD=${{ secrets.TEST_FORTALEZA_DB_ROOT_PASSWORD }}
-          DATASOURCE_USERNAME=$DB_USER
-          DATASOURCE_PASSWORD=${{ secrets.TEST_FORTALEZA_DATASOURCE_PASSWORD }}
-          FILE_STORAGE_ROOT=/app/files
-          IMPORT_PATH=/app/import
-          DOCUMENTS_ROOT=/app/documents
-          REQUESTLOG_TOKEN=$REQ_TOKEN
-          EXCHANGERATE_APIKEY=$EXR_KEY
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=${{ secrets.TEST_FORTALEZA_MAIL_PASSWORD }}
-          EOF
-
-      - name: Upload .env (fortaleza)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.TEST_FORTALEZA_HOST }}
-          username: ${{ secrets.TEST_FORTALEZA_USER }}
-          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
-          source: ".env"
-          target: "/opt/inatrace/deploy/backend/test/fortaleza"
-          debug: true
-
-      - name: Download backend image artifact (fortaleza)
-        uses: actions/download-artifact@v4
-        with:
-          name: be-image
-          path: .
-
-      - name: Verify backend image artifact (fortaleza)
-        run: |
-          set -e
-          ls -lah .
-          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
-          echo "✅ be-image.tar present"
-
-      - name: Upload image tar (fortaleza)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.TEST_FORTALEZA_HOST }}
-          username: ${{ secrets.TEST_FORTALEZA_USER }}
-          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
-          source: "be-image.tar"
-          target: "/opt/inatrace/deploy/backend/test/fortaleza"
-          debug: true
-
-      - name: Deploy on server (fortaleza)
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.TEST_FORTALEZA_HOST }}
-          username: ${{ secrets.TEST_FORTALEZA_USER }}
-          password: ${{ secrets.TEST_FORTALEZA_PASSWORD }}
-          script: |
-            set -e
-            cd /opt/inatrace/deploy/backend/test/fortaleza
-            docker network inspect inatrace-backend-fortaleza-network >/dev/null 2>&1 || docker network create inatrace-backend-fortaleza-network
-            docker load -i be-image.tar
-            docker-compose pull || true
-            docker-compose up -d --remove-orphans
-            for i in {1..12}; do
-              sleep 10
-              if curl -fsS "https://inatrace-test.fortalezadelvalle.org/api/actuator/health" >/dev/null; then
-                echo "✅ Backend FORTALEZA staging deployment healthy"
-                exit 0
-              fi
-              echo "⏳ Waiting for backend to become healthy ($i/12)"
-            done
-            echo "❌ Backend health check failed" && exit 1
-
+  
   deploy-dev:
     name: 🚀 Deploy to Development
     runs-on: ubuntu-latest
