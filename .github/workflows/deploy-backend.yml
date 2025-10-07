@@ -5,7 +5,6 @@ on:
     branches: [ develop, staging, main ]
     paths:
       - 'backend/**'
-      - 'deploy/backend/**'
       - '.github/workflows/deploy-backend.yml'
   pull_request:
     branches: [main]
@@ -288,7 +287,9 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           script: |
-            mkdir -p /opt/inatrace/backend/test/unocace
+            sudo mkdir -p /opt/inatrace/backend/test/unocace
+            sudo chown -R $USER:$USER /opt/inatrace/backend/test/unocace
+            sudo chmod -R 755 /opt/inatrace/backend/test/unocace
 
       - name: 📤 Upload unified docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -415,7 +416,9 @@ jobs:
           username: ${{ secrets.TEST_ESPAM_USER }}
           key: ${{ secrets.TEST_ESPAM_SSH_KEY }}
           script: |
-            mkdir -p /opt/inatrace/backend/test/espam
+            sudo mkdir -p /opt/inatrace/backend/test/espam
+            sudo chown -R $USER:$USER /opt/inatrace/backend/test/espam
+            sudo chmod -R 755 /opt/inatrace/backend/test/espam
 
       - name: 📤 Upload unified docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -689,7 +692,9 @@ jobs:
           username: ${{ secrets.TEST_DUFER_USER }}
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
           script: |
-            mkdir -p /opt/inatrace/backend/test/dufer
+            sudo mkdir -p /opt/inatrace/backend/test/dufer
+            sudo chown -R $USER:$USER /opt/inatrace/backend/test/dufer
+            sudo chmod -R 755 /opt/inatrace/backend/test/dufer
 
       - name: 📤 Upload unified docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
