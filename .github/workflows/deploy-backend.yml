@@ -296,9 +296,9 @@ jobs:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
-          source: "backend/ci/docker-compose.yml"
+          source: "ci/docker-compose.yml"
           target: "/opt/inatrace/backend/test/unocace/"
-          strip_components: 2
+          strip_components: 1
 
       - name: Prepare .env from template
         run: |
@@ -423,9 +423,9 @@ jobs:
           host: ${{ secrets.TEST_ESPAM_HOST }}
           username: ${{ secrets.TEST_ESPAM_USER }}
           key: ${{ secrets.TEST_ESPAM_SSH_KEY }}
-          source: "backend/ci/docker-compose.yml"
+          source: "ci/docker-compose.yml"
           target: "/opt/inatrace/backend/test/espam/"
-          strip_components: 2
+          strip_components: 1
 
       - name: Prepare .env
         run: |
@@ -697,9 +697,9 @@ jobs:
           host: ${{ secrets.TEST_DUFER_HOST }}
           username: ${{ secrets.TEST_DUFER_USER }}
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
-          source: "backend/ci/docker-compose.yml"
+          source: "ci/docker-compose.yml"
           target: "/opt/inatrace/backend/test/dufer/"
-          strip_components: 2
+          strip_components: 1
 
       - name: Prepare .env
         run: |
