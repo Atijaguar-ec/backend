@@ -21,6 +21,7 @@ services:
     image: ${IMAGE_NAME}:${TAG}
     container_name: inatrace-be
     environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       - INATRACE_DATABASE_NAME=${DATABASE_NAME}
       - INATRACE_DATABASE_HOSTNAME=inatrace-mysql
       - SPRING_DATASOURCE_USERNAME=${DATASOURCE_USERNAME}
