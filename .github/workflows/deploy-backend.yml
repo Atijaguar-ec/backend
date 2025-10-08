@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: 'Target environment (develop, staging, main)'
         required: true
         default: 'develop'
         type: choice
