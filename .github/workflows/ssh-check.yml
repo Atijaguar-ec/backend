@@ -14,4 +14,4 @@ jobs:
           username: ${{ secrets.TEST_ESPAM_USER }}
           key: ${{ secrets.TEST_ESPAM_SSH_KEY }}
           script: |
-            echo "SSH OK desde GitHub Actions"
+            echo "SSH OK desde GitHub Actions para el entorno de pruebas"
