@@ -255,7 +255,7 @@ jobs:
   deploy-test-unocace:
     name: Deploy Backend to UNOCACE Test (staging)
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, cedia]
     if: github.ref == 'refs/heads/staging'
     environment:
       name: test-unocace
@@ -390,7 +390,7 @@ jobs:
   deploy-test-fortaleza:
     name: 🚀 Deploy Backend to Fortaleza Test (staging)
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, cedia]
     if: github.ref == 'refs/heads/staging'
     environment:
       name: test-fortaleza
