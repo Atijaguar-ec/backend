@@ -255,7 +255,7 @@ jobs:
   deploy-test-unocace:
     name: Deploy Backend to UNOCACE Test (staging)
     needs: build
-    runs-on: [self-hosted, cedia]
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
     environment:
       name: test-unocace
