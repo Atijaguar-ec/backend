@@ -1,7 +1,7 @@
 // ============================================================================
 // Pipeline de Despliegue Backend - Fortaleza del Valle
-// Autor: DevOps Team
-// Última actualización: 2025-10-09
+// Autor: Alvaro Sanchez
+// Última actualización: 2025-10-09 v2.1
 // ============================================================================
 
 pipeline {
@@ -48,11 +48,11 @@ pipeline {
     MAX_RETRIES = '3'
   }
 
-  // Descomentar cuando configures JDK y Maven en Global Tool Configuration
-  // tools {
-  //   jdk 'jdk-17'
-  //   maven 'maven-3.9'
-  // }
+
+  tools {
+    jdk 'jdk-17'
+    maven 'maven-3.9'
+  }
 
   stages {
     // ========================================================================
@@ -81,14 +81,13 @@ pipeline {
           env.GIT_SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
           env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
           env.GIT_AUTHOR = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
-          
           // Configurar variables según entorno
           env.IMAGE_REPOSITORY = env.REGISTRY.toLowerCase() + '/' + (env.REPO_FULL_NAME + '-inatrace').toLowerCase()
           env.DEPLOY_TAG = params.BRANCH == 'main' ? 'latest' : "test-${env.GIT_SHORT_SHA}"
           env.FORTALEZA_ENV = params.BRANCH == 'main' ? 'prod' : 'test'
           env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 
-            'https://inatrace.fortalezadelvalle.org/api/actuator/health' : 
-            'http://localhost:8080/actuator/health'
+            'https://inatrace.espam.edu.ec/api/actuator/health' : 
+            'https://testinatrace.espam.edu.ec/api/actuator/health'
           env.COMPOSE_DIR = params.BRANCH == 'main' ? 
             'deploy/backend/prod/fortaleza' : 
             'deploy/backend/test/fortaleza'
