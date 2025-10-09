@@ -121,10 +121,10 @@ PY
           }
         }
       }
-    }
   }
   post {
     always {
       sh 'docker logout ghcr.io || true'
     }
   }
+}
