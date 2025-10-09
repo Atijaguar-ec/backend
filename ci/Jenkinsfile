@@ -65,21 +65,13 @@ pipeline {
           echo "  INICIO DE DESPLIEGUE - FORTALEZA DEL VALLE"
           echo "═════════════════════════════════════════════════════════════════"
           echo "Rama: ${params.BRANCH}"
-          echo "Build: #${env.BUILD_NUMBER}"
           echo "Usuario: ${env.BUILD_USER ?: 'Sistema'}"
-          echo "Timestamp: ${new Date()}"
+          echo "Timestamp: ${new Date().format('yyyy-MM-dd HH:mm:ss z')}"
           echo "═══════════════════════════════════════════════════════════════"
         }
         
-        checkout([
-          $class: 'GitSCM',
-          branches: [[name: "*/${params.BRANCH}"]],
-          userRemoteConfigs: [[credentialsId: 'github-pat', url: 'https://github.com/Atijaguar-ec/backend.git']],
-          extensions: [[$class: 'CloneOption', depth: 1, shallow: true]]
-        ])
-        
         script {
-          // Extraer información del repositorio
+          // Extraer información del repositorio (ya clonado por SCM)
           def remoteUrl = sh(script: 'git config --get remote.origin.url', returnStdout: true).trim()
           remoteUrl = remoteUrl.replaceAll(/\.git$/, '')
           remoteUrl = remoteUrl.replaceFirst(/^https?:\/\/github.com\//, '')
@@ -95,7 +87,7 @@ pipeline {
           env.DEPLOY_TAG = params.BRANCH == 'main' ? 'latest' : "test-${env.GIT_SHORT_SHA}"
           env.FORTALEZA_ENV = params.BRANCH == 'main' ? 'prod' : 'test'
           env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 
-            'https://testinatrace.espam.edu.ec/api/actuator/health' : 
+            'https://inatrace.fortalezadelvalle.org/api/actuator/health' : 
             'http://localhost:8080/actuator/health'
           env.COMPOSE_DIR = params.BRANCH == 'main' ? 
             'deploy/backend/prod/fortaleza' : 
