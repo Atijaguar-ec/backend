@@ -9,7 +9,7 @@ pipeline {
 
   options {
     timeout(time: 40, unit: 'MINUTES')
-    ansiColor('xterm')
+    // ansiColor('xterm')  // Descomenta cuando instales el plugin AnsiColor
     buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
     disableConcurrentBuilds()
     timestamps()
@@ -48,10 +48,11 @@ pipeline {
     MAX_RETRIES = '3'
   }
 
-  tools {
-    jdk 'jdk-17'
-    maven 'maven-3.9'
-  }
+  // Descomentar cuando configures JDK y Maven en Global Tool Configuration
+  // tools {
+  //   jdk 'jdk-17'
+  //   maven 'maven-3.9'
+  // }
 
   stages {
     // ========================================================================
