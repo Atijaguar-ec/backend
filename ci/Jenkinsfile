@@ -1,0 +1,130 @@
+pipeline {
+  agent any
+
+  options {
+    timeout(time: 40, unit: 'MINUTES')
+    ansiColor('xterm')
+  }
+
+  parameters {
+    choice(name: 'BRANCH', choices: ['staging', 'main'], description: 'Rama a desplegar', defaultValue: 'staging')
+    booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Omitir etapa de pruebas')
+  }
+
+  environment {
+    REGISTRY = 'ghcr.io'
+  }
+
+  tools {
+    jdk 'jdk-17'
+    maven 'maven-3.9'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "*/${params.BRANCH}"]],
+          userRemoteConfigs: [[credentialsId: 'github-pat', url: 'https://github.com/OWNER/REPO.git']]
+        ])
+        script {
+          def remoteUrl = sh(script: 'git config --get remote.origin.url', returnStdout: true).trim()
+          remoteUrl = remoteUrl.replaceAll(/\.git$/, '')
+          remoteUrl = remoteUrl.replaceFirst(/^https?:\\/\\/github.com\\//, '')
+          remoteUrl = remoteUrl.replaceFirst(/^git@github.com:/, '')
+          env.REPO_FULL_NAME = remoteUrl
+          env.GIT_SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          env.IMAGE_REPOSITORY = env.REGISTRY.toLowerCase() + '/' + (env.REPO_FULL_NAME + '-inatrace').toLowerCase()
+          env.DEPLOY_TAG = params.BRANCH == 'main' ? 'latest' : "test-${env.GIT_SHORT_SHA}"
+          env.FORTALEZA_ENV = params.BRANCH == 'main' ? 'prod' : 'test'
+          env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 'https://inatrace.fortalezadelvalle.org/api/actuator/health' : 'http://localhost:8080/actuator/health'
+        }
+      }
+    }
+
+    stage('Tests') {
+      when {
+        expression { return !params.SKIP_TESTS }
+      }
+      steps {
+        dir('backend') {
+          sh 'mvn -B clean verify -Dspring.profiles.active=test'
+        }
+      }
+    }
+
+    stage('Build & Push Image') {
+      steps {
+        dir('backend') {
+          withCredentials([
+            usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')
+          ]) {
+            sh '''
+              echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
+              mvn -B clean package -DskipTests
+              docker build -t ${IMAGE_REPOSITORY}:${DEPLOY_TAG} .
+              docker push ${IMAGE_REPOSITORY}:${DEPLOY_TAG}
+              docker tag ${IMAGE_REPOSITORY}:${DEPLOY_TAG} ${IMAGE_REPOSITORY}:latest
+              docker push ${IMAGE_REPOSITORY}:latest
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Deploy Fortaleza') {
+      steps {
+        script {
+          def composeDir = env.FORTALEZA_ENV == 'prod' ? 'deploy/backend/prod/fortaleza' : 'deploy/backend/test/fortaleza'
+          def envCredential = env.FORTALEZA_ENV == 'prod' ? 'fortaleza-env-prod' : 'fortaleza-env-staging'
+          dir(composeDir) {
+            withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
+              sh '''
+                cp $ENVFILE .env
+                python3 - <<'PY'
+import os
+from pathlib import Path
+
+env_path = Path('.env')
+lines = env_path.read_text().splitlines()
+updates = {
+    'TAG': os.environ['DEPLOY_TAG'],
+    'IMAGE_NAME': os.environ['IMAGE_REPOSITORY'],
+}
+
+for key, value in updates.items():
+    for idx, line in enumerate(lines):
+        if line.startswith(f"{key}="):
+            lines[idx] = f"{key}={value}"
+            break
+    else:
+        lines.append(f"{key}={value}")
+
+env_path.write_text('\n'.join(lines) + '\n')
+PY
+                docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+                docker-compose pull || true
+                docker-compose up -d --remove-orphans
+                for i in {1..12}; do
+                  sleep 10
+                  if curl -fsS ${HEALTHCHECK_URL} >/dev/null; then
+                    echo "Backend Fortaleza saludable"
+                    exit 0
+                  fi
+                  echo "Esperando salud del backend ($i/12)..."
+                done
+                echo "Fallo la verificación de salud" >&2
+                exit 1
+              '''
+            }
+          }
+        }
+      }
+    }
+  }
+  post {
+    always {
+      sh 'docker logout ghcr.io || true'
+    }
+  }
