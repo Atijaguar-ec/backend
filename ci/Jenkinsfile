@@ -74,7 +74,7 @@ pipeline {
         checkout([
           $class: 'GitSCM',
           branches: [[name: "*/${params.BRANCH}"]],
-          userRemoteConfigs: [[credentialsId: 'github-pat', url: 'https://github.com/OWNER/REPO.git']],
+          userRemoteConfigs: [[credentialsId: 'github-pat', url: 'https://github.com/Atijaguar-ec/backend.git']],
           extensions: [[$class: 'CloneOption', depth: 1, shallow: true]]
         ])
         
