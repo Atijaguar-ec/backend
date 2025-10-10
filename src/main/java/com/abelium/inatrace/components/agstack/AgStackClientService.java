@@ -195,14 +195,14 @@ public class AgStackClientService {
             throw new ApiException(ApiStatus.ERROR, "Autenticación AgStack no devolvió token");
         }
 
-        log.info("✅ Token de acceso obtenido exitosamente (expira: {})", tokenExpiration);
-
         cachedToken.set(authResponse.getAccessToken());
         Instant tokenExpiration = authResponse.getExpirationInstant();
         if (tokenExpiration == null) {
             tokenExpiration = clock.instant().plusSeconds(30 * 60); // fallback 30 minutos
         }
         tokenExpiry.set(tokenExpiration);
+
+        log.info("✅ Token de acceso obtenido exitosamente (expira: {})", tokenExpiration);
 
         return authResponse.getAccessToken();
     }
