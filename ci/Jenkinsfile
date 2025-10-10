@@ -30,7 +30,7 @@ pipeline {
     booleanParam(
       name: 'SKIP_DB_BACKUP',
       defaultValue: false,
-      description: '⚠️ Omitir backup de BD en producción'
+      description: '⚠️ Omitir backup de BD en producción (no recomendado para producción)' 
     )
   }
 
