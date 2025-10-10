@@ -92,7 +92,7 @@ pipeline {
             'deploy/backend/prod/fortaleza' : 
             'deploy/backend/test/fortaleza'
           
-          echo "\n📦 Información del Build:"
+          echo "\n📦 Información del Build :"
           echo "  - Repositorio: ${env.REPO_FULL_NAME}"
           echo "  - Commit: ${env.GIT_SHORT_SHA}"
           echo "  - Autor: ${env.GIT_AUTHOR}"
