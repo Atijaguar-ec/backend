@@ -149,8 +149,10 @@ public class AgStackClientService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Mono.just(new ApiAuthRequest(email, password)), ApiAuthRequest.class)
                 .retrieve()
-                .onStatus(HttpStatus::is4xxClientError, clientResponse -> Mono.error(new ApiException(ApiStatus.UNAUTHORIZED, "Credenciales inválidas para AgStack")))
-                .onStatus(HttpStatus::is5xxServerError, clientResponse -> Mono.error(new ApiException(ApiStatus.ERROR, "Fallo en autenticación AgStack")))
+                .onStatus(status -> status.is4xxClientError(), 
+                        clientResponse -> Mono.error(new ApiException(ApiStatus.UNAUTHORIZED, "Credenciales inválidas para AgStack")))
+                .onStatus(status -> status.is5xxServerError(), 
+                        clientResponse -> Mono.error(new ApiException(ApiStatus.ERROR, "Fallo en autenticación AgStack")))
                 .bodyToMono(ApiAuthResponse.class)
                 .block();
 
