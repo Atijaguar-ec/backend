@@ -9,7 +9,7 @@ pipeline {
 
   options {
     timeout(time: 40, unit: 'MINUTES')
-    // ansiColor('xterm')  // Descomenta cuando instales el plugin AnsiColor
+     ansiColor('xterm')  // Descomenta cuando instales el plugin AnsiColor
     buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
     disableConcurrentBuilds()
     timestamps()
