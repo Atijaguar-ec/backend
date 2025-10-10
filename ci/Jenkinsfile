@@ -8,8 +8,9 @@ pipeline {
   agent any
 
   options {
+    skipDefaultCheckout(true)
     timeout(time: 40, unit: 'MINUTES')
-     ansiColor('xterm')  // Descomenta cuando instales el plugin AnsiColor
+    ansiColor('xterm')
     buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
     disableConcurrentBuilds()
     timestamps()
@@ -56,7 +57,27 @@ pipeline {
 
   stages {
     // ========================================================================
-    // STAGE 1: Inicialización y Checkout
+    // STAGE 0: Checkout código fuente
+    // ========================================================================
+    stage('📥 Checkout') {
+      steps {
+        cleanWs()
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "*/${params.BRANCH}"]],
+          userRemoteConfigs: [[
+            url: 'https://github.com/Atijaguar-ec/backend.git',
+            credentialsId: 'github-pat'
+          ]],
+          extensions: [
+            [$class: 'CloneOption', shallow: false, depth: 0, noTags: false]
+          ]
+        ])
+      }
+    }
+
+    // ========================================================================
+    // STAGE 1: Inicialización y configuración
     // ========================================================================
     stage('🔧 Inicialización') {
       steps {
