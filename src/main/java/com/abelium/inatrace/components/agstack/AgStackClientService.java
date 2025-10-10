@@ -8,12 +8,16 @@ import com.abelium.inatrace.components.agstack.api.ApiRegisterFieldBoundaryError
 import com.abelium.inatrace.components.agstack.api.ApiRegisterFieldBoundaryRequest;
 import com.abelium.inatrace.components.agstack.api.ApiRegisterFieldBoundaryResponse;
 import com.abelium.inatrace.db.entities.common.PlotCoordinate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import jakarta.annotation.PostConstruct;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -25,6 +29,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 @Service
 public class AgStackClientService {
 
+    private static final Logger log = LoggerFactory.getLogger(AgStackClientService.class);
     private static final String FIELD_ALREADY_REGISTERED_MESSAGE = "Threshold matched for already registered Field Boundary(ies)";
     private static final String FIELD_AREA_EXCEEDED_MESSAGE = "Cannot register a field with Area greater than 1000 acres";
 
@@ -52,7 +57,24 @@ public class AgStackClientService {
         this.clock = clock;
     }
 
+    @PostConstruct
+    public void validateConfiguration() {
+        log.info("=== Configuración de AgStack ===");
+        log.info("Auth URL: {}", authUrl);
+        log.info("Base URL: {}", baseURL);
+        log.info("Email configurado: {}", isBlank(email) ? "❌ NO" : "✅ SÍ (" + email + ")");
+        log.info("Password configurado: {}", isBlank(password) ? "❌ NO" : "✅ SÍ");
+        
+        if (isBlank(email) || isBlank(password)) {
+            log.warn("⚠️ ADVERTENCIA: Credenciales de AgStack no configuradas. Configure INATRACE_AGSTACK_EMAIL y INATRACE_AGSTACK_PASSWORD");
+        } else {
+            log.info("✅ Credenciales de AgStack configuradas correctamente");
+        }
+        log.info("=================================");
+    }
+
     public ApiRegisterFieldBoundaryResponse registerFieldBoundaryResponse(List<PlotCoordinate> plotCoordinates) {
+        log.debug("Iniciando registro de field boundary con {} coordenadas", plotCoordinates.size());
 
         ApiRegisterFieldBoundaryRequest request = new ApiRegisterFieldBoundaryRequest();
         request.setS2Index("8, 13");
@@ -68,8 +90,10 @@ public class AgStackClientService {
             }
         }
         request.setWkt("POLYGON ((" + stringBuilder + "))");
+        log.debug("WKT generado: {}", request.getWkt());
 
         String accessToken = obtainAccessToken();
+        log.debug("Token de acceso obtenido exitosamente");
 
         WebClient webClient = WebClient.create(baseURL);
 
@@ -95,6 +119,7 @@ public class AgStackClientService {
 
     private ApiRegisterFieldBoundaryResponse handleBusinessResponse(ApiRegisterFieldBoundaryResponse response) {
         if (response == null) {
+            log.error("Respuesta vacía recibida de AgStack");
             throw new ApiException(ApiStatus.ERROR, "Respuesta vacía del servicio AgStack");
         }
 
@@ -102,13 +127,17 @@ public class AgStackClientService {
 
         if (equalsIgnoreCase(message, FIELD_AREA_EXCEEDED_MESSAGE)
                 || isAreaExceeded(response.getFieldAreaAcres())) {
+            log.warn("Campo rechazado: área excede 1000 acres ({})", response.getFieldAreaAcres());
             throw new ApiException(ApiStatus.INVALID_REQUEST, FIELD_AREA_EXCEEDED_MESSAGE);
         }
 
         if (equalsIgnoreCase(message, FIELD_ALREADY_REGISTERED_MESSAGE)
                 || (response.getMatchedGeoIDs() != null && !response.getMatchedGeoIDs().isEmpty())) {
+            log.warn("Campo ya registrado. IDs coincidentes: {}", response.getMatchedGeoIDs());
             throw new ApiException(ApiStatus.INVALID_REQUEST, resolveErrorMessage(response));
         }
+
+        log.info("✅ Field boundary registrado exitosamente. Geo ID: {}", response.getGeoID());
 
         return response;
     }
@@ -135,11 +164,16 @@ public class AgStackClientService {
         Instant expiry = tokenExpiry.get();
         String token = cachedToken.get();
         if (token != null && expiry != null && expiry.isAfter(clock.instant().minusSeconds(30))) {
+            log.debug("Usando token en caché (expira en {})", expiry);
             return token;
         }
 
+        log.debug("Token expirado o no disponible, solicitando nuevo token...");
+
         if (isBlank(email) || isBlank(password)) {
-            throw new ApiException(ApiStatus.ERROR, "Credenciales de AgStack no configuradas");
+            log.error("❌ Credenciales de AgStack no configuradas. Verifique INATRACE_AGSTACK_EMAIL y INATRACE_AGSTACK_PASSWORD");
+            throw new ApiException(ApiStatus.ERROR, 
+                "Credenciales de AgStack no configuradas. Configure INATRACE_AGSTACK_EMAIL y INATRACE_AGSTACK_PASSWORD en las variables de entorno o application.properties");
         }
 
         WebClient authClient = WebClient.create(authUrl);
@@ -157,8 +191,11 @@ public class AgStackClientService {
                 .block();
 
         if (authResponse == null || isBlank(authResponse.getAccessToken())) {
+            log.error("❌ Autenticación AgStack falló: respuesta vacía o sin token");
             throw new ApiException(ApiStatus.ERROR, "Autenticación AgStack no devolvió token");
         }
+
+        log.info("✅ Token de acceso obtenido exitosamente (expira: {})", tokenExpiration);
 
         cachedToken.set(authResponse.getAccessToken());
         Instant tokenExpiration = authResponse.getExpirationInstant();
