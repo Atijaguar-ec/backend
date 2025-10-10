@@ -139,7 +139,7 @@ pipeline {
           }
         }
         
-        dir('backend') {
+        dir('.') {
           sh '''
             set -e
             echo "📊 Ejecutando Maven verify..."
