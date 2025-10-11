@@ -359,6 +359,9 @@ pipeline {
           echo "\n🚀 Iniciando despliegue en entorno: ${env.FORTALEZA_ENV}"
 
           def envCredential = env.FORTALEZA_ENV == 'prod' ? 'fortaleza-env-prod' : 'fortaleza-env-staging'
+          def healthUrl = env.FORTALEZA_ENV == 'prod'
+            ? "${params.PROD_HEALTH_PROTOCOL ?: 'https'}://${params.PROD_HEALTH_HOST ?: params.PROD_HOST}/api/actuator/health"
+            : "http://localhost:${params.PROD_HEALTH_PORT_PRIMARY ?: '8082'}/actuator/health"
 
           dir(env.COMPOSE_DIR) {
             withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
@@ -415,6 +418,8 @@ pipeline {
                 MAX_RETRIES=12
                 SLEEP_TIME=10
                 
+                HEALTHCHECK_URL='${healthUrl}'
+
                 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
                   RETRY_COUNT=$((RETRY_COUNT + 1))
                   
