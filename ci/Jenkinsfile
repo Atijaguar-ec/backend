@@ -109,7 +109,8 @@ pipeline {
           env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 
             'https://inatrace.espam.edu.ec/api/actuator/health' : 
             'https://testinatrace.espam.edu.ec/api/actuator/health'
-          env.COMPOSE_DIR = 'backend/ci'
+          env.PROJECT_DIR = fileExists('backend/pom.xml') ? 'backend' : '.'
+          env.COMPOSE_DIR = fileExists('backend/ci/docker-compose.yml') ? 'backend/ci' : 'ci'
           
           echo "\n📦 Información del Build :"
           echo "  - Repositorio: ${env.REPO_FULL_NAME}"
@@ -167,8 +168,13 @@ pipeline {
           '''
 
           dir('.') {
-            sh '''
+            sh """
               set -e
+              PROJECT_DIR='${env.PROJECT_DIR}'
+              if [ "${env.PROJECT_DIR}" = 'backend' ]; then
+                cd backend
+              fi
+
               echo "📊 Ejecutando Maven verify..."
               SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3307/inatrace" \
               SPRING_DATASOURCE_USERNAME="inatrace" \
@@ -177,9 +183,9 @@ pipeline {
                 -Dspring.profiles.active=test \
                 -Dmaven.test.failure.ignore=false \
                 -Djacoco.skip=false
-              
+
               echo "✅ Pruebas completadas exitosamente"
-            '''
+            """
           }
         }
       }
@@ -203,42 +209,45 @@ pipeline {
           echo "\n🏗️ Construyendo imagen Docker..."
         }
         
-        dir('backend') {
-          withCredentials([
-            usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')
-          ]) {
-            sh '''
-              set -e
-              
-              echo "🔐 Autenticando en GHCR..."
-              echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
-              
-              echo "📦 Compilando artefactos con Maven..."
-              mvn -B clean package -DskipTests -Dmaven.javadoc.skip=true
-              
-              echo "🐳 Construyendo imagen Docker..."
-              docker build \
-                --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-                --build-arg VCS_REF=${GIT_SHORT_SHA} \
-                --build-arg VERSION=${DEPLOY_TAG} \
-                --label "org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-                --label "org.opencontainers.image.revision=${GIT_SHORT_SHA}" \
-                --label "org.opencontainers.image.version=${DEPLOY_TAG}" \
-                --label "org.opencontainers.image.source=https://github.com/${REPO_FULL_NAME}" \
-                -t ${IMAGE_REPOSITORY}:${DEPLOY_TAG} \
-                .
-              
-              echo "📤 Publicando imagen con tag: ${DEPLOY_TAG}"
-              docker push ${IMAGE_REPOSITORY}:${DEPLOY_TAG}
-              
-              echo "🏷️ Etiquetando como latest..."
-              docker tag ${IMAGE_REPOSITORY}:${DEPLOY_TAG} ${IMAGE_REPOSITORY}:latest
-              docker push ${IMAGE_REPOSITORY}:latest
-              
-              echo "✅ Imagen publicada exitosamente"
-              docker images | grep ${IMAGE_REPOSITORY} | head -5
-            '''
-          }
+        withCredentials([
+          usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')
+        ]) {
+          sh """
+            set -e
+
+            PROJECT_DIR='${env.PROJECT_DIR}'
+            if [ "${env.PROJECT_DIR}" = 'backend' ]; then
+              cd backend
+            fi
+
+            echo "🔐 Autenticando en GHCR..."
+            echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
+
+            echo "📦 Compilando artefactos con Maven..."
+            mvn -B clean package -DskipTests -Dmaven.javadoc.skip=true
+
+            echo "🐳 Construyendo imagen Docker..."
+            docker build \
+              --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+              --build-arg VCS_REF=${GIT_SHORT_SHA} \
+              --build-arg VERSION=${DEPLOY_TAG} \
+              --label "org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+              --label "org.opencontainers.image.revision=${GIT_SHORT_SHA}" \
+              --label "org.opencontainers.image.version=${DEPLOY_TAG}" \
+              --label "org.opencontainers.image.source=https://github.com/${REPO_FULL_NAME}" \
+              -t ${IMAGE_REPOSITORY}:${DEPLOY_TAG} \
+              .
+
+            echo "📤 Publicando imagen con tag: ${DEPLOY_TAG}"
+            docker push ${IMAGE_REPOSITORY}:${DEPLOY_TAG}
+
+            echo "🏷️ Etiquetando como latest..."
+            docker tag ${IMAGE_REPOSITORY}:${DEPLOY_TAG} ${IMAGE_REPOSITORY}:latest
+            docker push ${IMAGE_REPOSITORY}:latest
+
+            echo "✅ Imagen publicada exitosamente"
+            docker images | grep ${IMAGE_REPOSITORY} | head -5
+          """
         }
       }
       post {
