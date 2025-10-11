@@ -413,29 +413,39 @@ docker-compose pull || true
 echo "🔄 Desplegando servicios..."
 docker-compose up -d --remove-orphans --force-recreate
 
-echo "📊 Estado de contenedores:"
+echo "📊 Estado inicial de contenedores:"
 docker-compose ps
 
-echo "⏳ Esperando que el backend esté saludable..."
+echo "⏳ Esperando healthcheck nativo (remoto)..."
 RETRY_COUNT=0
 MAX_RETRIES=12
 SLEEP_TIME=10
+CONTAINER_NAME="inatrace-be"
+
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT + 1))
-  if curl -fsS --max-time 5 "http://localhost:8082/actuator/health" >/dev/null 2>&1; then
-    echo "✅ Backend Fortaleza está saludable"
+  CONTAINER_ID=$(docker-compose ps -q "${CONTAINER_NAME}")
+  if [ -n "$CONTAINER_ID" ]; then
+    HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
+  else
+    HEALTH_STATUS="not_found"
+  fi
+
+  if [ "$HEALTH_STATUS" = "healthy" ]; then
+    echo "✅ Backend Fortaleza está saludable (Estado: $HEALTH_STATUS)"
     echo "📈 Logs recientes:"
     docker-compose logs --tail=20 inatrace-be
     exit 0
   fi
-  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Esperando ${SLEEP_TIME}s..."
+
+  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Estado actual: $HEALTH_STATUS - Esperando ${SLEEP_TIME}s..."
   sleep $SLEEP_TIME
 done
 
-echo "❌ Health check falló después de ${MAX_RETRIES} intentos" >&2
+echo "❌ Healthcheck nativo falló después de ${MAX_RETRIES} intentos" >&2
 echo "📋 Logs del contenedor:"
 docker-compose logs --tail=50 inatrace-be
-echo "📊 Estado de contenedores:"
+echo "📊 Estado final de contenedores:"
 docker-compose ps
 exit 1
 EOSSH
@@ -456,29 +466,39 @@ EOSSH
                 echo "🔄 Desplegando servicios localmente..."
                 docker-compose up -d --remove-orphans --force-recreate
 
-                echo "📊 Estado de contenedores:"
+                echo "📊 Estado inicial de contenedores:"
                 docker-compose ps
 
-                echo "⏳ Esperando que el backend esté saludable..."
+                echo "⏳ Esperando healthcheck nativo (local)..."
                 RETRY_COUNT=0
                 MAX_RETRIES=12
                 SLEEP_TIME=10
+                CONTAINER_NAME="inatrace-be"
+
                 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
                   RETRY_COUNT=$((RETRY_COUNT + 1))
-                  if curl -fsS --max-time 5 "http://localhost:8082/actuator/health" >/dev/null 2>&1; then
-                    echo "✅ Backend local está saludable"
+                  CONTAINER_ID=$(docker-compose ps -q "${CONTAINER_NAME}")
+                  if [ -n "$CONTAINER_ID" ]; then
+                    HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
+                  else
+                    HEALTH_STATUS="not_found"
+                  fi
+
+                  if [ "$HEALTH_STATUS" = "healthy" ]; then
+                    echo "✅ Backend local está saludable (Estado: $HEALTH_STATUS)"
                     echo "📈 Logs recientes:"
                     docker-compose logs --tail=20 inatrace-be
                     exit 0
                   fi
-                  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Esperando ${SLEEP_TIME}s..."
+
+                  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Estado actual: $HEALTH_STATUS - Esperando ${SLEEP_TIME}s..."
                   sleep $SLEEP_TIME
                 done
 
-                echo "❌ Health check local falló después de ${MAX_RETRIES} intentos" >&2
+                echo "❌ Healthcheck nativo falló después de ${MAX_RETRIES} intentos" >&2
                 echo "📋 Logs del contenedor:"
                 docker-compose logs --tail=50 inatrace-be
-                echo "📊 Estado de contenedores:"
+                echo "📊 Estado final de contenedores:"
                 docker-compose ps
                 exit 1
               '''
