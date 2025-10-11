@@ -109,9 +109,7 @@ pipeline {
           env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 
             'https://inatrace.espam.edu.ec/api/actuator/health' : 
             'https://testinatrace.espam.edu.ec/api/actuator/health'
-          env.COMPOSE_DIR = params.BRANCH == 'main' ? 
-            'deploy/backend/prod/fortaleza' : 
-            'deploy/backend/test/fortaleza'
+          env.COMPOSE_DIR = 'backend/ci'
           
           echo "\n📦 Información del Build :"
           echo "  - Repositorio: ${env.REPO_FULL_NAME}"
@@ -139,22 +137,56 @@ pipeline {
           }
         }
         
-        dir('.') {
-          sh '''
+        script {
+          def mysqlContainer = 'inatrace-mysql-ci'
+          sh """
             set -e
-            echo "📊 Ejecutando Maven verify..."
-            mvn -B clean verify \
-              -Dspring.profiles.active=test \
-              -Dmaven.test.failure.ignore=false \
-              -Djacoco.skip=false
-            
-            echo "✅ Pruebas completadas exitosamente"
+            echo "🧹 Preparando contenedor MySQL temporal..."
+            docker rm -f ${mysqlContainer} >/dev/null 2>&1 || true
+            docker run -d --name ${mysqlContainer} \
+              -e MYSQL_ROOT_PASSWORD=inatrace \
+              -e MYSQL_DATABASE=inatrace \
+              -e MYSQL_USER=inatrace \
+              -e MYSQL_PASSWORD=inatrace \
+              -p 3307:3306 \
+              mysql:8.0.35
+          """
+
+          sh '''
+            set +e
+            echo "⏳ Esperando disponibilidad de MySQL temporal..."
+            for i in {1..12}; do
+              if docker exec inatrace-mysql-ci sh -c "mysqladmin ping -h127.0.0.1 -uroot -pinatrace" >/dev/null 2>&1; then
+                exit 0
+              fi
+              echo "Intento ${i}/12..."
+              sleep 5
+            done
+            echo "❌ MySQL temporal no disponible" >&2
+            exit 1
           '''
+
+          dir('.') {
+            sh '''
+              set -e
+              echo "📊 Ejecutando Maven verify..."
+              SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3307/inatrace" \
+              SPRING_DATASOURCE_USERNAME="inatrace" \
+              SPRING_DATASOURCE_PASSWORD="inatrace" \
+              mvn -B clean verify \
+                -Dspring.profiles.active=test \
+                -Dmaven.test.failure.ignore=false \
+                -Djacoco.skip=false
+              
+              echo "✅ Pruebas completadas exitosamente"
+            '''
+          }
         }
       }
       post {
         always {
           junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+          sh 'docker rm -f inatrace-mysql-ci >/dev/null 2>&1 || true'
         }
         failure {
           echo "❌ Las pruebas fallaron. Abortando despliegue."
@@ -273,10 +305,13 @@ pipeline {
             withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
               sh '''
                 set -e
-                
+
                 echo "📋 Preparando archivo .env..."
                 cp $ENVFILE .env
-                
+
+                echo "📝 Sincronizando docker-compose.yml desde backend/ci..."
+                cp ../docker-compose.yml ./docker-compose.yml || cp ../../ci/docker-compose.yml ./docker-compose.yml
+
                 # Actualizar variables dinámicas en .env
                 python3 - <<'PY'
 import os
