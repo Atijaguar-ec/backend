@@ -475,13 +475,13 @@ docker-compose up -d --remove-orphans --force-recreate
 echo "⏳ Esperando healthcheck local..."
 RETRY_COUNT=0
 MAX_RETRIES=12
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  RETRY_COUNT=$((RETRY_COUNT + 1))
+while [ ${'$'}RETRY_COUNT -lt ${'$'}MAX_RETRIES ]; do
+  RETRY_COUNT=${'$'}((RETRY_COUNT + 1))
   if curl -fsS --max-time 5 "http://localhost:${params.PROD_HEALTH_PORT_SECONDARY}/actuator/health" >/dev/null 2>&1; then
     echo "✅ Backend secundario saludable"
     exit 0
   fi
-  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES}..."
+  echo "⏳ Intento ${'$'}RETRY_COUNT/${'$'}MAX_RETRIES..."
   sleep 10
 done
 
