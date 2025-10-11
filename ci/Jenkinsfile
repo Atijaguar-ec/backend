@@ -221,17 +221,17 @@ pipeline {
             fi
 
             echo "🔐 Autenticando en GHCR..."
-            echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
+            echo \$GHCR_TOKEN | docker login ghcr.io -u \$GHCR_USER --password-stdin
 
             echo "📦 Compilando artefactos con Maven..."
             mvn -B clean package -DskipTests -Dmaven.javadoc.skip=true
 
             echo "🐳 Construyendo imagen Docker..."
             docker build \
-              --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+              --build-arg BUILD_DATE=\$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
               --build-arg VCS_REF=${GIT_SHORT_SHA} \
               --build-arg VERSION=${DEPLOY_TAG} \
-              --label "org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+              --label "org.opencontainers.image.created=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
               --label "org.opencontainers.image.revision=${GIT_SHORT_SHA}" \
               --label "org.opencontainers.image.version=${DEPLOY_TAG}" \
               --label "org.opencontainers.image.source=https://github.com/${REPO_FULL_NAME}" \
