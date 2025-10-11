@@ -382,40 +382,20 @@ pipeline {
                   echo "✅ docker-compose.yml presente en ${PWD}"
                 fi
 
-                # Actualizar variables dinámicas en .env
-                python3 - <<'PY'
-import os
-import sys
-from pathlib import Path
+                echo "🛠️ Actualizando variables dinámicas en .env..."
+                ensure_var() {
+                  local key="$1"
+                  local value="$2"
+                  if grep -q "^${key}=" .env; then
+                    sed -i "" "s|^${key}=.*|${key}=${value}|" .env
+                  else
+                    printf '\n%s=%s' "$key" "$value" >> .env
+                  fi
+                }
 
-try:
-    env_path = Path('.env')
-    if not env_path.exists():
-        print("❌ Archivo .env no encontrado", file=sys.stderr)
-        sys.exit(1)
-    
-    lines = env_path.read_text().splitlines()
-    updates = {
-        'TAG': os.environ['DEPLOY_TAG'],
-        'IMAGE_NAME': os.environ['IMAGE_REPOSITORY'],
-    }
-    
-    for key, value in updates.items():
-        found = False
-        for idx, line in enumerate(lines):
-            if line.startswith(f"{key}="):
-                lines[idx] = f"{key}={value}"
-                found = True
-                break
-        if not found:
-            lines.append(f"{key}={value}")
-    
-    env_path.write_text('\n'.join(lines) + '\n')
-    print(f"✅ Archivo .env actualizado: TAG={updates['TAG']}")
-except Exception as e:
-    print(f"❌ Error actualizando .env: {e}", file=sys.stderr)
-    sys.exit(1)
-PY
+                ensure_var TAG "${DEPLOY_TAG}"
+                ensure_var IMAGE_NAME "${IMAGE_REPOSITORY}"
+                echo "✅ Archivo .env actualizado"
                 
                 echo "\n🔗 Verificando red Docker..."
                 docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
