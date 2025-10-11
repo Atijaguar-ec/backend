@@ -49,7 +49,7 @@ pipeline {
     )
     string(
       name: 'PROD_HEALTH_PORT_PRIMARY',
-      defaultValue: '8080',
+      defaultValue: '8082',
       description: 'Puerto local donde expone healthcheck el backend en el servidor principal'
     )
     string(
@@ -74,7 +74,7 @@ pipeline {
     )
     string(
       name: 'PROD_HEALTH_PORT_SECONDARY',
-      defaultValue: '8080',
+      defaultValue: '8082',
       description: 'Puerto local donde expone healthcheck el backend en el nuevo servidor'
     )
     string(
