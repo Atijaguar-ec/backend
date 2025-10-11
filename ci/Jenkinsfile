@@ -57,7 +57,7 @@ pipeline {
 
   stages {
     // ========================================================================
-    // STAGE 0: Checkout código fuente
+    // STAGE 0: Checkout código fuente backend
     // ========================================================================
     stage('📥 Checkout') {
       steps {
