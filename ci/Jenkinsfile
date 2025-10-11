@@ -368,8 +368,19 @@ pipeline {
                 echo "📋 Preparando archivo .env..."
                 cp $ENVFILE .env
 
-                echo "📝 Sincronizando docker-compose.yml desde backend/ci..."
-                cp ../docker-compose.yml ./docker-compose.yml || cp ../../ci/docker-compose.yml ./docker-compose.yml
+                echo "📝 Verificando docker-compose.yml..."
+                if [ ! -f docker-compose.yml ]; then
+                  if [ -f ../docker-compose.yml ]; then
+                    cp ../docker-compose.yml ./docker-compose.yml
+                  elif [ -f ../../ci/docker-compose.yml ]; then
+                    cp ../../ci/docker-compose.yml ./docker-compose.yml
+                  else
+                    echo "❌ No se encontró docker-compose.yml en rutas previstas" >&2
+                    exit 1
+                  fi
+                else
+                  echo "✅ docker-compose.yml presente en ${PWD}"
+                fi
 
                 # Actualizar variables dinámicas en .env
                 python3 - <<'PY'
