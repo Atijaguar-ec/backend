@@ -387,7 +387,7 @@ pipeline {
                   local key="$1"
                   local value="$2"
                   if grep -q "^${key}=" .env; then
-                    sed -i "" "s|^${key}=.*|${key}=${value}|" .env
+                    sed -i "s|^${key}=.*|${key}=${value}|" .env
                   else
                     printf '\n%s=%s' "$key" "$value" >> .env
                   fi
