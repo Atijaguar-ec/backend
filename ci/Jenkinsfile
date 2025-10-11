@@ -155,7 +155,7 @@ pipeline {
           sh '''
             set +e
             echo "⏳ Esperando disponibilidad de MySQL temporal..."
-            for i in {1..12}; do
+            for i in $(seq 1 12); do
               if docker exec inatrace-mysql-ci sh -c "mysqladmin ping -h127.0.0.1 -uroot -pinatrace" >/dev/null 2>&1; then
                 exit 0
               fi
