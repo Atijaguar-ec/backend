@@ -34,12 +34,12 @@ pipeline {
     )
     string(
       name: 'PROD_HOST_PRIMARY',
-      defaultValue: '',
+      defaultValue: 'https://inatrace.espam.edu.ec',
       description: 'Hostname o IP del servidor de producción principal (ej. prod-fortaleza.atijaguar.com)'
     )
     string(
       name: 'PROD_USER_PRIMARY',
-      defaultValue: 'deploy',
+      defaultValue: 'inatrace',
       description: 'Usuario SSH para el servidor de producción principal'
     )
     string(
@@ -54,34 +54,10 @@ pipeline {
     )
     string(
       name: 'PROD_HEALTH_URL_PRIMARY',
-      defaultValue: 'https://inatrace.espam.edu.ec/api/actuator/health',
+      defaultValue: 'http://localhost:8082/actuator/health',
       description: 'URL externa para validar healthcheck del servidor principal'
     )
-    string(
-      name: 'PROD_HOST_SECONDARY',
-      defaultValue: '',
-      description: 'Hostname o IP del nuevo servidor de producción (dejar vacío para omitir)'
-    )
-    string(
-      name: 'PROD_USER_SECONDARY',
-      defaultValue: 'deploy',
-      description: 'Usuario SSH para el nuevo servidor de producción'
-    )
-    string(
-      name: 'PROD_TARGET_SECONDARY',
-      defaultValue: '/opt/inatrace/backend/prod/fortaleza-secondary',
-      description: 'Directorio remoto donde se desplegará la app en el nuevo servidor'
-    )
-    string(
-      name: 'PROD_HEALTH_PORT_SECONDARY',
-      defaultValue: '8082',
-      description: 'Puerto local donde expone healthcheck el backend en el nuevo servidor'
-    )
-    string(
-      name: 'PROD_HEALTH_URL_SECONDARY',
-      defaultValue: '',
-      description: 'URL externa opcional para validar healthcheck del nuevo servidor'
-    )
+    
   }
 
   environment {
@@ -399,68 +375,37 @@ pipeline {
                 ensure_var TAG "${DEPLOY_TAG}"
                 ensure_var IMAGE_NAME "${IMAGE_REPOSITORY}"
                 echo "✅ Archivo .env actualizado"
-                
-                echo "\n🔗 Verificando red Docker..."
-                docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
-                  docker network create inatrace-backend-network
-                
-                echo "\n📥 Descargando última imagen..."
-                docker-compose pull || true
-                
-                echo "\n🔄 Desplegando servicios..."
-                docker-compose up -d --remove-orphans --force-recreate
-                
-                echo "\n📊 Estado de contenedores:"
-                docker-compose ps
-                
-                echo "\n⏳ Esperando que el backend esté saludable..."
-                RETRY_COUNT=0
-                MAX_RETRIES=12
-                SLEEP_TIME=10
-                
-                HEALTHCHECK_URL='${healthUrl}'
-
-                while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-                  RETRY_COUNT=$((RETRY_COUNT + 1))
-                  
-                  if curl -fsS --max-time 5 "${HEALTHCHECK_URL}" >/dev/null 2>&1; then
-                    echo "✅ Backend Fortaleza está saludable"
-                    echo "\n📈 Logs recientes:"
-                    docker-compose logs --tail=20 inatrace-be
-                    exit 0
-                  fi
-                  
-                  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Esperando ${SLEEP_TIME}s..."
-                  sleep $SLEEP_TIME
-                done
-                
-                echo "\n❌ Health check falló después de ${MAX_RETRIES} intentos" >&2
-                echo "\n📋 Logs del contenedor:"
-                docker-compose logs --tail=50 inatrace-be
-                echo "\n📊 Estado de contenedores:"
-                docker-compose ps
-                exit 1
               '''
             }
-          }
 
-          if (params.BRANCH == 'main' && params.PROD_HOST_SECONDARY?.trim()) {
-            sh """
-              set -e
+            // Despliegue remoto solo para rama main (producción)
+            if (params.BRANCH == 'main') {
+              sshagent(['usuario-prod-ssh']) {
+                sh '''
+                  set -e
 
-              echo "\n🚀 Repitiendo despliegue en servidor secundario: ${params.PROD_HOST_SECONDARY}"
+                  SSH_TARGET="${PROD_USER_PRIMARY}@${PROD_HOST_PRIMARY}"
+                  REMOTE_DIR="${PROD_TARGET_PRIMARY}"
 
-              SSH_FLAGS="${params.PROD_USER_SECONDARY}@${params.PROD_HOST_SECONDARY}"
+                  echo "🚀 Sincronizando archivos a servidor remoto: ${SSH_TARGET}:${REMOTE_DIR}"
 
-              scp ${env.COMPOSE_DIR}/docker-compose.yml ${SSH_FLAGS}:${params.PROD_TARGET_SECONDARY}/docker-compose.yml
-              scp ${env.COMPOSE_DIR}/.env ${SSH_FLAGS}:${params.PROD_TARGET_SECONDARY}/.env
+                  # Crear directorio remoto si no existe
+                  ssh "${SSH_TARGET}" "mkdir -p ${REMOTE_DIR}"
 
-              ssh ${SSH_FLAGS} <<'EOSSH'
+                  # Copiar archivos necesarios
+                  scp docker-compose.yml "${SSH_TARGET}:${REMOTE_DIR}/docker-compose.yml"
+                  scp .env "${SSH_TARGET}:${REMOTE_DIR}/.env"
+
+                  echo "📋 Ejecutando despliegue remoto..."
+
+                  # Ejecutar comandos en el servidor remoto
+                  ssh "${SSH_TARGET}" << 'EOSSH'
 set -e
-cd ${params.PROD_TARGET_SECONDARY}
+cd ${REMOTE_DIR}
 
 echo "🔗 Verificando red Docker..."
-docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
+  docker network create inatrace-backend-network
 
 echo "📥 Descargando última imagen..."
 docker-compose pull || true
@@ -468,52 +413,118 @@ docker-compose pull || true
 echo "🔄 Desplegando servicios..."
 docker-compose up -d --remove-orphans --force-recreate
 
-echo "⏳ Esperando healthcheck local..."
+echo "📊 Estado de contenedores:"
+docker-compose ps
+
+echo "⏳ Esperando que el backend esté saludable..."
 RETRY_COUNT=0
 MAX_RETRIES=12
-while [ ${'$'}RETRY_COUNT -lt ${'$'}MAX_RETRIES ]; do
-  RETRY_COUNT=${'$'}((RETRY_COUNT + 1))
-  if curl -fsS --max-time 5 "http://localhost:${params.PROD_HEALTH_PORT_SECONDARY}/actuator/health" >/dev/null 2>&1; then
-    echo "✅ Backend secundario saludable"
+SLEEP_TIME=10
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if curl -fsS --max-time 5 "http://localhost:8082/actuator/health" >/dev/null 2>&1; then
+    echo "✅ Backend Fortaleza está saludable"
+    echo "📈 Logs recientes:"
+    docker-compose logs --tail=20 inatrace-be
     exit 0
   fi
-  echo "⏳ Intento ${'$'}RETRY_COUNT/${'$'}MAX_RETRIES..."
-  sleep 10
+  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Esperando ${SLEEP_TIME}s..."
+  sleep $SLEEP_TIME
 done
 
-echo "❌ Healthcheck falló en servidor secundario" >&2
+echo "❌ Health check falló después de ${MAX_RETRIES} intentos" >&2
+echo "📋 Logs del contenedor:"
 docker-compose logs --tail=50 inatrace-be
+echo "📊 Estado de contenedores:"
 docker-compose ps
 exit 1
 EOSSH
+                '''
+              }
+            } else if (params.BRANCH == 'staging') {
+              // Despliegue local para rama staging (pruebas)
+              sh '''
+                set -e
 
-              if [ -n "${params.PROD_HEALTH_URL_SECONDARY?.trim()}" ]; then
-                echo "🌐 Verificando health externo secundario: ${params.PROD_HEALTH_URL_SECONDARY}"
-                curl -fsS "${params.PROD_HEALTH_URL_SECONDARY}" || {
-                  echo "❌ Health externo falló" >&2
-                  exit 1
-                }
-              fi
-            """
+                echo "🔗 Verificando red Docker local..."
+                docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
+                  docker network create inatrace-backend-network
+
+                echo "📥 Descargando última imagen..."
+                docker-compose pull || true
+
+                echo "🔄 Desplegando servicios localmente..."
+                docker-compose up -d --remove-orphans --force-recreate
+
+                echo "📊 Estado de contenedores:"
+                docker-compose ps
+
+                echo "⏳ Esperando que el backend esté saludable..."
+                RETRY_COUNT=0
+                MAX_RETRIES=12
+                SLEEP_TIME=10
+                while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                  RETRY_COUNT=$((RETRY_COUNT + 1))
+                  if curl -fsS --max-time 5 "http://localhost:8082/actuator/health" >/dev/null 2>&1; then
+                    echo "✅ Backend local está saludable"
+                    echo "📈 Logs recientes:"
+                    docker-compose logs --tail=20 inatrace-be
+                    exit 0
+                  fi
+                  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Esperando ${SLEEP_TIME}s..."
+                  sleep $SLEEP_TIME
+                done
+
+                echo "❌ Health check local falló después de ${MAX_RETRIES} intentos" >&2
+                echo "📋 Logs del contenedor:"
+                docker-compose logs --tail=50 inatrace-be
+                echo "📊 Estado de contenedores:"
+                docker-compose ps
+                exit 1
+              '''
+            } else {
+              echo "⚠️ Rama ${params.BRANCH} no configurada para despliegue. Solo 'main' y 'staging' soportadas."
+            }
           }
         }
       }
       post {
         success {
           script {
+            def successMessage = params.BRANCH == 'main' ? 
+              "✅ DESPLIEGUE REMOTO EXITOSO - ${env.FORTALEZA_ENV.toUpperCase()}" : 
+              (params.BRANCH == 'staging' ? 
+                "✅ DESPLIEGUE LOCAL EXITOSO - ${env.FORTALEZA_ENV.toUpperCase()}" : 
+                "✅ BUILD Y PRUEBAS COMPLETADAS - ${env.FORTALEZA_ENV.toUpperCase()}")
             echo "\n═══════════════════════════════════════════════════════════════"
-            echo "  ✅ DESPLIEGUE EXITOSO - ${env.FORTALEZA_ENV.toUpperCase()}"
+            echo "  ${successMessage}"
             echo "═══════════════════════════════════════════════════════════════"
-            echo "Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
-            echo "Commit: ${env.GIT_SHORT_SHA}"
-            echo "URL: ${env.HEALTHCHECK_URL}"
+            if (params.BRANCH == 'main') {
+              echo "Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+              echo "Commit: ${env.GIT_SHORT_SHA}"
+              echo "Servidor: ${params.PROD_HOST_PRIMARY}"
+              echo "URL: ${env.HEALTHCHECK_URL}"
+            } else if (params.BRANCH == 'staging') {
+              echo "Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+              echo "Commit: ${env.GIT_SHORT_SHA}"
+              echo "Entorno: Despliegue local en agente Jenkins"
+            } else {
+              echo "Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+              echo "Commit: ${env.GIT_SHORT_SHA}"
+              echo "Nota: Despliegue omitido para rama ${params.BRANCH}"
+            }
             echo "═══════════════════════════════════════════════════════════════"
           }
         }
         failure {
           script {
+            def failureMessage = params.BRANCH == 'main' ? 
+              "❌ DESPLIEGUE REMOTO FALLIDO" : 
+              (params.BRANCH == 'staging' ? 
+                "❌ DESPLIEGUE LOCAL FALLIDO" : 
+                "❌ BUILD O PRUEBAS FALLIDAS")
             echo "\n═══════════════════════════════════════════════════════════════"
-            echo "  ❌ DESPLIEGUE FALLIDO"
+            echo "  ${failureMessage}"
             echo "═══════════════════════════════════════════════════════════════"
             echo "Revisa los logs arriba para más detalles"
             echo "═══════════════════════════════════════════════════════════════"
