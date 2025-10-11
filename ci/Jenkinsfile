@@ -32,6 +32,56 @@ pipeline {
       defaultValue: false,
       description: '⚠️ Omitir backup de BD en producción (no recomendado para producción)' 
     )
+    string(
+      name: 'PROD_HOST_PRIMARY',
+      defaultValue: '',
+      description: 'Hostname o IP del servidor de producción principal (ej. prod-fortaleza.atijaguar.com)'
+    )
+    string(
+      name: 'PROD_USER_PRIMARY',
+      defaultValue: 'deploy',
+      description: 'Usuario SSH para el servidor de producción principal'
+    )
+    string(
+      name: 'PROD_TARGET_PRIMARY',
+      defaultValue: '/opt/inatrace/backend/prod/fortaleza',
+      description: 'Directorio remoto donde se desplegará la app en el servidor principal'
+    )
+    string(
+      name: 'PROD_HEALTH_PORT_PRIMARY',
+      defaultValue: '8080',
+      description: 'Puerto local donde expone healthcheck el backend en el servidor principal'
+    )
+    string(
+      name: 'PROD_HEALTH_URL_PRIMARY',
+      defaultValue: 'https://inatrace.espam.edu.ec/api/actuator/health',
+      description: 'URL externa para validar healthcheck del servidor principal'
+    )
+    string(
+      name: 'PROD_HOST_SECONDARY',
+      defaultValue: '',
+      description: 'Hostname o IP del nuevo servidor de producción (dejar vacío para omitir)'
+    )
+    string(
+      name: 'PROD_USER_SECONDARY',
+      defaultValue: 'deploy',
+      description: 'Usuario SSH para el nuevo servidor de producción'
+    )
+    string(
+      name: 'PROD_TARGET_SECONDARY',
+      defaultValue: '/opt/inatrace/backend/prod/fortaleza-secondary',
+      description: 'Directorio remoto donde se desplegará la app en el nuevo servidor'
+    )
+    string(
+      name: 'PROD_HEALTH_PORT_SECONDARY',
+      defaultValue: '8080',
+      description: 'Puerto local donde expone healthcheck el backend en el nuevo servidor'
+    )
+    string(
+      name: 'PROD_HEALTH_URL_SECONDARY',
+      defaultValue: '',
+      description: 'URL externa opcional para validar healthcheck del nuevo servidor'
+    )
   }
 
   environment {
@@ -307,9 +357,9 @@ pipeline {
       steps {
         script {
           echo "\n🚀 Iniciando despliegue en entorno: ${env.FORTALEZA_ENV}"
-          
+
           def envCredential = env.FORTALEZA_ENV == 'prod' ? 'fortaleza-env-prod' : 'fortaleza-env-staging'
-          
+
           dir(env.COMPOSE_DIR) {
             withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
               sh '''
@@ -396,6 +446,59 @@ PY
                 exit 1
               '''
             }
+          }
+
+          if (params.BRANCH == 'main' && params.PROD_HOST_SECONDARY?.trim()) {
+            sh """
+              set -e
+
+              echo "\n🚀 Repitiendo despliegue en servidor secundario: ${params.PROD_HOST_SECONDARY}"
+
+              SSH_FLAGS="${params.PROD_USER_SECONDARY}@${params.PROD_HOST_SECONDARY}"
+
+              scp ${env.COMPOSE_DIR}/docker-compose.yml ${SSH_FLAGS}:${params.PROD_TARGET_SECONDARY}/docker-compose.yml
+              scp ${env.COMPOSE_DIR}/.env ${SSH_FLAGS}:${params.PROD_TARGET_SECONDARY}/.env
+
+              ssh ${SSH_FLAGS} <<'EOSSH'
+set -e
+cd ${params.PROD_TARGET_SECONDARY}
+
+echo "🔗 Verificando red Docker..."
+docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+
+echo "📥 Descargando última imagen..."
+docker-compose pull || true
+
+echo "🔄 Desplegando servicios..."
+docker-compose up -d --remove-orphans --force-recreate
+
+echo "⏳ Esperando healthcheck local..."
+RETRY_COUNT=0
+MAX_RETRIES=12
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if curl -fsS --max-time 5 "http://localhost:${params.PROD_HEALTH_PORT_SECONDARY}/actuator/health" >/dev/null 2>&1; then
+    echo "✅ Backend secundario saludable"
+    exit 0
+  fi
+  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES}..."
+  sleep 10
+done
+
+echo "❌ Healthcheck falló en servidor secundario" >&2
+docker-compose logs --tail=50 inatrace-be
+docker-compose ps
+exit 1
+EOSSH
+
+              if [ -n "${params.PROD_HEALTH_URL_SECONDARY?.trim()}" ]; then
+                echo "🌐 Verificando health externo secundario: ${params.PROD_HEALTH_URL_SECONDARY}"
+                curl -fsS "${params.PROD_HEALTH_URL_SECONDARY}" || {
+                  echo "❌ Health externo falló" >&2
+                  exit 1
+                }
+              fi
+            """
           }
         }
       }
