@@ -420,11 +420,15 @@ echo "⏳ Esperando healthcheck nativo (remoto)..."
 RETRY_COUNT=0
 MAX_RETRIES=12
 SLEEP_TIME=10
+SERVICE_NAME="inatrace-backend"
 CONTAINER_NAME="inatrace-be"
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT + 1))
-  CONTAINER_ID=$(docker-compose ps -q "${CONTAINER_NAME}")
+  CONTAINER_ID=$(docker-compose ps -q "${SERVICE_NAME}")
+  if [ -z "$CONTAINER_ID" ] && [ -n "$CONTAINER_NAME" ]; then
+    CONTAINER_ID=$(docker ps --filter "name=^/${CONTAINER_NAME}$" -q)
+  fi
   if [ -n "$CONTAINER_ID" ]; then
     HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
   else
@@ -473,11 +477,15 @@ EOSSH
                 RETRY_COUNT=0
                 MAX_RETRIES=12
                 SLEEP_TIME=10
+                SERVICE_NAME="inatrace-backend"
                 CONTAINER_NAME="inatrace-be"
 
                 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
                   RETRY_COUNT=$((RETRY_COUNT + 1))
-                  CONTAINER_ID=$(docker-compose ps -q "${CONTAINER_NAME}")
+                  CONTAINER_ID=$(docker-compose ps -q "${SERVICE_NAME}")
+                  if [ -z "$CONTAINER_ID" ] && [ -n "$CONTAINER_NAME" ]; then
+                    CONTAINER_ID=$(docker ps --filter "name=^/${CONTAINER_NAME}$" -q)
+                  fi
                   if [ -n "$CONTAINER_ID" ]; then
                     HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
                   else
