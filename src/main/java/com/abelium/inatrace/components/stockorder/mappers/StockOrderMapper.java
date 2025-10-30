@@ -53,6 +53,9 @@ public class StockOrderMapper {
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
         apiStockOrder.setWeekNumber(entity.getWeekNumber());
+        apiStockOrder.setParcelLot(entity.getParcelLot());
+        apiStockOrder.setVariety(entity.getVariety());
+        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
 
         // Farmer
         apiStockOrder.setProducerUserCustomer(
@@ -185,6 +188,9 @@ public class StockOrderMapper {
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
         apiStockOrder.setWeekNumber(entity.getWeekNumber());
+        apiStockOrder.setParcelLot(entity.getParcelLot());
+        apiStockOrder.setVariety(entity.getVariety());
+        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
 
         // Set price and currency for end customer (used in Quote orders for final products)
         apiStockOrder.setPricePerUnitForEndCustomer(entity.getPricePerUnitForEndCustomer());
@@ -231,6 +237,9 @@ public class StockOrderMapper {
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
         apiStockOrder.setWeekNumber(entity.getWeekNumber());
+        apiStockOrder.setParcelLot(entity.getParcelLot());
+        apiStockOrder.setVariety(entity.getVariety());
+        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
 
         // Map payments
         apiStockOrder.setPayments(entity.getPayments().stream().map(payment -> PaymentMapper.toApiPayment(payment, null)).collect(Collectors.toList()));

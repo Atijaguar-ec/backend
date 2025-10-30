@@ -190,6 +190,18 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private Integer weekNumber;
 
+	// Parcel lot for cacao deliveries
+	@Column(length = 255)
+	private String parcelLot;
+
+	// Variety for cacao deliveries
+	@Column(length = 255)
+	private String variety;
+
+	// Organic certification details
+	@Column(length = 255)
+	private String organicCertification;
+
 	@Column
 	private BigDecimal cost;
 	
@@ -685,6 +697,30 @@ public class StockOrder extends TimestampEntity {
 
 	public void setWeekNumber(Integer weekNumber) {
 		this.weekNumber = weekNumber;
+	}
+
+	public String getParcelLot() {
+		return parcelLot;
+	}
+
+	public void setParcelLot(String parcelLot) {
+		this.parcelLot = parcelLot;
+	}
+
+	public String getVariety() {
+		return variety;
+	}
+
+	public void setVariety(String variety) {
+		this.variety = variety;
+	}
+
+	public String getOrganicCertification() {
+		return organicCertification;
+	}
+
+	public void setOrganicCertification(String organicCertification) {
+		this.organicCertification = organicCertification;
 	}
 
 	public BigDecimal getTare() {

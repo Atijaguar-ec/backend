@@ -183,6 +183,15 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Week number for cacao deliveries (1-53)")
     private Integer weekNumber;
 
+    @Schema(description = "Parcel lot for cacao deliveries")
+    private String parcelLot;
+
+    @Schema(description = "Variety for cacao deliveries")
+    private String variety;
+
+    @Schema(description = "Organic certification details")
+    private String organicCertification;
+
     @Schema(description = "Tare")
     private BigDecimal tare;
 
@@ -622,6 +631,30 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setWeekNumber(Integer weekNumber) {
         this.weekNumber = weekNumber;
+    }
+
+    public String getParcelLot() {
+        return parcelLot;
+    }
+
+    public void setParcelLot(String parcelLot) {
+        this.parcelLot = parcelLot;
+    }
+
+    public String getVariety() {
+        return variety;
+    }
+
+    public void setVariety(String variety) {
+        this.variety = variety;
+    }
+
+    public String getOrganicCertification() {
+        return organicCertification;
+    }
+
+    public void setOrganicCertification(String organicCertification) {
+        this.organicCertification = organicCertification;
     }
 
     public BigDecimal getTare() {

@@ -1008,6 +1008,9 @@ public class StockOrderService extends BaseService {
         entity.setTare(apiStockOrder.getTare());
         entity.setWomenShare(apiStockOrder.getWomenShare());
         entity.setWeekNumber(apiStockOrder.getWeekNumber());
+        entity.setParcelLot(apiStockOrder.getParcelLot());
+        entity.setVariety(apiStockOrder.getVariety());
+        entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
         entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setCurrency(apiStockOrder.getCurrency());
