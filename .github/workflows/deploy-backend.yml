@@ -37,7 +37,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-inatrace
-  JAVA_VERSION: '17'  # Java 11 or higher is required (ver documentación oficial)
+  JAVA_VERSION: '17'  
   MAVEN_OPTS: -Xmx1024m
 jobs:
   quality:
