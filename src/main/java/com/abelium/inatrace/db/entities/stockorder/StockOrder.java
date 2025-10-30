@@ -220,6 +220,12 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private BigDecimal damagedWeightDeduction;
 
+	@Column
+	private BigDecimal moisturePercentage;
+
+	@Column
+	private BigDecimal moistureWeightDeduction;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	private ProcessingOrder processingOrder;
 	
@@ -745,5 +751,21 @@ public class StockOrder extends TimestampEntity {
 
 	public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
 		this.damagedWeightDeduction = damagedWeightDeduction;
+	}
+
+	public BigDecimal getMoisturePercentage() {
+		return moisturePercentage;
+	}
+
+	public void setMoisturePercentage(BigDecimal moisturePercentage) {
+		this.moisturePercentage = moisturePercentage;
+	}
+
+	public BigDecimal getMoistureWeightDeduction() {
+		return moistureWeightDeduction;
+	}
+
+	public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
+		this.moistureWeightDeduction = moistureWeightDeduction;
 	}
 }

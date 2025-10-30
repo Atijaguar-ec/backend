@@ -34,6 +34,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Weight deduction damage'")
 	private Boolean displayWeightDeductionDamage;
 
+	@Schema(description = "Enable form control 'Moisture percentage'")
+	private Boolean displayMoisturePercentage;
+
 	@Schema(description = "Enable form control 'Tare'")
 	private Boolean displayTare;
 
@@ -121,6 +124,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayWeightDeductionDamage(Boolean displayWeightDeductionDamage) {
 		this.displayWeightDeductionDamage = displayWeightDeductionDamage;
+	}
+
+	public Boolean getDisplayMoisturePercentage() {
+		return displayMoisturePercentage;
+	}
+
+	public void setDisplayMoisturePercentage(Boolean displayMoisturePercentage) {
+		this.displayMoisturePercentage = displayMoisturePercentage;
 	}
 
 	public Boolean getDisplayTare() {

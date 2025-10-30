@@ -201,6 +201,12 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Damaged weight deduction")
     private BigDecimal damagedWeightDeduction;
 
+    @Schema(description = "Moisture percentage applied (0-100)")
+    private BigDecimal moisturePercentage;
+
+    @Schema(description = "Calculated weight deduction due to moisture")
+    private BigDecimal moistureWeightDeduction;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -679,6 +685,22 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
         this.damagedWeightDeduction = damagedWeightDeduction;
+    }
+
+    public BigDecimal getMoisturePercentage() {
+        return moisturePercentage;
+    }
+
+    public void setMoisturePercentage(BigDecimal moisturePercentage) {
+        this.moisturePercentage = moisturePercentage;
+    }
+
+    public BigDecimal getMoistureWeightDeduction() {
+        return moistureWeightDeduction;
+    }
+
+    public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
+        this.moistureWeightDeduction = moistureWeightDeduction;
     }
 
     public String getQrCodeTag() {

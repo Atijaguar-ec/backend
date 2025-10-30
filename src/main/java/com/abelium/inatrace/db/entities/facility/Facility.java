@@ -47,6 +47,9 @@ public class Facility extends TimestampEntity {
 	private Boolean displayWeightDeductionDamage;
 
 	@Column
+	private Boolean displayMoisturePercentage;
+
+	@Column
 	private Boolean displayTare;
 
 	@Column
@@ -136,6 +139,14 @@ public class Facility extends TimestampEntity {
 
 	public void setDisplayWeightDeductionDamage(Boolean displayWeightDeductionDamage) {
 		this.displayWeightDeductionDamage = displayWeightDeductionDamage;
+	}
+
+	public Boolean getDisplayMoisturePercentage() {
+		return displayMoisturePercentage;
+	}
+
+	public void setDisplayMoisturePercentage(Boolean displayMoisturePercentage) {
+		this.displayMoisturePercentage = displayMoisturePercentage;
 	}
 
 	public Boolean getDisplayTare() {
