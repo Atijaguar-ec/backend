@@ -1,9 +1,9 @@
 package com.abelium.inatrace.db.entities.codebook;
 
+import com.abelium.inatrace.api.types.Lengths;
 import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.enums.CertificationCategory;
 import com.abelium.inatrace.db.enums.CertificationStatus;
-import com.abelium.inatrace.tools.Lengths;
 import jakarta.persistence.*;
 
 import java.util.HashSet;
@@ -37,7 +37,7 @@ public class CertificationType extends TimestampEntity {
     /**
      * Default name (English).
      */
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false, length = Lengths.DEFAULT)
     private String name;
 
     /**
