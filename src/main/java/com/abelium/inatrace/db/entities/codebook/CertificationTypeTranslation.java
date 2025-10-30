@@ -10,7 +10,7 @@ import jakarta.persistence.*;
  * @author INATrace Development Team
  */
 @Entity
-@Table(name = "certification_type_translation",
+@Table(name = "CertificationTypeTranslation",
        uniqueConstraints = @UniqueConstraint(columnNames = {"certification_type_id", "language"}))
 public class CertificationTypeTranslation extends TimestampEntity {
 
@@ -19,10 +19,10 @@ public class CertificationTypeTranslation extends TimestampEntity {
     private CertificationType certificationType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 64)
     private Language language;
 
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false, length = 255)
     private String name;
 
     public CertificationType getCertificationType() {

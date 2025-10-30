@@ -15,7 +15,7 @@ import java.util.Set;
  * @author INATrace Development Team
  */
 @Entity
-@Table(name = "certification_type")
+@Table(name = "CertificationType")
 @NamedQueries({
     @NamedQuery(name = "CertificationType.listAll",
                 query = "SELECT ct FROM CertificationType ct ORDER BY ct.name"),
@@ -31,7 +31,7 @@ public class CertificationType extends TimestampEntity {
     /**
      * Unique code identifier for the certification type.
      */
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = Lengths.CODE)
     private String code;
 
     /**
