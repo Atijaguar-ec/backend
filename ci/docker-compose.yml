@@ -1,9 +1,9 @@
 
 services:
 
-  inatrace-mysql:
+  mysql:
     image: mysql:8.0.35
-    container_name: inatrace-mysql
+    container_name: ${CONTAINER_NAME_DB:-inatrace-mysql-dev}
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=${DATABASE_NAME}
@@ -14,16 +14,16 @@ services:
     networks:
       - backend
     ports:
-      - "3306:3306"
+      - "${HOST_PORT_DB:-3306}:3306"
     restart: always
 
-  inatrace-backend:
+  backend:
     image: ${IMAGE_NAME}:${TAG}
-    container_name: inatrace-be
+    container_name: ${CONTAINER_NAME_BE:-inatrace-be-dev}
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       - INATRACE_DATABASE_NAME=${DATABASE_NAME}
-      - INATRACE_DATABASE_HOSTNAME=inatrace-mysql
+      - INATRACE_DATABASE_HOSTNAME=${CONTAINER_NAME_DB:-inatrace-mysql-dev}
       - SPRING_DATASOURCE_USERNAME=${DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DATASOURCE_PASSWORD}
       - INATRACE_FILESTORAGE_ROOT=${FILE_STORAGE_ROOT}
@@ -34,7 +34,6 @@ services:
       - INATRACE_FE_URL=${FE_URL}
       - INATRACE_EMAILCONFIRMATION_URL=${FE_CONFIRM_URL}
       - INATRACE_PASSWORDRESET_URL=${FE_RESET_URL}
-      - SERVER_PORT=${SERVER_PORT}
     volumes:
       - ${FILE_STORAGE_ROOT_VOL}:${FILE_STORAGE_ROOT}
       - ${IMPORT_PATH_VOL}:${IMPORT_PATH}
@@ -42,11 +41,11 @@ services:
     networks:
       - backend
     depends_on:
-      - inatrace-mysql
+      - mysql
     ports:
-      - "${SERVER_PORT}:8082"
+      - "${HOST_PORT_BE:-8080}:8080"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3

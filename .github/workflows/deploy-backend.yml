@@ -17,6 +17,7 @@ on:
         type: choice
         options:
         - develop
+        - develop-shrimp
         - staging
         - main
       company:
@@ -562,20 +563,21 @@ jobs:
       - name: Verify local compose path (dev)
         run: |
           set -e
-          ls -lah .ci || true
-          if [ ! -f .ci/docker-compose.yml ]; then
-            echo "Missing .ci/docker-compose.yml (will use remote compose)"
+          ls -lah ci || true
+          if [ ! -f ci/docker-compose.yml ]; then
+            echo "Missing ci/docker-compose.yml (will use remote compose)"
           fi
 
       - name: Upload docker-compose.yml (dev)
-        if: ${{ hashFiles('.ci/docker-compose.yml') != '' }}
+        if: ${{ hashFiles('ci/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: ".ci/docker-compose.yml"
+          source: "ci/docker-compose.yml"
           target: "/opt/inatrace/backend/dev"
+          strip_components: 1
           debug: true
 
       - name: Prepare .env (dev)
@@ -597,6 +599,10 @@ jobs:
           DB_ROOT_PASSWORD=$DB_ROOT
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=$DB_PASS
+          CONTAINER_NAME_BE=inatrace-be-dev
+          CONTAINER_NAME_DB=inatrace-mysql-dev
+          HOST_PORT_BE=8080
+          HOST_PORT_DB=3306
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
@@ -689,6 +695,184 @@ jobs:
             for i in {1..10}; do
               if curl -f http://localhost:8080/actuator/health; then
                 echo "✅ Development backend deployment successful!"
+                exit 0
+              fi
+              echo "⏳ Health check attempt $i/10, waiting..."
+              sleep 10
+            done
+
+            echo "❌ Health check failed after 10 attempts"
+            docker-compose logs
+            exit 1
+
+  deploy-dev-shrimp:
+    name: 🦐 Deploy to Development Shrimp
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'develop-shrimp'
+    environment:
+      name: dev-shrimp
+      url: http://camaron.atijaguar.com/api/health
+    steps:
+      - name: 📥 Checkout deployment configs
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (DEV-SHRIMP - key auth)
+        run: |
+          missing=0
+          [ -z "${{ secrets.DEV_HOST }}" ] && echo "Missing secret: DEV_HOST" && missing=1
+          [ -z "${{ secrets.DEV_USER }}" ] && echo "Missing secret: DEV_USER" && missing=1
+          [ -z "${{ secrets.DEV_SSH_KEY }}" ] && echo "Missing secret: DEV_SSH_KEY" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (dev-shrimp)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            sudo mkdir -p /opt/inatrace/volumes-shrimp
+            sudo mkdir -p /opt/inatrace/volumes-shrimp/{uploads,import,documents,logs}
+            sudo chown -R 1000:1000 /opt/inatrace/volumes-shrimp
+            sudo chmod -R 755 /opt/inatrace/volumes-shrimp
+            mkdir -p /opt/inatrace/backend/dev-shrimp
+
+      - name: Verify local compose path (dev-shrimp)
+        run: |
+          set -e
+          ls -lah ci || true
+          if [ ! -f ci/docker-compose.yml ]; then
+            echo "Missing ci/docker-compose.yml (will use remote compose)"
+          fi
+
+      - name: Upload docker-compose.yml (dev-shrimp)
+        if: ${{ hashFiles('ci/docker-compose.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "ci/docker-compose.yml"
+          target: "/opt/inatrace/backend/dev-shrimp"
+          strip_components: 1
+          debug: true
+
+      - name: Prepare .env (dev-shrimp)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.DEV_SHRIMP_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_shrimp"
+          DB_PASS="${{ secrets.DEV_SHRIMP_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace_shrimp"
+          DB_ROOT="${{ secrets.DEV_SHRIMP_DB_ROOT_PASSWORD }}"; [ -z "$DB_ROOT" ] && DB_ROOT="root_shrimp"
+          MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
+          REQ_TOKEN="${{ secrets.DEV_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="dev-shrimp-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
+          FE_URL="${{ secrets.DEV_SHRIMP_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="http://camaron.atijaguar.com/"
+          FE_CONFIRM_URL="${{ secrets.DEV_SHRIMP_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
+          FE_RESET_URL="${{ secrets.DEV_SHRIMP_FE_RESET_URL }}"; [ -z "$FE_RESET_URL " ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=develop
+          DATABASE_NAME=inatrace_shrimp
+          DB_ROOT_PASSWORD=$DB_ROOT
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=$DB_PASS
+          CONTAINER_NAME_BE=inatrace-be-dev-shrimp
+          CONTAINER_NAME_DB=inatrace-mysql-dev-shrimp
+          HOST_PORT_BE=8081
+          HOST_PORT_DB=3307
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
+          # Host volume paths used by docker-compose
+          DB_VOLUME=/opt/inatrace/mysql-shrimp
+          FILE_STORAGE_ROOT_VOL=/opt/inatrace/volumes-shrimp/uploads
+          IMPORT_PATH_VOL=/opt/inatrace/volumes-shrimp/import
+          DOCUMENTS_ROOT_VOL=/opt/inatrace/volumes-shrimp/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=$FE_CONFIRM_URL
+          FE_RESET_URL=$FE_RESET_URL
+          MAIL_HOST=mail.atijaguar.com
+          MAIL_PORT=465
+          MAIL_USERNAME=desarrollo@atijaguar.com
+          MAIL_PASSWORD=$MAIL_PASS
+          EOF
+
+      - name: Verify .env exists (dev-shrimp)
+        run: |
+          set -e
+          ls -lah .
+          test -s .env || { echo ".env is missing or empty"; exit 1; }
+
+      - name: Upload .env (dev-shrimp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: ".env"
+          target: "/opt/inatrace/backend/dev-shrimp"
+          debug: true
+
+      - name: Download backend image artifact (dev-shrimp)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (dev-shrimp)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (dev-shrimp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/backend/dev-shrimp"
+          debug: true
+
+      - name: Deploy on server (dev-shrimp)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_PORT || 22 }}
+          script: |
+            set -e
+            cd /opt/inatrace/backend/dev-shrimp
+
+            # Stop only shrimp backend containers (preserve cacao and frontend)
+            echo "🛑 Stopping existing shrimp backend containers..."
+            docker stop inatrace-be-dev-shrimp inatrace-mysql-dev-shrimp 2>/dev/null || true
+            docker rm inatrace-be-dev-shrimp inatrace-mysql-dev-shrimp 2>/dev/null || true
+
+            # Ensure shared network exists (DO NOT remove - other services may be using it)
+            echo "🔗 Ensuring shared network exists..."
+            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+
+            # Load new image
+            echo "📦 Loading new shrimp backend image..."
+            docker load -i be-image.tar
+
+            # Start shrimp services
+            echo "🦐 Starting dev-shrimp services..."
+            docker-compose up -d
+
+            echo "⏳ Waiting for shrimp service to be ready..."
+            sleep 30
+
+            for i in {1..10}; do
+              if curl -f http://localhost:8081/actuator/health; then
+                echo "✅ Development Shrimp backend deployment successful!"
                 exit 0
               fi
               echo "⏳ Health check attempt $i/10, waiting..."
