@@ -93,18 +93,18 @@ spring.mail.properties.mail.smtp.writetimeout = 5000
 spring.mail.properties.mail.debug = false
 
 # mail template properties
-INATrace.mail.template.from =
+INATrace.mail.template.from =desarrollo@atijaguar.com
 
-INATrace.mail.redirect =
+INATrace.mail.redirect =desarrollo@atijaguar.com
 
 # if sending mail is enabled
 INATrace.mail.sendingEnabled = false
 
 # mail to send when a new registration is requested
-INATrace.loginManager.mail =
+INATrace.loginManager.mail =desarrollo@atijaguar.com
 
 # info email
-INATrace.info.mail =
+INATrace.info.mail =desarrollo@atijaguar.com
 
 # Tokens name and expiration
 INATrace.auth.accessTokenCookieName = inatrace-accessToken

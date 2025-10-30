@@ -1,5 +1,17 @@
 -- Safely replace unique index on Transaction.inputMeasureUnitType_id with a non-unique index
 -- Steps: drop FK -> drop unique index -> create non-unique index -> recreate FK
+-- IDEMPOTENT: Only runs if Transaction table exists
+
+-- Check if Transaction table exists
+SET @table_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.TABLES
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Transaction'
+);
+
+-- Only proceed if Transaction table exists
+SET @proceed := @table_exists > 0;
 
 -- 1) Drop FK on `inputMeasureUnitType_id` if present
 SET @fk_mut := (
@@ -11,7 +23,7 @@ SET @fk_mut := (
     AND REFERENCED_TABLE_NAME = 'MeasureUnitType'
   LIMIT 1
 );
-SET @sql_drop_fk_mut := IF(@fk_mut IS NOT NULL,
+SET @sql_drop_fk_mut := IF(@proceed AND @fk_mut IS NOT NULL,
   CONCAT('ALTER TABLE `Transaction` DROP FOREIGN KEY `', @fk_mut, '`'),
   'SELECT 1'
 );
@@ -29,7 +41,7 @@ SET @uniq_idx := (
   HAVING GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) = 'inputMeasureUnitType_id'
   LIMIT 1
 );
-SET @sql_drop_idx := IF(@uniq_idx IS NOT NULL,
+SET @sql_drop_idx := IF(@proceed AND @uniq_idx IS NOT NULL,
   CONCAT('ALTER TABLE `Transaction` DROP INDEX `', @uniq_idx, '`'),
   'SELECT 1'
 );
@@ -43,7 +55,7 @@ SET @has_nonuniq := (
     AND TABLE_NAME = 'Transaction'
     AND INDEX_NAME = 'idx_transaction_input_measure_unit_type'
 );
-SET @sql_create_idx := IF(@has_nonuniq = 0,
+SET @sql_create_idx := IF(@proceed AND @has_nonuniq = 0,
   'CREATE INDEX `idx_transaction_input_measure_unit_type` ON `Transaction` (`inputMeasureUnitType_id`)',
   'SELECT 1'
 );
@@ -59,7 +71,7 @@ SET @fk_mut2 := (
     AND REFERENCED_TABLE_NAME = 'MeasureUnitType'
   LIMIT 1
 );
-SET @sql_add_fk := IF(@fk_mut2 IS NULL,
+SET @sql_add_fk := IF(@proceed AND @fk_mut2 IS NULL,
   'ALTER TABLE `Transaction` ADD CONSTRAINT `FK_transaction_input_measure_unit_type` FOREIGN KEY (`inputMeasureUnitType_id`) REFERENCES `MeasureUnitType`(`id`)',
   'SELECT 1'
 );

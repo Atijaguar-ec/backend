@@ -1,0 +1,594 @@
+// ============================================================================
+// Pipeline de Despliegue Backend - Fortaleza del Valle
+// Autor: Alvaro Sanchez
+// Última actualización: 2025-10-09 v2.1
+// ============================================================================
+
+pipeline {
+  agent any
+
+  options {
+    skipDefaultCheckout(true)
+    timeout(time: 40, unit: 'MINUTES')
+    ansiColor('xterm')
+    buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
+    disableConcurrentBuilds()
+    timestamps()
+  }
+
+  parameters {
+    choice(
+      name: 'BRANCH',
+      choices: ['staging', 'main'],
+      description: 'Rama a desplegar (staging→test, main→prod)'
+    )
+    booleanParam(
+      name: 'SKIP_TESTS',
+      defaultValue: false,
+      description: '⚠️ Omitir pruebas (no recomendado para producción)'
+    )
+    booleanParam(
+      name: 'SKIP_DB_BACKUP',
+      defaultValue: false,
+      description: '⚠️ Omitir backup de BD en producción (no recomendado para producción)' 
+    )
+    string(
+      name: 'PROD_HOST_PRIMARY',
+      defaultValue: 'https://inatrace.espam.edu.ec',
+      description: 'Hostname o IP del servidor de producción principal (ej. prod-fortaleza.atijaguar.com)'
+    )
+    string(
+      name: 'PROD_USER_PRIMARY',
+      defaultValue: 'inatrace',
+      description: 'Usuario SSH para el servidor de producción principal'
+    )
+    string(
+      name: 'PROD_TARGET_PRIMARY',
+      defaultValue: '/opt/inatrace/backend/prod/fortaleza',
+      description: 'Directorio remoto donde se desplegará la app en el servidor principal'
+    )
+    string(
+      name: 'PROD_HEALTH_PORT_PRIMARY',
+      defaultValue: '8082',
+      description: 'Puerto local donde expone healthcheck el backend en el servidor principal'
+    )
+    string(
+      name: 'PROD_HEALTH_URL_PRIMARY',
+      defaultValue: 'http://localhost:8082/actuator/health',
+      description: 'URL externa para validar healthcheck del servidor principal'
+    )
+    
+  }
+
+  environment {
+    // Configuración de registro Docker
+    REGISTRY = 'ghcr.io'
+    
+    // Configuración de despliegue
+    COMPOSE_PROJECT_NAME = 'inatrace-backend-fortaleza'
+    DOCKER_BUILDKIT = '1'
+    COMPOSE_DOCKER_CLI_BUILD = '1'
+    
+    // Timeouts y reintentos
+    HEALTH_CHECK_TIMEOUT = '120'
+    HEALTH_CHECK_INTERVAL = '10'
+    MAX_RETRIES = '3'
+  }
+
+
+  tools {
+    jdk 'jdk-17'
+    maven 'maven-3.9.11'
+  }
+
+  stages {
+    // ========================================================================
+    // STAGE 0: Checkout código fuente backend
+    // ========================================================================
+    stage('📥 Checkout') {
+      steps {
+        cleanWs()
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "*/${params.BRANCH}"]],
+          userRemoteConfigs: [[
+            url: 'https://github.com/Atijaguar-ec/backend.git',
+            credentialsId: 'github-pat'
+          ]],
+          extensions: [
+            [$class: 'CloneOption', shallow: false, depth: 0, noTags: false]
+          ]
+        ])
+      }
+    }
+
+    // ========================================================================
+    // STAGE 1: Inicialización y configuración
+    // ========================================================================
+    stage('🔧 Inicialización') {
+      steps {
+        script {
+          echo "═════════════════════════════════════════════════════════════════"
+          echo "  INICIO DE DESPLIEGUE - FORTALEZA DEL VALLE"
+          echo "═════════════════════════════════════════════════════════════════"
+          echo "Rama: ${params.BRANCH}"
+          echo "Usuario: ${env.BUILD_USER ?: 'Sistema'}"
+          echo "Timestamp: ${new Date().format('yyyy-MM-dd HH:mm:ss z')}"
+          echo "═══════════════════════════════════════════════════════════════"
+        }
+        
+        script {
+          // Extraer información del repositorio (ya clonado por SCM)
+          def remoteUrl = sh(script: 'git config --get remote.origin.url', returnStdout: true).trim()
+          remoteUrl = remoteUrl.replaceAll(/\.git$/, '')
+          remoteUrl = remoteUrl.replaceFirst(/^https?:\/\/github.com\//, '')
+          remoteUrl = remoteUrl.replaceFirst(/^git@github.com:/, '')
+          
+          env.REPO_FULL_NAME = remoteUrl
+          env.GIT_SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+          env.GIT_AUTHOR = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+          // Configurar variables según entorno
+          env.IMAGE_REPOSITORY = env.REGISTRY.toLowerCase() + '/' + (env.REPO_FULL_NAME + '-inatrace').toLowerCase()
+          env.DEPLOY_TAG = params.BRANCH == 'main' ? 'latest' : "test-${env.GIT_SHORT_SHA}"
+          env.FORTALEZA_ENV = params.BRANCH == 'main' ? 'prod' : 'test'
+          env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 
+            'https://inatrace.espam.edu.ec/api/actuator/health' : 
+            'https://testinatrace.espam.edu.ec/api/actuator/health'
+          env.PROJECT_DIR = fileExists('backend/pom.xml') ? 'backend' : '.'
+          env.COMPOSE_DIR = fileExists('backend/ci/docker-compose.yml') ? 'backend/ci' : 'ci'
+          
+          echo "\n📦 Información del Build :"
+          echo "  - Repositorio: ${env.REPO_FULL_NAME}"
+          echo "  - Commit: ${env.GIT_SHORT_SHA}"
+          echo "  - Autor: ${env.GIT_AUTHOR}"
+          echo "  - Mensaje: ${env.GIT_COMMIT_MSG}"
+          echo "  - Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+          echo "  - Entorno: ${env.FORTALEZA_ENV}"
+        }
+      }
+    }
+
+    // ========================================================================
+    // STAGE 2: Pruebas y Validación de Calidad
+    // ========================================================================
+    stage('🧪 Tests & Quality') {
+      when {
+        expression { return !params.SKIP_TESTS }
+      }
+      steps {
+        script {
+          echo "\n🧪 Ejecutando pruebas unitarias e integración..."
+          if (params.BRANCH == 'main' && params.SKIP_TESTS) {
+            error("❌ No se permiten despliegues a producción sin pruebas")
+          }
+        }
+        
+        script {
+          def mysqlContainer = 'inatrace-mysql-ci'
+          sh """
+            set -e
+            echo "🧹 Preparando contenedor MySQL temporal..."
+            docker rm -f ${mysqlContainer} >/dev/null 2>&1 || true
+            docker run -d --name ${mysqlContainer} \
+              -e MYSQL_ROOT_PASSWORD=inatrace \
+              -e MYSQL_DATABASE=inatrace \
+              -e MYSQL_USER=inatrace \
+              -e MYSQL_PASSWORD=inatrace \
+              -p 3307:3306 \
+              mysql:8.0.35
+          """
+
+          sh '''
+            set +e
+            echo "⏳ Esperando disponibilidad de MySQL temporal..."
+            for i in $(seq 1 12); do
+              if docker exec inatrace-mysql-ci sh -c "mysqladmin ping -h127.0.0.1 -uroot -pinatrace" >/dev/null 2>&1; then
+                exit 0
+              fi
+              echo "Intento ${i}/12..."
+              sleep 5
+            done
+            echo "❌ MySQL temporal no disponible" >&2
+            exit 1
+          '''
+
+          dir('.') {
+            sh """
+              set -e
+              PROJECT_DIR='${env.PROJECT_DIR}'
+              if [ "${env.PROJECT_DIR}" = 'backend' ]; then
+                cd backend
+              fi
+
+              echo "📊 Ejecutando Maven verify..."
+              SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3307/inatrace" \
+              SPRING_DATASOURCE_USERNAME="inatrace" \
+              SPRING_DATASOURCE_PASSWORD="inatrace" \
+              mvn -B clean verify \
+                -Dspring.profiles.active=test \
+                -Dmaven.test.failure.ignore=false \
+                -Djacoco.skip=false
+
+              echo "✅ Pruebas completadas exitosamente"
+            """
+          }
+        }
+      }
+      post {
+        always {
+          junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+          sh 'docker rm -f inatrace-mysql-ci >/dev/null 2>&1 || true'
+        }
+        failure {
+          echo "❌ Las pruebas fallaron. Abortando despliegue."
+        }
+      }
+    }
+
+    // ========================================================================
+    // STAGE 3: Construcción y Publicación de Imagen Docker
+    // ========================================================================
+    stage('🏗️ Build & Push Image') {
+      steps {
+        script {
+          echo "\n🏗️ Construyendo imagen Docker..."
+        }
+        
+        withCredentials([
+          usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')
+        ]) {
+          sh """
+            set -e
+
+            PROJECT_DIR='${env.PROJECT_DIR}'
+            if [ "${env.PROJECT_DIR}" = 'backend' ]; then
+              cd backend
+            fi
+
+            echo "🔐 Autenticando en GHCR..."
+            echo \$GHCR_TOKEN | docker login ghcr.io -u \$GHCR_USER --password-stdin
+
+            echo "📦 Compilando artefactos con Maven..."
+            mvn -B clean package -DskipTests -Dmaven.javadoc.skip=true
+
+            echo "🐳 Construyendo imagen Docker..."
+            docker build \
+              --build-arg BUILD_DATE=\$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+              --build-arg VCS_REF=${GIT_SHORT_SHA} \
+              --build-arg VERSION=${DEPLOY_TAG} \
+              --label "org.opencontainers.image.created=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+              --label "org.opencontainers.image.revision=${GIT_SHORT_SHA}" \
+              --label "org.opencontainers.image.version=${DEPLOY_TAG}" \
+              --label "org.opencontainers.image.source=https://github.com/${REPO_FULL_NAME}" \
+              -t ${IMAGE_REPOSITORY}:${DEPLOY_TAG} \
+              .
+
+            echo "📤 Publicando imagen con tag: ${DEPLOY_TAG}"
+            docker push ${IMAGE_REPOSITORY}:${DEPLOY_TAG}
+
+            echo "🏷️ Etiquetando como latest..."
+            docker tag ${IMAGE_REPOSITORY}:${DEPLOY_TAG} ${IMAGE_REPOSITORY}:latest
+            docker push ${IMAGE_REPOSITORY}:latest
+
+            echo "✅ Imagen publicada exitosamente"
+            docker images | grep ${IMAGE_REPOSITORY} | head -5
+          """
+        }
+      }
+      post {
+        failure {
+          echo "❌ Falló la construcción o publicación de la imagen"
+        }
+      }
+    }
+
+    // ========================================================================
+    // STAGE 4: Backup de Base de Datos (solo producción)
+    // ========================================================================
+    stage('💾 Database Backup') {
+      when {
+        allOf {
+          expression { params.BRANCH == 'main' }
+          expression { !params.SKIP_DB_BACKUP }
+        }
+      }
+      steps {
+        script {
+          echo "\n💾 Realizando backup de base de datos..."
+          sh '''
+            set -e
+            CONTAINER_NAME="inatrace-mysql-prod-fortaleza"
+            BACKUP_DIR="/opt/inatrace/backups"
+            BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S)-pre-deploy.sql.gz"
+            
+            if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+              echo "📦 Creando backup en: ${BACKUP_DIR}/${BACKUP_FILE}"
+              docker exec "${CONTAINER_NAME}" sh -c '
+                mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" \
+                  --single-transaction \
+                  --quick \
+                  --lock-tables=false \
+                  "${MYSQL_DATABASE}" | gzip -9 > "/backups/'"${BACKUP_FILE}"'"
+              '
+              
+              echo "🧹 Limpiando backups antiguos (>14 días)..."
+              docker exec "${CONTAINER_NAME}" sh -c '
+                find /backups -name "backup-*.sql.gz" -mtime +14 -delete
+              '
+              
+              echo "✅ Backup completado: ${BACKUP_FILE}"
+            else
+              echo "⚠️ Contenedor MySQL no encontrado, omitiendo backup"
+            fi
+          '''
+        }
+      }
+    }
+    
+    // ========================================================================
+    // STAGE 5: Despliegue en Fortaleza
+    // ========================================================================
+    stage('🚀 Deploy Fortaleza') {
+      steps {
+        script {
+          echo "\n🚀 Iniciando despliegue en entorno: ${env.FORTALEZA_ENV}"
+
+          def envCredential = env.FORTALEZA_ENV == 'prod' ? 'fortaleza-env-prod' : 'fortaleza-env-staging'
+          def healthUrl = env.FORTALEZA_ENV == 'prod'
+            ? "${params.PROD_HEALTH_PROTOCOL ?: 'https'}://${params.PROD_HEALTH_HOST ?: params.PROD_HOST}/api/actuator/health"
+            : "http://localhost:${params.PROD_HEALTH_PORT_PRIMARY ?: '8082'}/actuator/health"
+
+          dir(env.COMPOSE_DIR) {
+            withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
+              sh '''
+                set -e
+
+                echo "📋 Preparando archivo .env..."
+                cp $ENVFILE .env
+
+                echo "📝 Verificando docker-compose.yml..."
+                if [ ! -f docker-compose.yml ]; then
+                  if [ -f ../docker-compose.yml ]; then
+                    cp ../docker-compose.yml ./docker-compose.yml
+                  elif [ -f ../../ci/docker-compose.yml ]; then
+                    cp ../../ci/docker-compose.yml ./docker-compose.yml
+                  else
+                    echo "❌ No se encontró docker-compose.yml en rutas previstas" >&2
+                    exit 1
+                  fi
+                else
+                  echo "✅ docker-compose.yml presente en ${PWD}"
+                fi
+
+                echo "🛠️ Actualizando variables dinámicas en .env..."
+                ensure_var() {
+                  local key="$1"
+                  local value="$2"
+                  if grep -q "^${key}=" .env; then
+                    sed -i "s|^${key}=.*|${key}=${value}|" .env
+                  else
+                    printf '\n%s=%s' "$key" "$value" >> .env
+                  fi
+                }
+
+                ensure_var TAG "${DEPLOY_TAG}"
+                ensure_var IMAGE_NAME "${IMAGE_REPOSITORY}"
+                echo "✅ Archivo .env actualizado"
+              '''
+            }
+
+            // Despliegue remoto solo para rama main (producción)
+            if (params.BRANCH == 'main') {
+              sshagent(['usuario-prod-ssh']) {
+                sh '''
+                  set -e
+
+                  SSH_TARGET="${PROD_USER_PRIMARY}@${PROD_HOST_PRIMARY}"
+                  REMOTE_DIR="${PROD_TARGET_PRIMARY}"
+
+                  echo "🚀 Sincronizando archivos a servidor remoto: ${SSH_TARGET}:${REMOTE_DIR}"
+
+                  # Crear directorio remoto si no existe
+                  ssh "${SSH_TARGET}" "mkdir -p ${REMOTE_DIR}"
+
+                  # Copiar archivos necesarios
+                  scp docker-compose.yml "${SSH_TARGET}:${REMOTE_DIR}/docker-compose.yml"
+                  scp .env "${SSH_TARGET}:${REMOTE_DIR}/.env"
+
+                  echo "📋 Ejecutando despliegue remoto..."
+
+                  # Ejecutar comandos en el servidor remoto
+                  ssh "${SSH_TARGET}" << 'EOSSH'
+set -e
+cd ${REMOTE_DIR}
+
+echo "🔗 Verificando red Docker..."
+docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
+  docker network create inatrace-backend-network
+
+echo "📥 Descargando última imagen..."
+docker-compose pull || true
+
+echo "🔄 Desplegando servicios..."
+docker-compose up -d --remove-orphans --force-recreate
+
+echo "📊 Estado inicial de contenedores:"
+docker-compose ps
+
+echo "⏳ Esperando healthcheck nativo (remoto)..."
+RETRY_COUNT=0
+MAX_RETRIES=12
+SLEEP_TIME=10
+SERVICE_NAME="inatrace-backend"
+CONTAINER_NAME="inatrace-be"
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  CONTAINER_ID=$(docker-compose ps -q "${SERVICE_NAME}")
+  if [ -z "$CONTAINER_ID" ] && [ -n "$CONTAINER_NAME" ]; then
+    CONTAINER_ID=$(docker ps --filter "name=^/${CONTAINER_NAME}$" -q)
+  fi
+  if [ -n "$CONTAINER_ID" ]; then
+    HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
+  else
+    HEALTH_STATUS="not_found"
+  fi
+
+  if [ "$HEALTH_STATUS" = "healthy" ]; then
+    echo "✅ Backend Fortaleza está saludable (Estado: $HEALTH_STATUS)"
+    echo "📈 Logs recientes:"
+    docker-compose logs --tail=20 inatrace-be
+    exit 0
+  fi
+
+  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Estado actual: $HEALTH_STATUS - Esperando ${SLEEP_TIME}s..."
+  sleep $SLEEP_TIME
+done
+
+echo "❌ Healthcheck nativo falló después de ${MAX_RETRIES} intentos" >&2
+echo "📋 Logs del contenedor:"
+docker-compose logs --tail=50 inatrace-be
+echo "📊 Estado final de contenedores:"
+docker-compose ps
+exit 1
+EOSSH
+                '''
+              }
+            } else if (params.BRANCH == 'staging') {
+              // Despliegue local para rama staging (pruebas)
+              sh '''
+                set -e
+
+                echo "🔗 Verificando red Docker local..."
+                docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
+                  docker network create inatrace-backend-network
+
+                echo "📥 Descargando última imagen..."
+                docker-compose pull || true
+
+                echo "🔄 Desplegando servicios localmente..."
+                docker-compose up -d --remove-orphans --force-recreate
+
+                echo "📊 Estado inicial de contenedores:"
+                docker-compose ps
+
+                echo "⏳ Esperando healthcheck nativo (local)..."
+                RETRY_COUNT=0
+                MAX_RETRIES=12
+                SLEEP_TIME=10
+                SERVICE_NAME="inatrace-backend"
+                CONTAINER_NAME="inatrace-be"
+
+                while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                  RETRY_COUNT=$((RETRY_COUNT + 1))
+                  CONTAINER_ID=$(docker-compose ps -q "${SERVICE_NAME}")
+                  if [ -z "$CONTAINER_ID" ] && [ -n "$CONTAINER_NAME" ]; then
+                    CONTAINER_ID=$(docker ps --filter "name=^/${CONTAINER_NAME}$" -q)
+                  fi
+                  if [ -n "$CONTAINER_ID" ]; then
+                    HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
+                  else
+                    HEALTH_STATUS="not_found"
+                  fi
+
+                  if [ "$HEALTH_STATUS" = "healthy" ]; then
+                    echo "✅ Backend local está saludable (Estado: $HEALTH_STATUS)"
+                    echo "📈 Logs recientes:"
+                    docker-compose logs --tail=20 inatrace-be
+                    exit 0
+                  fi
+
+                  echo "⏳ Intento ${RETRY_COUNT}/${MAX_RETRIES} - Estado actual: $HEALTH_STATUS - Esperando ${SLEEP_TIME}s..."
+                  sleep $SLEEP_TIME
+                done
+
+                echo "❌ Healthcheck nativo falló después de ${MAX_RETRIES} intentos" >&2
+                echo "📋 Logs del contenedor:"
+                docker-compose logs --tail=50 inatrace-be
+                echo "📊 Estado final de contenedores:"
+                docker-compose ps
+                exit 1
+              '''
+            } else {
+              echo "⚠️ Rama ${params.BRANCH} no configurada para despliegue. Solo 'main' y 'staging' soportadas."
+            }
+          }
+        }
+      }
+      post {
+        success {
+          script {
+            def successMessage = params.BRANCH == 'main' ? 
+              "✅ DESPLIEGUE REMOTO EXITOSO - ${env.FORTALEZA_ENV.toUpperCase()}" : 
+              (params.BRANCH == 'staging' ? 
+                "✅ DESPLIEGUE LOCAL EXITOSO - ${env.FORTALEZA_ENV.toUpperCase()}" : 
+                "✅ BUILD Y PRUEBAS COMPLETADAS - ${env.FORTALEZA_ENV.toUpperCase()}")
+            echo "\n═══════════════════════════════════════════════════════════════"
+            echo "  ${successMessage}"
+            echo "═══════════════════════════════════════════════════════════════"
+            if (params.BRANCH == 'main') {
+              echo "Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+              echo "Commit: ${env.GIT_SHORT_SHA}"
+              echo "Servidor: ${params.PROD_HOST_PRIMARY}"
+              echo "URL: ${env.HEALTHCHECK_URL}"
+            } else if (params.BRANCH == 'staging') {
+              echo "Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+              echo "Commit: ${env.GIT_SHORT_SHA}"
+              echo "Entorno: Despliegue local en agente Jenkins"
+            } else {
+              echo "Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+              echo "Commit: ${env.GIT_SHORT_SHA}"
+              echo "Nota: Despliegue omitido para rama ${params.BRANCH}"
+            }
+            echo "═══════════════════════════════════════════════════════════════"
+          }
+        }
+        failure {
+          script {
+            def failureMessage = params.BRANCH == 'main' ? 
+              "❌ DESPLIEGUE REMOTO FALLIDO" : 
+              (params.BRANCH == 'staging' ? 
+                "❌ DESPLIEGUE LOCAL FALLIDO" : 
+                "❌ BUILD O PRUEBAS FALLIDAS")
+            echo "\n═══════════════════════════════════════════════════════════════"
+            echo "  ${failureMessage}"
+            echo "═══════════════════════════════════════════════════════════════"
+            echo "Revisa los logs arriba para más detalles"
+            echo "═══════════════════════════════════════════════════════════════"
+          }
+        }
+      }
+    }
+  }
+  
+  post {
+    always {
+      script {
+        echo "\n🧹 Limpieza post-despliegue..."
+        sh '''
+          # Logout de registros Docker
+          docker logout ghcr.io || true
+          
+          # Limpiar imágenes huérfanas (opcional)
+          docker image prune -f --filter "dangling=true" || true
+        '''
+      }
+    }
+    success {
+      script {
+        def duration = currentBuild.durationString.replace(' and counting', '')
+        echo "\n🎉 Pipeline completado exitosamente en ${duration}"
+      }
+    }
+    failure {
+      script {
+        echo "\n❌ Pipeline falló. Revisa los logs para más información."
+        // Aquí puedes agregar notificaciones (Slack, email, etc.)
+      }
+    }
+    unstable {
+      echo "\n⚠️ Pipeline completado con advertencias"
+    }
+  }
+}
