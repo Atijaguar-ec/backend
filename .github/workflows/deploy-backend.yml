@@ -20,7 +20,7 @@ on:
         - staging
         - main
       company:
-        description: 'Target company (develop, staging, main)'
+        description: 'Target company'
         required: false
         default: false
         type: boolean
