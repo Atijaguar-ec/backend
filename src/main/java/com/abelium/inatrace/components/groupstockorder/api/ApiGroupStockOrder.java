@@ -24,6 +24,9 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
             String semiProductName,
             String finalProductName,
             Integer weekNumber,
+            String parcelLot,
+            String variety,
+            String organicCertification,
             BigDecimal totalQuantity,
             BigDecimal fulfilledQuantity,
             BigDecimal availableQuantity,
@@ -42,6 +45,9 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
                 semiProductName,
                 finalProductName,
                 weekNumber,
+                parcelLot,
+                variety,
+                organicCertification,
                 totalQuantity,
                 fulfilledQuantity,
                 availableQuantity,
@@ -63,6 +69,9 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
             String semiProductName,
             String finalProductName,
             Integer weekNumber,
+            String parcelLot,
+            String variety,
+            String organicCertification,
             BigDecimal totalQuantity,
             BigDecimal fulfilledQuantity,
             BigDecimal availableQuantity,
@@ -85,6 +94,9 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         setNoOfSacs(noOfSacs);
         setFinalProductName(finalProductName);
         setWeekNumber(weekNumber);
+        setParcelLot(parcelLot);
+        setVariety(variety);
+        setOrganicCertification(organicCertification);
         setFacilityName(facilityName);
         setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
     }
@@ -136,6 +148,15 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Week number for cacao deliveries (1-53)")
     private Integer weekNumber;
+
+    @Schema(description = "Parcel lot for cacao deliveries")
+    private String parcelLot;
+
+    @Schema(description = "Variety for cacao deliveries")
+    private String variety;
+
+    @Schema(description = "Organic certification details")
+    private String organicCertification;
 
     public Instant getUpdateTimestamp() {
         return updateTimestamp;
@@ -231,6 +252,30 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     public void setWeekNumber(Integer weekNumber) {
         this.weekNumber = weekNumber;
+    }
+
+    public String getParcelLot() {
+        return parcelLot;
+    }
+
+    public void setParcelLot(String parcelLot) {
+        this.parcelLot = parcelLot;
+    }
+
+    public String getVariety() {
+        return variety;
+    }
+
+    public void setVariety(String variety) {
+        this.variety = variety;
+    }
+
+    public String getOrganicCertification() {
+        return organicCertification;
+    }
+
+    public void setOrganicCertification(String organicCertification) {
+        this.organicCertification = organicCertification;
     }
 
     public LocalDate getProductionDate() {

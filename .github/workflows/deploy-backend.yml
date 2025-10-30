@@ -252,6 +252,19 @@ jobs:
           echo "📦 Image: ${{ steps.image_ref_push.outputs.image }}:${{ steps.meta.outputs.tag }}"
           echo "🏷️  Tag: ${{ steps.meta.outputs.tag }}"
 
+      - name: 💾 Export image to tar (for deployment)
+        run: |
+          docker pull ${{ steps.image_ref_push.outputs.image }}:${{ steps.meta.outputs.tag }}
+          docker save -o be-image.tar ${{ steps.image_ref_push.outputs.image }}:${{ steps.meta.outputs.tag }}
+          ls -lh be-image.tar
+
+      - name: 📤 Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: be-image
+          path: be-image.tar
+          retention-days: 1
+
   deploy-test-unocace:
     name: Deploy Backend to UNOCACE Test (staging)
     needs: build

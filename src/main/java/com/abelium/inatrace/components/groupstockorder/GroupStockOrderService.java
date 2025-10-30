@@ -36,7 +36,7 @@ public class GroupStockOrderService extends BaseService {
             "SELECT new com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder(" +
             "GROUP_CONCAT(SO.id), " +
             "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
-            "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, " +
+            "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, " +
             "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
             "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
             "SO.isAvailable " +
@@ -68,7 +68,7 @@ public class GroupStockOrderService extends BaseService {
 
         // Add GROUP BY query string for grouping common columns
         queryString.append(
-                " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, MUT.label, " +
+                " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, MUT.label, " +
                 "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name "
         );
 
@@ -112,13 +112,13 @@ public class GroupStockOrderService extends BaseService {
         StringBuilder queryString = new StringBuilder(
                 "SELECT new com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder(" +
                         "GROUP_CONCAT(SO.id), " +
-                        "COALESCE(FT.name, F.name), " +
-                        "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
-                        "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, " +
-                        "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
-                        "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
-                        "SO.isAvailable " +
-                        ") FROM StockOrder SO " +
+                "COALESCE(FT.name, F.name), " +
+                "SO.productionDate AS date, SO.internalLotNumber AS id, COUNT(SO.sacNumber) as noOfSacs, " +
+                "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, " +
+                "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
+                "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
+                "SO.isAvailable " +
+                ") FROM StockOrder SO " +
                         "LEFT JOIN SO.processingOrder PO " +
                         "LEFT JOIN SO.measurementUnitType MUT " +
                         "LEFT JOIN SO.semiProduct SP " +
@@ -141,7 +141,7 @@ public class GroupStockOrderService extends BaseService {
         }
 
         queryString.append(
-                " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, MUT.label, " +
+                " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, MUT.label, " +
                         "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name, F.name, FT.name " +
                         "ORDER BY SO.productionDate DESC"
         );
@@ -215,13 +215,16 @@ public class GroupStockOrderService extends BaseService {
                 createCell(row, 5, productName, dataCellStyle);
                 
                 createCell(row, 6, order.getWeekNumber() != null ? order.getWeekNumber().toString() : "-", dataCellStyle);
-                createCell(row, 7, order.getTotalQuantity() != null ? String.format("%.2f", order.getTotalQuantity()) : "0.00", dataCellStyle);
-                createCell(row, 8, order.getFulfilledQuantity() != null ? String.format("%.2f", order.getFulfilledQuantity()) : "0.00", dataCellStyle);
-                createCell(row, 9, order.getAvailableQuantity() != null ? String.format("%.2f", order.getAvailableQuantity()) : "0.00", dataCellStyle);
-                createCell(row, 10, order.getUnitLabel() != null ? order.getUnitLabel() : "", dataCellStyle);
-                createCell(row, 11, order.getDeliveryTime() != null ? order.getDeliveryTime().format(dateFormatter) : "", dataCellStyle);
-                createCell(row, 12, order.getUpdateTimestamp() != null ? timestampFormatter.withZone(ZoneId.systemDefault()).format(order.getUpdateTimestamp()) : "", dataCellStyle);
-                createCell(row, 13, formatAvailability(order.getAvailable(), language), dataCellStyle);
+                createCell(row, 7, order.getParcelLot() != null ? order.getParcelLot() : "", dataCellStyle);
+                createCell(row, 8, order.getVariety() != null ? order.getVariety() : "", dataCellStyle);
+                createCell(row, 9, order.getOrganicCertification() != null ? order.getOrganicCertification() : "", dataCellStyle);
+                createCell(row, 10, order.getTotalQuantity() != null ? String.format("%.2f", order.getTotalQuantity()) : "0.00", dataCellStyle);
+                createCell(row, 11, order.getFulfilledQuantity() != null ? String.format("%.2f", order.getFulfilledQuantity()) : "0.00", dataCellStyle);
+                createCell(row, 12, order.getAvailableQuantity() != null ? String.format("%.2f", order.getAvailableQuantity()) : "0.00", dataCellStyle);
+                createCell(row, 13, order.getUnitLabel() != null ? order.getUnitLabel() : "", dataCellStyle);
+                createCell(row, 14, order.getDeliveryTime() != null ? order.getDeliveryTime().format(dateFormatter) : "", dataCellStyle);
+                createCell(row, 15, order.getUpdateTimestamp() != null ? timestampFormatter.withZone(ZoneId.systemDefault()).format(order.getUpdateTimestamp()) : "", dataCellStyle);
+                createCell(row, 16, formatAvailability(order.getAvailable(), language), dataCellStyle);
             }
             
             // Auto-size columns
@@ -250,6 +253,9 @@ public class GroupStockOrderService extends BaseService {
                 "Tipo",
                 "Semi-producto / Producto Final",
                 "Número de Semana",
+                "Lote (Parcela)",
+                "Variedad",
+                "Certificación Orgánica",
                 "Cantidad Total",
                 "Cantidad Cumplida",
                 "Cantidad Disponible",
@@ -268,6 +274,9 @@ public class GroupStockOrderService extends BaseService {
             "Type",
             "Semi-product / Final Product",
             "Week Number",
+            "Parcel Lot",
+            "Variety",
+            "Organic Certification",
             "Total Quantity",
             "Fulfilled Quantity",
             "Available Quantity",
