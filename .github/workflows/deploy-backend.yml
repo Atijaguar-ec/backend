@@ -737,6 +737,8 @@ jobs:
             sudo chown -R 1000:1000 /opt/inatrace/volumes-shrimp
             sudo chmod -R 755 /opt/inatrace/volumes-shrimp
             mkdir -p /opt/inatrace/backend/dev-shrimp
+            # Remove legacy compose files (now we use backend-only compose)
+            rm -f /opt/inatrace/backend/dev-shrimp/docker-compose.yml /opt/inatrace/backend/dev-shrimp/docker-compose.yaml
 
       - name: Verify local compose path (dev-shrimp)
         run: |
@@ -847,6 +849,9 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/backend/dev-shrimp
+
+            # Use backend-only compose file (shared MySQL)
+            export COMPOSE_FILE=docker-compose.backend-only.yml
 
             # Stop only shrimp backend container (preserve cacao, mysql and frontend)
             echo "🛑 Stopping existing shrimp backend containers..."
