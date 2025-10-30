@@ -779,7 +779,7 @@ jobs:
           DATASOURCE_PASSWORD=$DB_PASS
           CONTAINER_NAME_BE=inatrace-be-dev-shrimp
           CONTAINER_NAME_DB=inatrace-mysql-dev-shrimp
-          HOST_PORT_BE=8081
+          HOST_PORT_BE=8083
           HOST_PORT_DB=3307
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
@@ -871,7 +871,7 @@ jobs:
             sleep 30
 
             for i in {1..10}; do
-              if curl -f http://localhost:8081/actuator/health; then
+              if curl -f http://localhost:8083/actuator/health; then
                 echo "✅ Development Shrimp backend deployment successful!"
                 exit 0
               fi
