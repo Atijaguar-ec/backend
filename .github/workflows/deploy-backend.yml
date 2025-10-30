@@ -742,18 +742,18 @@ jobs:
         run: |
           set -e
           ls -lah ci || true
-          if [ ! -f ci/docker-compose.yml ]; then
-            echo "Missing ci/docker-compose.yml (will use remote compose)"
+          if [ ! -f ci/docker-compose.backend-only.yml ]; then
+            echo "Missing ci/docker-compose.backend-only.yml (expected custom compose for shared MySQL)"
           fi
 
       - name: Upload docker-compose.yml (dev-shrimp)
-        if: ${{ hashFiles('ci/docker-compose.yml') != '' }}
+        if: ${{ hashFiles('ci/docker-compose.backend-only.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: "ci/docker-compose.yml"
+          source: "ci/docker-compose.backend-only.yml"
           target: "/opt/inatrace/backend/dev-shrimp"
           strip_components: 1
           debug: true
@@ -778,14 +778,12 @@ jobs:
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=$DB_PASS
           CONTAINER_NAME_BE=inatrace-be-dev-shrimp
-          CONTAINER_NAME_DB=inatrace-mysql-dev-shrimp
           HOST_PORT_BE=8083
-          HOST_PORT_DB=3307
+          DATABASE_HOSTNAME=inatrace-mysql-dev
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
           # Host volume paths used by docker-compose
-          DB_VOLUME=/opt/inatrace/mysql-shrimp
           FILE_STORAGE_ROOT_VOL=/opt/inatrace/volumes-shrimp/uploads
           IMPORT_PATH_VOL=/opt/inatrace/volumes-shrimp/import
           DOCUMENTS_ROOT_VOL=/opt/inatrace/volumes-shrimp/documents
@@ -850,10 +848,10 @@ jobs:
             set -e
             cd /opt/inatrace/backend/dev-shrimp
 
-            # Stop only shrimp backend containers (preserve cacao and frontend)
+            # Stop only shrimp backend container (preserve cacao, mysql and frontend)
             echo "🛑 Stopping existing shrimp backend containers..."
-            docker stop inatrace-be-dev-shrimp inatrace-mysql-dev-shrimp 2>/dev/null || true
-            docker rm inatrace-be-dev-shrimp inatrace-mysql-dev-shrimp 2>/dev/null || true
+            docker stop inatrace-be-dev-shrimp 2>/dev/null || true
+            docker rm inatrace-be-dev-shrimp 2>/dev/null || true
 
             # Ensure shared network exists (DO NOT remove - other services may be using it)
             echo "🔗 Ensuring shared network exists..."
