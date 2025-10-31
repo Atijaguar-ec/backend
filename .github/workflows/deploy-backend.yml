@@ -64,6 +64,12 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
+      - name: 📋 Contexto de ejecución
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
 
       - name: Determine backend paths
         id: paths
@@ -278,6 +284,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
+
       - name: Preflight - validate required secrets (SSH & App)
         run: |
           missing=0
@@ -413,6 +426,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
+
       - name: Preflight - validate required secrets (SSH & App)
         run: |
           missing=0
@@ -538,6 +558,13 @@ jobs:
     steps:
       - name: 📥 Checkout deployment configs
         uses: actions/checkout@v4
+
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
 
       - name: Preflight - validate required secrets (DEV - key auth)
         run: |
@@ -702,7 +729,7 @@ jobs:
             done
 
             echo "❌ Health check failed after 10 attempts"
-            docker-compose logs
+            docker-compose logs --tail 200
             exit 1
 
   deploy-dev-shrimp:
@@ -848,12 +875,25 @@ jobs:
           port: ${{ secrets.DEV_PORT || 22 }}
           script: |
             set -e
+            set -o pipefail
             cd /opt/inatrace/backend/dev-shrimp
+
+            failure_handler() {
+              exit_code=$?
+              echo "⚠️  Falló el despliegue dev-shrimp (código $exit_code). Capturando información..."
+              docker-compose ps || true
+              echo "📦 Contenedores locales relevantes:"
+              docker ps -a --filter "name=inatrace" || true
+              echo "🦐 Últimos logs del backend shrimp:"
+              docker logs inatrace-be-dev-shrimp --tail 200 || true
+              echo "🗒️  docker-compose logs (últimos 200):"
+              docker-compose logs --tail 200 || true
+              exit $exit_code
+            }
+            trap failure_handler ERR
 
             # Use backend-only compose file (shared MySQL)
             export COMPOSE_FILE=docker-compose.backend-only.yml
-
-            trap 'echo "⚠️  Falló el despliegue dev-shrimp, mostrando logs..."; docker-compose logs || true' ERR
 
             # Stop only shrimp backend container (preserve cacao, mysql and frontend)
             echo "🛑 Stopping existing shrimp backend containers..."
@@ -899,6 +939,13 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
 
       - name: Preflight - validate required secrets (DUFER prod)
         run: |
