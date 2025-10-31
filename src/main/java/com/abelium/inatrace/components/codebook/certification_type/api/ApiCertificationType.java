@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Certification type API model.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 @Validated
 public class ApiCertificationType extends ApiCodebookBaseEntity {

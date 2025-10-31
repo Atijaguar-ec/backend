@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /**
  * Certification type translation API model.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 public class ApiCertificationTypeTranslation {
 

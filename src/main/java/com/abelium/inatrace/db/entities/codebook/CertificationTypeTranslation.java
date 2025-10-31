@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 /**
  * Translation entity for CertificationType.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 @Entity
 @Table(name = "CertificationTypeTranslation",
