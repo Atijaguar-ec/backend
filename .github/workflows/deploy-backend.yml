@@ -395,7 +395,7 @@ jobs:
             echo "📥 Pulling latest image from GHCR..."
             docker-compose pull
             
-            echo "🚀 Starting services..."
+            echo "🚀 Starting services"
             docker-compose up -d
             
             echo "⏳ Waiting for backend to be healthy..."
