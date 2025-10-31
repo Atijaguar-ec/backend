@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * REST controller for certification type entity.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 @RestController
 @RequestMapping("/chain/certification-type")

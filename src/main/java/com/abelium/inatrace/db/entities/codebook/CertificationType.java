@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  * Codebook entity for certifications and environmental seals.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 @Entity
 @Table(name = "CertificationType")

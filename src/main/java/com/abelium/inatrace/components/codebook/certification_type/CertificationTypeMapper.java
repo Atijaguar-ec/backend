@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 /**
  * Mapper for CertificationType entity.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 public final class CertificationTypeMapper {
 

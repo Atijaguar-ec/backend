@@ -23,7 +23,7 @@ import org.torpedoquery.jakarta.jpa.Torpedo;
 /**
  * Service for certification type entity.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 @Lazy
 @Service
