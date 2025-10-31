@@ -853,6 +853,8 @@ jobs:
             # Use backend-only compose file (shared MySQL)
             export COMPOSE_FILE=docker-compose.backend-only.yml
 
+            trap 'echo "⚠️  Falló el despliegue dev-shrimp, mostrando logs..."; docker-compose logs || true' ERR
+
             # Stop only shrimp backend container (preserve cacao, mysql and frontend)
             echo "🛑 Stopping existing shrimp backend containers..."
             docker stop inatrace-be-dev-shrimp 2>/dev/null || true
