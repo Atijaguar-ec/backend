@@ -31,7 +31,7 @@ public class CertificationType extends TimestampEntity {
     /**
      * Unique code identifier for the certification type.
      */
-    @Column(nullable = false, unique = true, length = Lengths.CODE)
+    @Column(nullable = false, unique = true, length = Lengths.UID)
     private String code;
 
     /**
