@@ -1013,6 +1013,8 @@ public class StockOrderService extends BaseService {
         entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
         entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
+        entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
+        entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
         entity.setCurrency(apiStockOrder.getCurrency());
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders
