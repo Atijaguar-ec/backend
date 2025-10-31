@@ -226,6 +226,10 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private BigDecimal moistureWeightDeduction;
 
+	// Net quantity after all deductions (tare, damaged weight, moisture)
+	@Column(precision = 38, scale = 2)
+	private BigDecimal netQuantity;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	private ProcessingOrder processingOrder;
 	
@@ -767,5 +771,13 @@ public class StockOrder extends TimestampEntity {
 
 	public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
 		this.moistureWeightDeduction = moistureWeightDeduction;
+	}
+
+	public BigDecimal getNetQuantity() {
+		return netQuantity;
+	}
+
+	public void setNetQuantity(BigDecimal netQuantity) {
+		this.netQuantity = netQuantity;
 	}
 }

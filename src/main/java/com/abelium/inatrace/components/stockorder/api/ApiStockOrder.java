@@ -207,6 +207,9 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Calculated weight deduction due to moisture")
     private BigDecimal moistureWeightDeduction;
 
+    @Schema(description = "Net quantity after all deductions (tare, damaged weight, moisture)")
+    private BigDecimal netQuantity;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -701,6 +704,14 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
         this.moistureWeightDeduction = moistureWeightDeduction;
+    }
+
+    public BigDecimal getNetQuantity() {
+        return netQuantity;
+    }
+
+    public void setNetQuantity(BigDecimal netQuantity) {
+        this.netQuantity = netQuantity;
     }
 
     public String getQrCodeTag() {

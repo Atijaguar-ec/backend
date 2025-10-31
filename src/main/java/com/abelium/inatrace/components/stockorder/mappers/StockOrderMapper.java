@@ -172,6 +172,7 @@ public class StockOrderMapper {
         apiStockOrder.setDamagedWeightDeduction(entity.getDamagedWeightDeduction());
         apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
         apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
+        apiStockOrder.setNetQuantity(entity.getNetQuantity());
         apiStockOrder.setCost(entity.getCost());
         apiStockOrder.setPaid(entity.getPaid());
         apiStockOrder.setBalance(entity.getBalance());

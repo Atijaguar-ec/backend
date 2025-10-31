@@ -1065,6 +1065,15 @@ public class StockOrderService extends BaseService {
                 entity.setTotalQuantity(apiStockOrder.getTotalQuantity());
                 entity.setTotalGrossQuantity(apiStockOrder.getTotalGrossQuantity());
 
+                // Calculate net quantity after all deductions including moisture
+                BigDecimal netQuantity = calculateNetQuantity(
+                    apiStockOrder.getTotalGrossQuantity(),
+                    apiStockOrder.getTare(),
+                    apiStockOrder.getDamagedWeightDeduction(),
+                    apiStockOrder.getMoisturePercentage()
+                );
+                entity.setNetQuantity(netQuantity);
+
                 // Required
                 if (apiStockOrder.getProducerUserCustomer() == null) {
                     throw new ApiException(ApiStatus.INVALID_REQUEST, "Producer user customer is required for purchase orders!");
@@ -1085,7 +1094,9 @@ public class StockOrderService extends BaseService {
                     pricePerUnitReduced = entity.getPricePerUnit().subtract(entity.getDamagedPriceDeduction());
                 }
                 if (!Boolean.TRUE.equals(apiStockOrder.getPriceDeterminedLater())) {
-                    entity.setCost(pricePerUnitReduced.multiply(entity.getTotalQuantity()));
+                    // Use net quantity for cost calculation
+                    BigDecimal quantityForCost = entity.getNetQuantity() != null ? entity.getNetQuantity() : entity.getTotalQuantity();
+                    entity.setCost(pricePerUnitReduced.multiply(quantityForCost));
 
                     if (processingOrder == null) {
                         entity.setBalance(calculateBalanceForPurchaseOrder(entity));
@@ -1723,5 +1734,38 @@ public class StockOrderService extends BaseService {
         }
         // if areaSum is < 0, polygon order is counter-clockwise
         return areaSum < 0;
+    }
+
+    /**
+     * Calculate net quantity after all deductions (tare, damaged weight, moisture)
+     * Formula: Net = (Gross - Tare - DamagedWeight) * (MoisturePercentage / 100)
+     */
+    private BigDecimal calculateNetQuantity(BigDecimal grossQuantity, BigDecimal tare, 
+                                           BigDecimal damagedWeightDeduction, BigDecimal moisturePercentage) {
+        if (grossQuantity == null) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal baseWeight = grossQuantity;
+
+        // Apply tare deduction
+        if (tare != null) {
+            baseWeight = baseWeight.subtract(tare);
+        }
+
+        // Apply damaged weight deduction
+        if (damagedWeightDeduction != null) {
+            baseWeight = baseWeight.subtract(damagedWeightDeduction);
+        }
+
+        // Ensure base weight is not negative
+        baseWeight = baseWeight.max(BigDecimal.ZERO);
+
+        // Apply moisture percentage (percentage represents the net weight that remains)
+        if (moisturePercentage != null && moisturePercentage.compareTo(BigDecimal.ZERO) > 0) {
+            baseWeight = baseWeight.multiply(moisturePercentage.divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP));
+        }
+
+        return baseWeight.max(BigDecimal.ZERO);
     }
 }
