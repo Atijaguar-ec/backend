@@ -1053,17 +1053,14 @@ public class StockOrderService extends BaseService {
         switch (apiStockOrder.getOrderType()) {
             case PURCHASE_ORDER:
 
-                // On purchase order, Total quantity is calculated by total gross quantity and tare
+                // Calculate base quantity after tare and damaged weight deductions
+                BigDecimal quantityAfterDeductions = apiStockOrder.getTotalGrossQuantity();
                 if (apiStockOrder.getTare() != null) {
-                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalGrossQuantity().subtract(apiStockOrder.getTare()));
-                } else {
-                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalGrossQuantity());
+                    quantityAfterDeductions = quantityAfterDeductions.subtract(apiStockOrder.getTare());
                 }
                 if (apiStockOrder.getDamagedWeightDeduction() != null) {
-                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalQuantity().subtract(apiStockOrder.getDamagedWeightDeduction()));
+                    quantityAfterDeductions = quantityAfterDeductions.subtract(apiStockOrder.getDamagedWeightDeduction());
                 }
-                entity.setTotalQuantity(apiStockOrder.getTotalQuantity());
-                entity.setTotalGrossQuantity(apiStockOrder.getTotalGrossQuantity());
 
                 // Calculate net quantity after all deductions including moisture
                 BigDecimal netQuantity = calculateNetQuantity(
@@ -1072,7 +1069,18 @@ public class StockOrderService extends BaseService {
                     apiStockOrder.getDamagedWeightDeduction(),
                     apiStockOrder.getMoisturePercentage()
                 );
-                entity.setNetQuantity(netQuantity);
+
+                // Persist gross quantity
+                entity.setTotalGrossQuantity(apiStockOrder.getTotalGrossQuantity());
+
+                // Persist net quantity and ensure total quantity mirrors it (legacy behaviour)
+                BigDecimal quantityToStore = netQuantity != null ? netQuantity : quantityAfterDeductions;
+                if (quantityToStore == null) {
+                    quantityToStore = quantityAfterDeductions;
+                }
+                apiStockOrder.setTotalQuantity(quantityToStore);
+                entity.setNetQuantity(quantityToStore);
+                entity.setTotalQuantity(quantityToStore);
 
                 // Required
                 if (apiStockOrder.getProducerUserCustomer() == null) {

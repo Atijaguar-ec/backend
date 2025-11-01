@@ -232,6 +232,12 @@ public class StockOrderMapper {
         apiStockOrder.setCreationTimestamp(entity.getCreationTimestamp());
 
         apiStockOrder.setTotalQuantity(entity.getTotalQuantity());
+        apiStockOrder.setTotalGrossQuantity(entity.getTotalGrossQuantity());
+        apiStockOrder.setNetQuantity(entity.getNetQuantity());
+        apiStockOrder.setTare(entity.getTare());
+        apiStockOrder.setDamagedWeightDeduction(entity.getDamagedWeightDeduction());
+        apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
+        apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
         apiStockOrder.setMeasureUnitType(
                 MeasureUnitTypeMapper.toApiMeasureUnitType(entity.getMeasurementUnitType()));
 
