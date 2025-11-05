@@ -153,6 +153,12 @@ public class FacilityService extends BaseService {
 		FacilityType facilityType = Queries.get(em, FacilityType.class, apiFacility.getFacilityType().getId());
 		entity.setFacilityType(facilityType);
 		
+		if (apiFacility.getLevel() != null) {
+			entity.setLevel(apiFacility.getLevel());
+		} else if (entity.getLevel() == null && facilityType != null) {
+			entity.setLevel(facilityType.getOrder());
+		}
+
 		entity.setFacilityLocation(facilityLocation);
 
 		entity.setCompany(company);

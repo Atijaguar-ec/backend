@@ -71,6 +71,8 @@ public final class FacilityMapper {
 			return null;
 		}
 
+		apiFacility.setLevel(entity.getLevel() != null ? entity.getLevel() : entity.getFacilityType().getOrder());
+
 		apiFacility.setDisplayMayInvolveCollectors(entity.getDisplayMayInvolveCollectors());
 		apiFacility.setDisplayOrganic(entity.getDisplayOrganic());
 		apiFacility.setDisplayPriceDeductionDamage(entity.getDisplayPriceDeductionDamage());
