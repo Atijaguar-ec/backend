@@ -49,6 +49,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Price determined later'")
 	private Boolean displayPriceDeterminedLater;
 
+	@Schema(description = "Custom facility level overriding facility type order")
+	private Integer level;
+
 	@Schema(description = "Facility location")
 	private ApiFacilityLocation facilityLocation;
 
@@ -164,6 +167,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean displayPriceDeterminedLater) {
 		this.displayPriceDeterminedLater = displayPriceDeterminedLater;
+	}
+
+	public Integer getLevel() {
+		return level;
+	}
+
+	public void setLevel(Integer level) {
+		this.level = level;
 	}
 
 	public ApiFacilityLocation getFacilityLocation() {

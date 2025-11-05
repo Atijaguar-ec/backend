@@ -61,6 +61,9 @@ public class Facility extends TimestampEntity {
 	@Column
 	private Boolean displayPriceDeterminedLater;
 
+	@Column
+	private Integer level;
+
 	@OneToOne(cascade = CascadeType.ALL)
 	private FacilityLocation facilityLocation;
 
@@ -179,6 +182,14 @@ public class Facility extends TimestampEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean priceDeterminedLater) {
 		this.displayPriceDeterminedLater = priceDeterminedLater;
+	}
+
+	public Integer getLevel() {
+		return level;
+	}
+
+	public void setLevel(Integer level) {
+		this.level = level;
 	}
 
 	public FacilityLocation getFacilityLocation() {
