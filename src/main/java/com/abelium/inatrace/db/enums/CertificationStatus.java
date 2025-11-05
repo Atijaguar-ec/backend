@@ -3,7 +3,7 @@ package com.abelium.inatrace.db.enums;
 /**
  * Enum for certification status.
  *
- * @author INATrace Development Team
+ * @author Álvaro Sánchez
  */
 public enum CertificationStatus {
     ACTIVE,
