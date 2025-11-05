@@ -392,7 +392,7 @@ jobs:
             echo "🔗 Ensuring Docker network exists..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
-            echo "📥 Pulling latest image from GHCR..."
+            echo "📥 Pulling latest image from GHCR"
             docker-compose pull
             
             echo "🚀 Starting services"
