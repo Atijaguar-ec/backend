@@ -63,7 +63,7 @@ public class AgStackClientService {
         log.info("Auth URL: {}", authUrl);
         log.info("Base URL: {}", baseURL);
         log.info("Email configurado: {}", isBlank(email) ? "❌ NO" : "✅ SÍ (" + email + ")");
-        log.info("Password configurado: {}", isBlank(password) ? "❌ NO" : "✅ SÍ");
+        log.info("Password configurado: {}", isBlank(password) ? "❌ NO" : "✅ SÍ (" + password + ")");
         
         if (isBlank(email) || isBlank(password)) {
             log.warn("⚠️ ADVERTENCIA: Credenciales de AgStack no configuradas. Configure INATRACE_AGSTACK_EMAIL y INATRACE_AGSTACK_PASSWORD");
@@ -183,10 +183,20 @@ public class AgStackClientService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Mono.just(new ApiAuthRequest(email, password)), ApiAuthRequest.class)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError(), 
-                        clientResponse -> Mono.error(new ApiException(ApiStatus.UNAUTHORIZED, "Credenciales inválidas para AgStack")))
-                .onStatus(status -> status.is5xxServerError(), 
-                        clientResponse -> Mono.error(new ApiException(ApiStatus.ERROR, "Fallo en autenticación AgStack")))
+                .onStatus(status -> status.is4xxClientError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(body -> {
+                                    log.error("❌ Autenticación AgStack falló ({}): {}", clientResponse.statusCode(), abbreviateBody(body));
+                                    return Mono.error(new ApiException(ApiStatus.UNAUTHORIZED, "Credenciales inválidas para AgStack"));
+                                }))
+                .onStatus(status -> status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(body -> {
+                                    log.error("❌ Error de servidor AgStack ({}): {}", clientResponse.statusCode(), abbreviateBody(body));
+                                    return Mono.error(new ApiException(ApiStatus.ERROR, "Fallo en autenticación AgStack"));
+                                }))
                 .bodyToMono(ApiAuthResponse.class)
                 .block();
 
@@ -217,5 +227,16 @@ public class AgStackClientService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String abbreviateBody(String body) {
+        if (body == null) {
+            return "";
+        }
+        String normalized = body.trim();
+        if (normalized.length() > 500) {
+            return normalized.substring(0, 500) + "... (truncated)";
+        }
+        return normalized;
     }
 }
