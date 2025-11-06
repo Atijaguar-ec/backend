@@ -219,6 +219,14 @@ public class StockOrderMapper {
         return apiStockOrder;
     }
 
+    public static ApiStockOrder toApiStockOrderHistory(StockOrder entity, Language language) {
+        return toApiStockOrderHistory(entity, null, language);
+    }
+
+    public static ApiStockOrder toApiStockOrderHistory(StockOrder entity, Long userId, Language language) {
+        return toApiStockOrder(entity, userId, language, true);
+    }
+
     public static ApiStockOrder toApiStockOrderHistoryItem(StockOrder entity, Language language) {
 
         if (entity == null) {
@@ -228,12 +236,10 @@ public class StockOrderMapper {
         ApiStockOrder apiStockOrder = new ApiStockOrder();
         apiStockOrder.setId(entity.getId());
         apiStockOrder.setIdentifier(entity.getIdentifier());
-
-            apiStockOrder.setCurrency(entity.getCurrency());
-            apiStockOrder.setCost(entity.getCost());
-            apiStockOrder.setPaid(entity.getPaid());
-            apiStockOrder.setBalance(entity.getBalance());
-        }
+        apiStockOrder.setCurrency(entity.getCurrency());
+        apiStockOrder.setCost(entity.getCost());
+        apiStockOrder.setPaid(entity.getPaid());
+        apiStockOrder.setBalance(entity.getBalance());
 
         apiStockOrder.setSemiProduct(SemiProductMapper.toApiSemiProductBase(entity.getSemiProduct(), ApiSemiProduct.class, language));
         apiStockOrder.setFinalProduct(ProductApiTools.toApiFinalProductBase(entity.getFinalProduct()));
