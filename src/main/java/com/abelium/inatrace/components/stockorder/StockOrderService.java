@@ -885,6 +885,7 @@ public class StockOrderService extends BaseService {
             apiStockOrder.setIdentifier(farmer.getIdentifier());
             apiStockOrder.setOrganic(farmer.getOrganic());
             apiStockOrder.setDamagedPriceDeduction(farmer.getDamagedPriceDeduction());
+            apiStockOrder.setFinalPriceDiscount(farmer.getFinalPriceDiscount());
             apiStockOrder.setDamagedWeightDeduction(farmer.getDamagedWeightDeduction());
             apiStockOrder.setSemiProduct(farmer.getSemiProduct());
             apiStockOrder.setTare(farmer.getTare());
@@ -1102,13 +1103,17 @@ public class StockOrderService extends BaseService {
                 if (entity.getDamagedPriceDeduction() != null){
                     pricePerUnitReduced = entity.getPricePerUnit().subtract(entity.getDamagedPriceDeduction());
                 }
-                if (entity.getFinalPriceDiscount() != null) {
-                    pricePerUnitReduced = pricePerUnitReduced.subtract(entity.getFinalPriceDiscount());
-                }
                 if (!Boolean.TRUE.equals(apiStockOrder.getPriceDeterminedLater())) {
                     // Use net quantity for cost calculation
                     BigDecimal quantityForCost = entity.getNetQuantity() != null ? entity.getNetQuantity() : entity.getTotalQuantity();
-                    entity.setCost(pricePerUnitReduced.multiply(quantityForCost));
+                    BigDecimal cost = pricePerUnitReduced.multiply(quantityForCost);
+                    if (entity.getFinalPriceDiscount() != null) {
+                        cost = cost.subtract(entity.getFinalPriceDiscount());
+                    }
+                    if (cost.compareTo(BigDecimal.ZERO) < 0) {
+                        cost = BigDecimal.ZERO;
+                    }
+                    entity.setCost(cost);
 
                     if (processingOrder == null) {
                         entity.setBalance(calculateBalanceForPurchaseOrder(entity));
