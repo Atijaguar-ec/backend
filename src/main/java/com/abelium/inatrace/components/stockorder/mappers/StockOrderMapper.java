@@ -36,6 +36,7 @@ public class StockOrderMapper {
         apiStockOrder.setInternalLotNumber(setupInternalLotNumberForSacked(entity.getInternalLotNumber(), entity.getSacNumber()));
         apiStockOrder.setCurrency(entity.getCurrency());
         apiStockOrder.setPreferredWayOfPayment(entity.getPreferredWayOfPayment());
+        apiStockOrder.setFinalPriceDiscount(entity.getFinalPriceDiscount());
         apiStockOrder.setTotalQuantity(entity.getTotalQuantity());
         apiStockOrder.setFulfilledQuantity(entity.getFulfilledQuantity());
         apiStockOrder.setBalance(entity.getBalance());
@@ -169,6 +170,7 @@ public class StockOrderMapper {
         apiStockOrder.setCurrency(entity.getCurrency());
         apiStockOrder.setPricePerUnit(entity.getPricePerUnit());
         apiStockOrder.setDamagedPriceDeduction(entity.getDamagedPriceDeduction());
+        apiStockOrder.setFinalPriceDiscount(entity.getFinalPriceDiscount());
         apiStockOrder.setDamagedWeightDeduction(entity.getDamagedWeightDeduction());
         apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
         apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
@@ -226,69 +228,6 @@ public class StockOrderMapper {
         ApiStockOrder apiStockOrder = new ApiStockOrder();
         apiStockOrder.setId(entity.getId());
         apiStockOrder.setIdentifier(entity.getIdentifier());
-        apiStockOrder.setInternalLotNumber(setupInternalLotNumberForSacked(entity.getInternalLotNumber(), entity.getSacNumber()));
-        apiStockOrder.setSacNumber(entity.getSacNumber());
-        apiStockOrder.setProductionDate(entity.getProductionDate());
-        apiStockOrder.setCreationTimestamp(entity.getCreationTimestamp());
-
-        apiStockOrder.setTotalQuantity(entity.getTotalQuantity());
-        apiStockOrder.setTotalGrossQuantity(entity.getTotalGrossQuantity());
-        apiStockOrder.setNetQuantity(entity.getNetQuantity());
-        apiStockOrder.setTare(entity.getTare());
-        apiStockOrder.setDamagedWeightDeduction(entity.getDamagedWeightDeduction());
-        apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
-        apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
-        apiStockOrder.setMeasureUnitType(
-                MeasureUnitTypeMapper.toApiMeasureUnitType(entity.getMeasurementUnitType()));
-
-        apiStockOrder.setFacility(FacilityMapper.toApiFacilityBase(entity.getFacility(), language));
-
-        apiStockOrder.setWomenShare(entity.getWomenShare());
-        apiStockOrder.setOrganic(entity.getOrganic());
-        apiStockOrder.setWeekNumber(entity.getWeekNumber());
-        apiStockOrder.setParcelLot(entity.getParcelLot());
-        apiStockOrder.setVariety(entity.getVariety());
-        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
-
-        // Map payments
-        apiStockOrder.setPayments(entity.getPayments().stream().map(payment -> PaymentMapper.toApiPayment(payment, null)).collect(Collectors.toList()));
-
-        // Map the instances (values) of processing evidence fields
-        if (!entity.getProcessingEFValues().isEmpty()) {
-            apiStockOrder.setRequiredEvidenceFieldValues(entity.getProcessingEFValues().stream()
-                    .map(StockOrderEvidenceFieldValueMapper::toApiStockOrderEvidenceFieldValue)
-                    .collect(Collectors.toList()));
-        }
-
-        return apiStockOrder;
-    }
-
-    public static ApiStockOrder toApiStockOrderHistory(StockOrder entity, Language language) {
-
-        ApiStockOrder apiStockOrder = toApiStockOrderHistoryItem(entity, language);
-
-        if (apiStockOrder == null) {
-            return null;
-        }
-
-        apiStockOrder.setUpdateTimestamp(entity.getUpdateTimestamp());
-        apiStockOrder.setOrderType(entity.getOrderType());
-
-        apiStockOrder.setFulfilledQuantity(entity.getFulfilledQuantity());
-        apiStockOrder.setAvailableQuantity(entity.getAvailableQuantity());
-
-        apiStockOrder.setComments(entity.getComments());
-        apiStockOrder.setPurchaseOrder(entity.getPurchaseOrder());
-
-        if (BooleanUtils.isTrue(entity.getPurchaseOrder())) {
-
-            // Farmer
-            apiStockOrder.setProducerUserCustomer(
-                    UserCustomerMapper.toApiUserCustomerBase(entity.getProducerUserCustomer()));
-
-            // Collector
-            apiStockOrder.setRepresentativeOfProducerUserCustomer(
-                    UserCustomerMapper.toApiUserCustomerBase(entity.getRepresentativeOfProducerUserCustomer()));
 
             apiStockOrder.setCurrency(entity.getCurrency());
             apiStockOrder.setCost(entity.getCost());

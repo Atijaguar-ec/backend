@@ -76,6 +76,7 @@ public final class FacilityMapper {
 		apiFacility.setDisplayMayInvolveCollectors(entity.getDisplayMayInvolveCollectors());
 		apiFacility.setDisplayOrganic(entity.getDisplayOrganic());
 		apiFacility.setDisplayPriceDeductionDamage(entity.getDisplayPriceDeductionDamage());
+		apiFacility.setDisplayFinalPriceDiscount(entity.getDisplayFinalPriceDiscount());
 		apiFacility.setDisplayWeightDeductionDamage(entity.getDisplayWeightDeductionDamage());
 		apiFacility.setDisplayMoisturePercentage(entity.getDisplayMoisturePercentage());
 		apiFacility.setDisplayTare(entity.getDisplayTare());

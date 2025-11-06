@@ -31,6 +31,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Price deduction damage'")
 	private Boolean displayPriceDeductionDamage;
 
+	@Schema(description = "Enable form control 'Final price discount'")
+	private Boolean displayFinalPriceDiscount;
+
 	@Schema(description = "Enable form control 'Weight deduction damage'")
 	private Boolean displayWeightDeductionDamage;
 
@@ -119,6 +122,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayPriceDeductionDamage(Boolean displayPriceDeductionDamage) {
 		this.displayPriceDeductionDamage = displayPriceDeductionDamage;
+	}
+
+	public Boolean getDisplayFinalPriceDiscount() {
+		return displayFinalPriceDiscount;
+	}
+
+	public void setDisplayFinalPriceDiscount(Boolean displayFinalPriceDiscount) {
+		this.displayFinalPriceDiscount = displayFinalPriceDiscount;
 	}
 
 	public Boolean getDisplayWeightDeductionDamage() {

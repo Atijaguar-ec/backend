@@ -217,6 +217,9 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private BigDecimal damagedPriceDeduction;
 
+	@Column(precision = 38, scale = 2)
+	private BigDecimal finalPriceDiscount;
+
 	@Column
 	private BigDecimal damagedWeightDeduction;
 
@@ -747,6 +750,14 @@ public class StockOrder extends TimestampEntity {
 
 	public void setDamagedPriceDeduction(BigDecimal damagedPriceDeduction) {
 		this.damagedPriceDeduction = damagedPriceDeduction;
+	}
+
+	public BigDecimal getFinalPriceDiscount() {
+		return finalPriceDiscount;
+	}
+
+	public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+		this.finalPriceDiscount = finalPriceDiscount;
 	}
 
 	public BigDecimal getDamagedWeightDeduction() {

@@ -198,6 +198,9 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Damaged price deduction")
     private BigDecimal damagedPriceDeduction;
 
+    @Schema(description = "Final price discount per unit")
+    private BigDecimal finalPriceDiscount;
+
     @Schema(description = "Damaged weight deduction")
     private BigDecimal damagedWeightDeduction;
 
@@ -680,6 +683,14 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setDamagedPriceDeduction(BigDecimal damagedPriceDeduction) {
         this.damagedPriceDeduction = damagedPriceDeduction;
+    }
+
+    public BigDecimal getFinalPriceDiscount() {
+        return finalPriceDiscount;
+    }
+
+    public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+        this.finalPriceDiscount = finalPriceDiscount;
     }
 
     public BigDecimal getDamagedWeightDeduction() {

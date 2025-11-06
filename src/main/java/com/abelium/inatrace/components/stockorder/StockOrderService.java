@@ -1012,6 +1012,7 @@ public class StockOrderService extends BaseService {
         entity.setVariety(apiStockOrder.getVariety());
         entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
         entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
+        entity.setFinalPriceDiscount(apiStockOrder.getFinalPriceDiscount());
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
         entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
@@ -1100,6 +1101,9 @@ public class StockOrderService extends BaseService {
                 // if pay later remove payable but keep balance
                 if (entity.getDamagedPriceDeduction() != null){
                     pricePerUnitReduced = entity.getPricePerUnit().subtract(entity.getDamagedPriceDeduction());
+                }
+                if (entity.getFinalPriceDiscount() != null) {
+                    pricePerUnitReduced = pricePerUnitReduced.subtract(entity.getFinalPriceDiscount());
                 }
                 if (!Boolean.TRUE.equals(apiStockOrder.getPriceDeterminedLater())) {
                     // Use net quantity for cost calculation
