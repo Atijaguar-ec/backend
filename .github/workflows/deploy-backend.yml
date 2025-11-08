@@ -31,7 +31,7 @@ on:
         default: false
         type: boolean
       skip_security:
-        description: 'Skip security scan (OWASP dependency check)'
+        description: 'Skip security scan (OWASP dependency check) '
         required: false
         default: false
         type: boolean
