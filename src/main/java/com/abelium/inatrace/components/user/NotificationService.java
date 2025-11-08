@@ -31,7 +31,7 @@ public class NotificationService extends BaseService {
 	        "<p>En cuanto verifiquemos y activemos tu perfil, podrás iniciar sesión en tu panel de INATrace ec con el correo y la contraseña que usaste para registrarte.</p>");
         context.setVariable("signatureMessage", "");
         context.setVariable("signature", "Saludos cordiales,");
-        context.setVariable("INATraceTeam", "Equipo INATrace ec");
+        context.setVariable("INATraceTeam", "Equipo INATrace Ecuador");
         context.setVariable("link", link);
         context.setVariable("linkText", "CONFIRMAR CORREO");
         return templateEngine.process("inline/basic-ar.html", context); 
@@ -44,29 +44,29 @@ public class NotificationService extends BaseService {
         context.setVariable("greeting", "Hola " + name + " " + surname);
         context.setVariable("message", 
         	"<p>Tu cuenta ha sido verificada correctamente. ¡Felicidades por dar el primer paso hacia la transparencia para mejores resultados!</p>" + 
-	        "<p>Si necesitas ayuda, contáctanos a través del chat de soporte en tu panel de INATrace ec" +
+	        "<p>Si necesitas ayuda, contáctanos a través del chat de soporte en tu panel de INATrace Ecuador" +
 	        "(botón verde en la esquina inferior derecha) o escríbenos a <a href=\"mailto:" + infoMail + "\">" + infoMail + "</a> y " +
 	        "nos pondremos en contacto contigo lo antes posible.</p>");
         context.setVariable("signatureMessage", "¡Esperamos conversar contigo pronto!");
         context.setVariable("signature", "Saludos cordiales,");
-        context.setVariable("INATraceTeam", "Equipo INATrace ec");
+        context.setVariable("INATraceTeam", "Equipo INATrace Ecuador");
         return templateEngine.process("inline/basic-ar.html", context); 
     }
     
     public String createPasswordResetEmail(String link) {
         Context context = new Context(LOCALE_ES);
         context.setVariable("heading", true);
-        context.setVariable("greetingsTitle", "Restablecer contraseña de tu cuenta INATrace ec");
+        context.setVariable("greetingsTitle", "Restablecer contraseña de tu cuenta INATrace Ecuador");
         context.setVariable("greeting", "");
         context.setVariable("message", 
-        	"<p>Haz clic en el botón de abajo para restablecer la contraseña de tu cuenta INATrace ec.</p>" +
+        	"<p>Haz clic en el botón de abajo para restablecer la contraseña de tu cuenta INATrace Ecuador.</p>" +
 		"<p>Si no solicitaste una nueva contraseña, por favor ignora o elimina este correo.</p>" +
 	    	"<p>Si el botón no funciona, copia y pega el siguiente enlace en tu navegador: " +
 	    	"<a href=\"" + link + "\">" + link + "</a>" +
 	    	"</p>");
         context.setVariable("signatureMessage", "");
         context.setVariable("signature", "Saludos cordiales,");
-        context.setVariable("INATraceTeam", "Equipo INATrace ec");
+        context.setVariable("INATraceTeam", "Equipo INATrace Ecuador");
         context.setVariable("link", link);
         context.setVariable("linkText", "RESTABLECER CONTRASEÑA");
         return templateEngine.process("inline/basic-ar.html", context); 
