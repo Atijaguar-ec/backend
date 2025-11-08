@@ -26,12 +26,12 @@ on:
         default: false
         type: boolean
       skip_quality:
-        description: 'Skip quality checks (tests, security scan)'
+        description: 'Skip quality checks (tests, security scan) | ⚠️ Not recommended for production'
         required: false
         default: false
         type: boolean
       skip_security:
-        description: 'Skip security scan (OWASP dependency check)'
+        description: 'Skip security scan (OWASP dependency check) | ⚠️ Not recommended for production'
         required: false
         default: false
         type: boolean
