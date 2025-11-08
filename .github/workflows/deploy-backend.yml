@@ -343,6 +343,20 @@ jobs:
           FE_CONFIRM_URL="${{ secrets.TEST_UNOCACE_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
           FE_RESET_URL="${{ secrets.TEST_UNOCACE_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           SERVER_PORT="${{ secrets.TEST_UNOCACE_SERVER_PORT }}"; [ -z "$SERVER_PORT" ] && SERVER_PORT="8080"
+          MAIL_HOST="${{ secrets.TEST_UNOCACE_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.TEST_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.TEST_UNOCACE_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
+          MAIL_PASSWORD="${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.TEST_UNOCACE_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.TEST_UNOCACE_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT="desarrollo@atijaguar.com"
+          MAIL_SENDING_ENABLED="${{ secrets.TEST_UNOCACE_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="true"
+          MAIL_DEBUG="${{ secrets.TEST_UNOCACE_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.TEST_UNOCACE_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.TEST_UNOCACE_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.TEST_UNOCACE_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -363,11 +377,20 @@ jobs:
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
           SERVER_PORT=$SERVER_PORT
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}
-          # Deploy timestamp: 2025-09-25 00:23
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASSWORD
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
           EOF
 
       - name: 📤 Upload .env
@@ -477,6 +500,20 @@ jobs:
           FE_CONFIRM_URL="${{ secrets.TEST_DUFER_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
           FE_RESET_URL="${{ secrets.TEST_DUFER_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           SERVER_PORT="${{ secrets.TEST_DUFER_SERVER_PORT }}"; [ -z "$SERVER_PORT" ] && SERVER_PORT="8080"
+          MAIL_HOST="${{ secrets.TEST_DUFER_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.TEST_DUFER_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.TEST_DUFER_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
+          MAIL_PASSWORD="${{ secrets.TEST_DUFER_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.TEST_DUFER_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.TEST_DUFER_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT="desarrollo@atijaguar.com"
+          MAIL_SENDING_ENABLED="${{ secrets.TEST_DUFER_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="true"
+          MAIL_DEBUG="${{ secrets.TEST_DUFER_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.TEST_DUFER_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.TEST_DUFER_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.TEST_DUFER_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -484,23 +521,32 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_DUFER_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_DUFER_DATASOURCE_PASSWORD }}
-           FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
           FILE_STORAGE_ROOT_VOL=/opt/inatrace/uploads
           IMPORT_PATH_VOL=/opt/inatrace/imports
           DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
           DB_VOLUME=/opt/inatrace/mysql
-          
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
           FE_URL=$FE_URL
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=${{ secrets.TEST_DUFER_MAIL_PASSWORD }}
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASSWORD
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
           EOF
 
       - name: 📤 Upload .env
@@ -613,7 +659,20 @@ jobs:
           DB_USER="${{ secrets.DEV_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace"
           DB_PASS="${{ secrets.DEV_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace"
           DB_ROOT="${{ secrets.DEV_DB_ROOT_PASSWORD }}"; [ -z "$DB_ROOT" ] && DB_ROOT="root"
+          MAIL_HOST="${{ secrets.DEV_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.DEV_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.DEV_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
           MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.DEV_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.DEV_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT=""
+          MAIL_SENDING_ENABLED="${{ secrets.DEV_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="false"
+          MAIL_DEBUG="${{ secrets.DEV_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.DEV_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.DEV_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.DEV_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.DEV_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
           REQ_TOKEN="${{ secrets.DEV_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="dev-requestlog-${GITHUB_RUN_ID}"
           EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
           FE_URL="${{ secrets.DEV_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
@@ -643,10 +702,20 @@ jobs:
           FE_URL=$FE_URL
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
           EOF
 
       - name: Verify .env exists (dev)
@@ -793,7 +862,20 @@ jobs:
           DB_USER="${{ secrets.DEV_SHRIMP_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_shrimp"
           DB_PASS="${{ secrets.DEV_SHRIMP_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace_shrimp"
           DB_ROOT="${{ secrets.DEV_SHRIMP_DB_ROOT_PASSWORD }}"; [ -z "$DB_ROOT" ] && DB_ROOT="root_shrimp"
+          MAIL_HOST="${{ secrets.DEV_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.DEV_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.DEV_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
           MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.DEV_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.DEV_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT=""
+          MAIL_SENDING_ENABLED="${{ secrets.DEV_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="false"
+          MAIL_DEBUG="${{ secrets.DEV_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.DEV_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.DEV_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.DEV_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.DEV_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
           REQ_TOKEN="${{ secrets.DEV_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="dev-shrimp-requestlog-${GITHUB_RUN_ID}"
           EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
           FE_URL="${{ secrets.DEV_SHRIMP_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="http://camaron.atijaguar.com/"
@@ -821,10 +903,20 @@ jobs:
           FE_URL=$FE_URL
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
           EOF
 
       - name: Verify .env exists (dev-shrimp)
