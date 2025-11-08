@@ -154,4 +154,16 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# application.properties file
+### Environment & deployment artifacts
+# Never commit real environment files
+.env
+**/.env
+**/.env.local
+ci/.env
+ci/.env.local
+
+# Keep templates tracked
+!ci/env-templates/*.example
+
+# Local deployment artifacts
+**/be-image.tar
