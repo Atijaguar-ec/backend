@@ -366,6 +366,10 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}
+          CONTAINER_NAME_BE=inatrace-be-test-unocace
+          CONTAINER_NAME_DB=inatrace-mysql-test-unocace
+          HOST_PORT_BE=8080
+          HOST_PORT_DB=3306
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
@@ -420,10 +424,10 @@ jobs:
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
             echo "📥 Pulling latest image from GHCR"
-            docker-compose pull
+            docker-compose pull backend
             
-            echo "🚀 Starting services"
-            docker-compose up -d
+            echo "🚀 Starting backend only (no deps, no orphans)"
+            docker-compose up -d --no-deps backend
             
             echo "⏳ Waiting for backend to be healthy..."
             for i in {1..12}; do
@@ -525,6 +529,10 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_DUFER_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_DUFER_DATASOURCE_PASSWORD }}
+          CONTAINER_NAME_BE=inatrace-be-test-dufer
+          CONTAINER_NAME_DB=inatrace-mysql-test-dufer
+          HOST_PORT_BE=8080
+          HOST_PORT_DB=3306
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
@@ -576,10 +584,10 @@ jobs:
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
             echo "📥 Pulling latest image from GHCR..."
-            docker-compose pull
+            docker-compose pull backend
             
-            echo "🚀 Starting services..."
-            docker-compose up -d --remove-orphans
+            echo "🚀 Starting backend only (no deps, no orphans)"
+            docker-compose up -d --no-deps backend
             
             echo "⏳ Waiting for backend to be healthy... "
             for i in {1..12}; do
