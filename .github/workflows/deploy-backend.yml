@@ -393,6 +393,8 @@ jobs:
           INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
           INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
           INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
+          INATRACE_AGSTACK_EMAIL=${{ secrets.TEST_UNOCACE_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_PASSWORD=${{ secrets.TEST_UNOCACE_AGSTACK_PASSWORD }}
           EOF
 
       - name: 📤 Upload .env
@@ -620,6 +622,8 @@ jobs:
           [ -z "${{ secrets.DEV_HOST }}" ] && echo "Missing secret: DEV_HOST" && missing=1
           [ -z "${{ secrets.DEV_USER }}" ] && echo "Missing secret: DEV_USER" && missing=1
           [ -z "${{ secrets.DEV_SSH_KEY }}" ] && echo "Missing secret: DEV_SSH_KEY" && missing=1
+          [ -z "${{ secrets.DEV_AGSTACK_EMAIL }}" ] && echo "Missing secret: DEV_AGSTACK_EMAIL" && missing=1
+          [ -z "${{ secrets.DEV_AGSTACK_PASSWORD }}" ] && echo "Missing secret: DEV_AGSTACK_PASSWORD" && missing=1
           if [ "$missing" -ne 0 ]; then exit 1; fi
 
       - name: Ensure remote directory exists (dev)
@@ -718,6 +722,8 @@ jobs:
           INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
           INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
           INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
+          INATRACE_AGSTACK_EMAIL=${{ secrets.DEV_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_PASSWORD=${{ secrets.DEV_AGSTACK_PASSWORD }}
           EOF
 
       - name: Verify .env exists (dev)

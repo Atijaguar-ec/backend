@@ -7,7 +7,7 @@ Esta guía describe el flujo de despliegue con GitHub Actions (UNOCACE/DUFER) y 
 - Secrets configurados por entorno en GitHub/Jenkins (DB, Mail, FE URLs, AgStack si aplica).
 - Imagen Docker generada desde el monorepo (`backend`), publicada en GHCR.
 
-## 2. Artefactos del repo
+## 2. Artefactos del repo😔
 - `Dockerfile`: build multi-stage del backend.
 - `ci/docker-compose.yml`: stack backend+mysql.
 - `ci/docker-compose.backend-only.yml`: solo backend (MySQL externo/compartido).
