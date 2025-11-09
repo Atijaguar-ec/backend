@@ -22,6 +22,7 @@ services:
     container_name: ${CONTAINER_NAME_BE:-inatrace-be-dev}
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=${SERVER_PORT:-8080}
       - INATRACE_DATABASE_NAME=${DATABASE_NAME}
       - INATRACE_DATABASE_HOSTNAME=${CONTAINER_NAME_DB:-inatrace-mysql-dev}
       - SPRING_DATASOURCE_USERNAME=${DATASOURCE_USERNAME}
@@ -59,9 +60,9 @@ services:
     depends_on:
       - mysql
     ports:
-      - "${HOST_PORT_BE:-8080}:8080"
+      - "${HOST_PORT_BE:-8080}:${SERVER_PORT:-8080}"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:${SERVER_PORT:-8080}/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
