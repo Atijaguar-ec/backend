@@ -367,7 +367,7 @@ jobs:
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}
           CONTAINER_NAME_BE=inatrace-be-test-unocace
-          CONTAINER_NAME_DB=inatrace-mysql-test-unocace
+          CONTAINER_NAME_DB=inatrace-mysql
           HOST_PORT_BE=8080
           HOST_PORT_DB=3306
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
@@ -450,7 +450,7 @@ jobs:
             
             echo "❌ Health check failed after 2 minutes"
             docker ps -a
-            docker logs inatrace-be 2>&1 | tail -50
+            docker logs "$CONTAINER_NAME_BE" 2>&1 | tail -50
             exit 1
 
   deploy-test-dufer:
