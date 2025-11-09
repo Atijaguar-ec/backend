@@ -426,7 +426,11 @@ jobs:
             echo "📥 Pulling latest image from GHCR"
             docker-compose pull backend
 
-            echo "🛑 Stopping existing backend container if running"
+            echo "🛑 Stopping old backend container (inatrace-be) if running"
+            docker stop inatrace-be >/dev/null 2>&1 || true
+            docker rm inatrace-be >/dev/null 2>&1 || true
+            
+            echo "🛑 Stopping new backend container if exists"
             docker stop "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
             docker rm "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
 
