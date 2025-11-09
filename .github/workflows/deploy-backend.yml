@@ -425,9 +425,13 @@ jobs:
             
             echo "📥 Pulling latest image from GHCR"
             docker-compose pull backend
-            
-            echo "🚀 Starting backend only (no deps, no orphans)"
-            docker-compose up -d --no-deps backend
+
+            echo "🛑 Stopping existing backend container if running"
+            docker stop "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+            docker rm "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+
+            echo "🚀 Recreating backend only (no deps)"
+            docker-compose up -d --no-deps --force-recreate backend
             
             echo "⏳ Waiting for backend to be healthy..."
             for i in {1..12}; do
@@ -585,9 +589,13 @@ jobs:
             
             echo "📥 Pulling latest image from GHCR..."
             docker-compose pull backend
-            
-            echo "🚀 Starting backend only (no deps, no orphans)"
-            docker-compose up -d --no-deps backend
+
+            echo "🛑 Stopping existing backend container if running"
+            docker stop "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+            docker rm "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+
+            echo "🚀 Recreating backend only (no deps)"
+            docker-compose up -d --no-deps --force-recreate backend
             
             echo "⏳ Waiting for backend to be healthy... "
             for i in {1..12}; do
