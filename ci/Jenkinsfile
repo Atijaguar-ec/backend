@@ -469,8 +469,24 @@ EOSSH
                 echo "📥 Descargando última imagen..."
                 docker-compose pull || true
 
+                echo "🛑 Deteniendo backend previo..."
+                docker-compose stop backend >/dev/null 2>&1 || true
+
+                echo "🗑️ Eliminando backend previo..."
+                docker-compose rm -f backend >/dev/null 2>&1 || true
+
+                if [ -f .env ]; then
+                  echo "🧹 Limpiando contenedor backend definido en .env (si existe)..."
+                  set -a
+                  . ./.env
+                  set +a
+                  if [ -n "${CONTAINER_NAME_BE:-}" ]; then
+                    docker rm -f "${CONTAINER_NAME_BE}" >/dev/null 2>&1 || true
+                  fi
+                fi
+
                 echo "🔄 Desplegando servicios localmente..."
-                docker-compose up -d --remove-orphans --force-recreate
+                docker-compose up -d --remove-orphans --force-recreate backend
 
                 echo "📊 Estado inicial de contenedores:"
                 docker-compose ps
