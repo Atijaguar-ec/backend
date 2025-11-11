@@ -4,7 +4,7 @@ import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.Instant;
 
 /**
