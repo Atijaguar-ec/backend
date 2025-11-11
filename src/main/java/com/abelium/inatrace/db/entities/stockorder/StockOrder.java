@@ -246,6 +246,13 @@ public class StockOrder extends TimestampEntity {
 	@Column(length = 100)
 	private String guiaRemisionNumber;
 
+	// 🔬 Laboratory-specific fields
+	@Column(length = 100)
+	private String sampleNumber;
+
+	@Column
+	private LocalTime receptionTime;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	private ProcessingOrder processingOrder;
 	
@@ -835,5 +842,21 @@ public class StockOrder extends TimestampEntity {
 
 	public void setGuiaRemisionNumber(String guiaRemisionNumber) {
 		this.guiaRemisionNumber = guiaRemisionNumber;
+	}
+
+	public String getSampleNumber() {
+		return sampleNumber;
+	}
+
+	public void setSampleNumber(String sampleNumber) {
+		this.sampleNumber = sampleNumber;
+	}
+
+	public LocalTime getReceptionTime() {
+		return receptionTime;
+	}
+
+	public void setReceptionTime(LocalTime receptionTime) {
+		this.receptionTime = receptionTime;
 	}
 }

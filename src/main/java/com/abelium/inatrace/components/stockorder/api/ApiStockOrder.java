@@ -226,6 +226,13 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Remission guide number (shrimp-specific)")
     private String guiaRemisionNumber;
 
+    // 🔬 Laboratory-specific fields
+    @Schema(description = "Sample number (laboratory-specific)")
+    private String sampleNumber;
+
+    @Schema(description = "Reception time (laboratory-specific)")
+    private LocalTime receptionTime;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -768,6 +775,22 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setGuiaRemisionNumber(String guiaRemisionNumber) {
         this.guiaRemisionNumber = guiaRemisionNumber;
+    }
+
+    public String getSampleNumber() {
+        return sampleNumber;
+    }
+
+    public void setSampleNumber(String sampleNumber) {
+        this.sampleNumber = sampleNumber;
+    }
+
+    public LocalTime getReceptionTime() {
+        return receptionTime;
+    }
+
+    public void setReceptionTime(LocalTime receptionTime) {
+        this.receptionTime = receptionTime;
     }
 
     public String getQrCodeTag() {

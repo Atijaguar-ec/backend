@@ -1022,6 +1022,9 @@ public class StockOrderService extends BaseService {
         entity.setNumberOfBatea(apiStockOrder.getNumberOfBatea());
         entity.setNumberOfPiscinas(apiStockOrder.getNumberOfPiscinas());
         entity.setGuiaRemisionNumber(apiStockOrder.getGuiaRemisionNumber());
+        // 🔬 Laboratory-specific fields
+        entity.setSampleNumber(apiStockOrder.getSampleNumber());
+        entity.setReceptionTime(apiStockOrder.getReceptionTime());
         entity.setCurrency(apiStockOrder.getCurrency());
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders

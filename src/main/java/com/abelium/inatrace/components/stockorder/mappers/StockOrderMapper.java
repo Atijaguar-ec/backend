@@ -180,6 +180,9 @@ public class StockOrderMapper {
         apiStockOrder.setNumberOfBatea(entity.getNumberOfBatea());
         apiStockOrder.setNumberOfPiscinas(entity.getNumberOfPiscinas());
         apiStockOrder.setGuiaRemisionNumber(entity.getGuiaRemisionNumber());
+        // 🔬 Laboratory-specific fields
+        apiStockOrder.setSampleNumber(entity.getSampleNumber());
+        apiStockOrder.setReceptionTime(entity.getReceptionTime());
         apiStockOrder.setCost(entity.getCost());
         apiStockOrder.setPaid(entity.getPaid());
         apiStockOrder.setBalance(entity.getBalance());
