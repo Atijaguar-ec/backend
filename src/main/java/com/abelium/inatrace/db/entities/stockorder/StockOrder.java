@@ -235,16 +235,16 @@ public class StockOrder extends TimestampEntity {
 	private BigDecimal netQuantity;
 
 	// 🦐 Shrimp-specific fields (only for non-laboratory deliveries)
-	@Column
+	@Column(name = "number_of_gavetas")
 	private Integer numberOfGavetas;
 
-	@Column(name = "number_of_bines")
+	@Column(name = "number_of_bines", length = 50)
 	private String numberOfBines;
 
-	@Column(length = 50)
+	@Column(name = "number_of_piscinas", length = 50)
 	private String numberOfPiscinas;
 
-	@Column(length = 100)
+	@Column(name = "guia_remision_number", length = 100)
 	private String guiaRemisionNumber;
 
 	// 🔬 Laboratory-specific fields
