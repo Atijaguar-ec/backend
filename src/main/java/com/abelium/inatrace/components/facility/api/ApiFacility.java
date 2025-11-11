@@ -52,6 +52,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Price determined later'")
 	private Boolean displayPriceDeterminedLater;
 
+	@Schema(description = "Facility is a laboratory (specific for shrimp value chain)")
+	private Boolean isLaboratory;
+
 	@Schema(description = "Custom facility level overriding facility type order")
 	private Integer level;
 
@@ -178,6 +181,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean displayPriceDeterminedLater) {
 		this.displayPriceDeterminedLater = displayPriceDeterminedLater;
+	}
+
+	public Boolean getIsLaboratory() {
+		return isLaboratory;
+	}
+
+	public void setIsLaboratory(Boolean isLaboratory) {
+		this.isLaboratory = isLaboratory;
 	}
 
 	public Integer getLevel() {

@@ -132,6 +132,7 @@ public class FacilityService extends BaseService {
 		entity.setDisplayWomenOnly(apiFacility.getDisplayWomenOnly() != null ? apiFacility.getDisplayWomenOnly() : Boolean.FALSE);
 		entity.setIsDeactivated(BooleanUtils.isTrue(apiFacility.getDeactivated()));
 		entity.setDisplayPriceDeterminedLater(BooleanUtils.isTrue(apiFacility.getDisplayPriceDeterminedLater()));
+		entity.setIsLaboratory(BooleanUtils.isTrue(apiFacility.getIsLaboratory()));
 
 		facilityLocation.setLatitude(apiFacility.getFacilityLocation().getLatitude());
 		facilityLocation.setLongitude(apiFacility.getFacilityLocation().getLongitude());
