@@ -218,8 +218,8 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Number of gavetas (shrimp-specific)")
     private Integer numberOfGavetas;
 
-    @Schema(description = "Batea number (shrimp-specific)")
-    private String numberOfBatea;
+    @Schema(description = "N° de Bines (específico para camarón)")
+    private String numberOfBines;
 
     @Schema(description = "Number of pools/piscinas (shrimp-specific)")
     private String numberOfPiscinas;
@@ -754,12 +754,12 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.numberOfGavetas = numberOfGavetas;
     }
 
-    public String getNumberOfBatea() {
-        return numberOfBatea;
+    public String getNumberOfBines() {
+        return numberOfBines;
     }
 
-    public void setNumberOfBatea(String numberOfBatea) {
-        this.numberOfBatea = numberOfBatea;
+    public void setNumberOfBines(String numberOfBines) {
+        this.numberOfBines = numberOfBines;
     }
 
     public String getNumberOfPiscinas() {

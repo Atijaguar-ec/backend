@@ -177,7 +177,7 @@ public class StockOrderMapper {
         apiStockOrder.setNetQuantity(entity.getNetQuantity());
         // 🦐 Shrimp-specific fields
         apiStockOrder.setNumberOfGavetas(entity.getNumberOfGavetas());
-        apiStockOrder.setNumberOfBatea(entity.getNumberOfBatea());
+        apiStockOrder.setNumberOfBines(entity.getNumberOfBines());
         apiStockOrder.setNumberOfPiscinas(entity.getNumberOfPiscinas());
         apiStockOrder.setGuiaRemisionNumber(entity.getGuiaRemisionNumber());
         // 🔬 Laboratory-specific fields

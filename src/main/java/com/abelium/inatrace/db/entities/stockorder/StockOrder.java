@@ -238,8 +238,8 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private Integer numberOfGavetas;
 
-	@Column(length = 50)
-	private String numberOfBatea;
+	@Column(name = "number_of_bines")
+	private String numberOfBines;
 
 	@Column(length = 50)
 	private String numberOfPiscinas;
@@ -821,12 +821,12 @@ public class StockOrder extends TimestampEntity {
 		this.numberOfGavetas = numberOfGavetas;
 	}
 
-	public String getNumberOfBatea() {
-		return numberOfBatea;
+	public String getNumberOfBines() {
+		return numberOfBines;
 	}
 
-	public void setNumberOfBatea(String numberOfBatea) {
-		this.numberOfBatea = numberOfBatea;
+	public void setNumberOfBines(String numberOfBines) {
+		this.numberOfBines = numberOfBines;
 	}
 
 	public String getNumberOfPiscinas() {

@@ -1019,7 +1019,7 @@ public class StockOrderService extends BaseService {
         entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
         // 🦐 Shrimp-specific fields
         entity.setNumberOfGavetas(apiStockOrder.getNumberOfGavetas());
-        entity.setNumberOfBatea(apiStockOrder.getNumberOfBatea());
+        entity.setNumberOfBines(apiStockOrder.getNumberOfBines());
         entity.setNumberOfPiscinas(apiStockOrder.getNumberOfPiscinas());
         entity.setGuiaRemisionNumber(apiStockOrder.getGuiaRemisionNumber());
         // 🔬 Laboratory-specific fields
