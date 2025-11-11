@@ -175,6 +175,11 @@ public class StockOrderMapper {
         apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
         apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
         apiStockOrder.setNetQuantity(entity.getNetQuantity());
+        // 🦐 Shrimp-specific fields
+        apiStockOrder.setNumberOfGavetas(entity.getNumberOfGavetas());
+        apiStockOrder.setNumberOfBatea(entity.getNumberOfBatea());
+        apiStockOrder.setNumberOfPiscinas(entity.getNumberOfPiscinas());
+        apiStockOrder.setGuiaRemisionNumber(entity.getGuiaRemisionNumber());
         apiStockOrder.setCost(entity.getCost());
         apiStockOrder.setPaid(entity.getPaid());
         apiStockOrder.setBalance(entity.getBalance());

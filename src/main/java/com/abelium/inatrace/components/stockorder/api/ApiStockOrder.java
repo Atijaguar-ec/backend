@@ -213,6 +213,19 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Net quantity after all deductions (tare, damaged weight, moisture)")
     private BigDecimal netQuantity;
 
+    // 🦐 Shrimp-specific fields (only for non-laboratory deliveries)
+    @Schema(description = "Number of gavetas (shrimp-specific)")
+    private Integer numberOfGavetas;
+
+    @Schema(description = "Batea number (shrimp-specific)")
+    private String numberOfBatea;
+
+    @Schema(description = "Number of pools/piscinas (shrimp-specific)")
+    private String numberOfPiscinas;
+
+    @Schema(description = "Remission guide number (shrimp-specific)")
+    private String guiaRemisionNumber;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -723,6 +736,38 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setNetQuantity(BigDecimal netQuantity) {
         this.netQuantity = netQuantity;
+    }
+
+    public Integer getNumberOfGavetas() {
+        return numberOfGavetas;
+    }
+
+    public void setNumberOfGavetas(Integer numberOfGavetas) {
+        this.numberOfGavetas = numberOfGavetas;
+    }
+
+    public String getNumberOfBatea() {
+        return numberOfBatea;
+    }
+
+    public void setNumberOfBatea(String numberOfBatea) {
+        this.numberOfBatea = numberOfBatea;
+    }
+
+    public String getNumberOfPiscinas() {
+        return numberOfPiscinas;
+    }
+
+    public void setNumberOfPiscinas(String numberOfPiscinas) {
+        this.numberOfPiscinas = numberOfPiscinas;
+    }
+
+    public String getGuiaRemisionNumber() {
+        return guiaRemisionNumber;
+    }
+
+    public void setGuiaRemisionNumber(String guiaRemisionNumber) {
+        this.guiaRemisionNumber = guiaRemisionNumber;
     }
 
     public String getQrCodeTag() {

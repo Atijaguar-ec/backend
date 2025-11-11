@@ -1017,6 +1017,11 @@ public class StockOrderService extends BaseService {
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
         entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
+        // 🦐 Shrimp-specific fields
+        entity.setNumberOfGavetas(apiStockOrder.getNumberOfGavetas());
+        entity.setNumberOfBatea(apiStockOrder.getNumberOfBatea());
+        entity.setNumberOfPiscinas(apiStockOrder.getNumberOfPiscinas());
+        entity.setGuiaRemisionNumber(apiStockOrder.getGuiaRemisionNumber());
         entity.setCurrency(apiStockOrder.getCurrency());
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders

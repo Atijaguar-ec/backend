@@ -233,6 +233,19 @@ public class StockOrder extends TimestampEntity {
 	@Column(precision = 38, scale = 2)
 	private BigDecimal netQuantity;
 
+	// 🦐 Shrimp-specific fields (only for non-laboratory deliveries)
+	@Column
+	private Integer numberOfGavetas;
+
+	@Column(length = 50)
+	private String numberOfBatea;
+
+	@Column(length = 50)
+	private String numberOfPiscinas;
+
+	@Column(length = 100)
+	private String guiaRemisionNumber;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	private ProcessingOrder processingOrder;
 	
@@ -790,5 +803,37 @@ public class StockOrder extends TimestampEntity {
 
 	public void setNetQuantity(BigDecimal netQuantity) {
 		this.netQuantity = netQuantity;
+	}
+
+	public Integer getNumberOfGavetas() {
+		return numberOfGavetas;
+	}
+
+	public void setNumberOfGavetas(Integer numberOfGavetas) {
+		this.numberOfGavetas = numberOfGavetas;
+	}
+
+	public String getNumberOfBatea() {
+		return numberOfBatea;
+	}
+
+	public void setNumberOfBatea(String numberOfBatea) {
+		this.numberOfBatea = numberOfBatea;
+	}
+
+	public String getNumberOfPiscinas() {
+		return numberOfPiscinas;
+	}
+
+	public void setNumberOfPiscinas(String numberOfPiscinas) {
+		this.numberOfPiscinas = numberOfPiscinas;
+	}
+
+	public String getGuiaRemisionNumber() {
+		return guiaRemisionNumber;
+	}
+
+	public void setGuiaRemisionNumber(String guiaRemisionNumber) {
+		this.guiaRemisionNumber = guiaRemisionNumber;
 	}
 }
