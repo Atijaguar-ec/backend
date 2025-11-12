@@ -67,6 +67,9 @@ public class Facility extends TimestampEntity {
 	@Column(name = "isLaboratory")
 	private Boolean isLaboratory;
 
+	@Column(name = "isClassificationProcess")
+	private Boolean isClassificationProcess;
+
 	@Column
 	private Integer level;
 
@@ -204,6 +207,14 @@ public class Facility extends TimestampEntity {
 
 	public void setIsLaboratory(Boolean isLaboratory) {
 		this.isLaboratory = isLaboratory;
+	}
+
+	public Boolean getIsClassificationProcess() {
+		return isClassificationProcess;
+	}
+
+	public void setIsClassificationProcess(Boolean isClassificationProcess) {
+		this.isClassificationProcess = isClassificationProcess;
 	}
 
 	public Integer getLevel() {

@@ -83,6 +83,7 @@ public final class FacilityMapper {
 		apiFacility.setDisplayWomenOnly(entity.getDisplayWomenOnly());
 		apiFacility.setDisplayPriceDeterminedLater(entity.getDisplayPriceDeterminedLater());
 		apiFacility.setIsLaboratory(entity.getIsLaboratory());
+		apiFacility.setIsClassificationProcess(entity.getIsClassificationProcess());
 
 		// Map facility location data
 		ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();

@@ -12,6 +12,7 @@ import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
 import com.abelium.inatrace.components.transaction.TransactionService;
 import com.abelium.inatrace.components.transaction.api.ApiTransaction;
 import com.abelium.inatrace.db.entities.processingaction.ProcessingAction;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatch;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.product.FinalProduct;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
@@ -22,12 +23,15 @@ import com.abelium.inatrace.security.utils.PermissionsUtil;
 import com.abelium.inatrace.tools.Queries;
 import com.abelium.inatrace.types.Language;
 import com.abelium.inatrace.types.ProcessingActionType;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.TypedQuery;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -44,13 +48,17 @@ public class ProcessingOrderService extends BaseService {
 
     private final CompanyQueries companyQueries;
 
+    private final ClassificationExcelService classificationExcelService;
+
     @Autowired
     public ProcessingOrderService(StockOrderService stockOrderService,
                                   TransactionService transactionService,
-                                  CompanyQueries companyQueries) {
+                                  CompanyQueries companyQueries,
+                                  ClassificationExcelService classificationExcelService) {
         this.stockOrderService = stockOrderService;
         this.transactionService = transactionService;
         this.companyQueries = companyQueries;
+        this.classificationExcelService = classificationExcelService;
     }
 
     public ApiProcessingOrder getProcessingOrder(Long id, CustomUserDetails authUser, Language language) throws ApiException {
@@ -499,6 +507,46 @@ public class ProcessingOrderService extends BaseService {
     private <E> E fetchEntityOrElse(Long id, Class<E> entityClass, E defaultValue) {
         E entity = Queries.get(em, entityClass, id);
         return entity == null ? defaultValue : entity;
+    }
+
+    /**
+     * Export classification batch as Excel "Liquidación de Pesca".
+     * 
+     * @param stockOrderId The target stock order ID (output from processing order)
+     * @param authUser Authenticated user
+     * @return Excel file as byte array
+     * @throws ApiException if batch not found or permissions denied
+     * @throws IOException if Excel generation fails
+     */
+    public byte[] exportClassificationLiquidacion(Long stockOrderId, CustomUserDetails authUser) 
+            throws ApiException, IOException {
+
+        // Fetch the stock order
+        StockOrder stockOrder = fetchEntity(stockOrderId, StockOrder.class);
+
+        // Check permissions
+        PermissionsUtil.checkUserIfConnectedWithProducts(
+                companyQueries.fetchCompanyProducts(stockOrder.getCompany().getId()),
+                authUser);
+
+        // Find the classification batch for this stock order
+        TypedQuery<ProcessingClassificationBatch> query = em.createQuery(
+                "SELECT b FROM ProcessingClassificationBatch b " +
+                "LEFT JOIN FETCH b.details " +
+                "WHERE b.targetStockOrder.id = :stockOrderId",
+                ProcessingClassificationBatch.class);
+        query.setParameter("stockOrderId", stockOrderId);
+
+        ProcessingClassificationBatch batch;
+        try {
+            batch = query.getSingleResult();
+        } catch (NoResultException e) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, 
+                    "No classification batch found for stock order ID: " + stockOrderId);
+        }
+
+        // Generate Excel
+        return classificationExcelService.generateLiquidacionExcel(batch);
     }
 
 }
