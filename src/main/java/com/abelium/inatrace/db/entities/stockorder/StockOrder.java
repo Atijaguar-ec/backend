@@ -4,6 +4,7 @@ import com.abelium.inatrace.api.types.Lengths;
 import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.codebook.MeasureUnitType;
 import com.abelium.inatrace.db.entities.codebook.SemiProduct;
+import com.abelium.inatrace.db.entities.common.Document;
 import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.entities.common.UserCustomer;
 import com.abelium.inatrace.db.entities.company.Company;
@@ -253,6 +254,10 @@ public class StockOrder extends TimestampEntity {
 
 	@Column
 	private LocalTime receptionTime;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "quality_document_id")
+	private Document qualityDocument;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	private ProcessingOrder processingOrder;
@@ -859,5 +864,13 @@ public class StockOrder extends TimestampEntity {
 
 	public void setReceptionTime(LocalTime receptionTime) {
 		this.receptionTime = receptionTime;
+	}
+
+	public Document getQualityDocument() {
+		return qualityDocument;
+	}
+
+	public void setQualityDocument(Document qualityDocument) {
+		this.qualityDocument = qualityDocument;
 	}
 }

@@ -4,6 +4,7 @@ import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.components.codebook.measure_unit_type.api.ApiMeasureUnitType;
 import com.abelium.inatrace.components.codebook.semiproduct.api.ApiSemiProduct;
 import com.abelium.inatrace.components.common.api.ApiActivityProof;
+import com.abelium.inatrace.components.common.api.ApiDocument;
 import com.abelium.inatrace.components.company.api.ApiCompany;
 import com.abelium.inatrace.components.company.api.ApiCompanyCustomer;
 import com.abelium.inatrace.components.company.api.ApiUserCustomer;
@@ -233,6 +234,9 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Reception time (laboratory-specific)")
     private LocalTime receptionTime;
+
+    @Schema(description = "Quality document (PDF) for laboratory analysis")
+    private ApiDocument qualityDocument;
 
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
@@ -792,6 +796,14 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setReceptionTime(LocalTime receptionTime) {
         this.receptionTime = receptionTime;
+    }
+
+    public ApiDocument getQualityDocument() {
+        return qualityDocument;
+    }
+
+    public void setQualityDocument(ApiDocument qualityDocument) {
+        this.qualityDocument = qualityDocument;
     }
 
     public String getQrCodeTag() {

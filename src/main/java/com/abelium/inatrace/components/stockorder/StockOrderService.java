@@ -1025,6 +1025,14 @@ public class StockOrderService extends BaseService {
         // 🔬 Laboratory-specific fields
         entity.setSampleNumber(apiStockOrder.getSampleNumber());
         entity.setReceptionTime(apiStockOrder.getReceptionTime());
+        
+        // Set quality document if provided
+        if (apiStockOrder.getQualityDocument() != null && apiStockOrder.getQualityDocument().getId() != null) {
+            entity.setQualityDocument(fetchEntity(apiStockOrder.getQualityDocument().getId(), Document.class));
+        } else {
+            entity.setQualityDocument(null);
+        }
+        
         entity.setCurrency(apiStockOrder.getCurrency());
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders
