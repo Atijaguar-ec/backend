@@ -67,8 +67,8 @@ public class ClassificationExcelService {
                     : "N/A";
             
             String weekNumber = batch.getTargetStockOrder() != null && batch.getTargetStockOrder().getWeekNumber() != null
-                    ? batch.getTargetStockOrder().getWeekNumber()
-                    : "N/A";
+                ? String.valueOf(batch.getTargetStockOrder().getWeekNumber())
+                : "N/A";
 
             rowNum = createInfoRow(sheet, rowNum, "Lote:", lotNumber, headerInfoStyle, dataStyle);
             rowNum = createInfoRow(sheet, rowNum, "N° de Semana:", weekNumber, headerInfoStyle, dataStyle);
