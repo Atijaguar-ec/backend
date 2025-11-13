@@ -58,6 +58,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Facility performs shrimp classification process (specific for shrimp value chain)")
 	private Boolean isClassificationProcess;
 
+	@Schema(description = "Facility performs shrimp freezing process (specific for shrimp value chain)")
+	private Boolean isFreezingProcess;
+
 	@Schema(description = "Custom facility level overriding facility type order")
 	private Integer level;
 
@@ -200,6 +203,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setIsClassificationProcess(Boolean isClassificationProcess) {
 		this.isClassificationProcess = isClassificationProcess;
+	}
+
+	public Boolean getIsFreezingProcess() {
+		return isFreezingProcess;
+	}
+
+	public void setIsFreezingProcess(Boolean isFreezingProcess) {
+		this.isFreezingProcess = isFreezingProcess;
 	}
 
 	public Integer getLevel() {
