@@ -134,6 +134,7 @@ public class FacilityService extends BaseService {
 		entity.setDisplayPriceDeterminedLater(BooleanUtils.isTrue(apiFacility.getDisplayPriceDeterminedLater()));
 		entity.setIsLaboratory(BooleanUtils.isTrue(apiFacility.getIsLaboratory()));
 		entity.setIsClassificationProcess(BooleanUtils.isTrue(apiFacility.getIsClassificationProcess()));
+		entity.setIsFreezingProcess(BooleanUtils.isTrue(apiFacility.getIsFreezingProcess()));
 
 		facilityLocation.setLatitude(apiFacility.getFacilityLocation().getLatitude());
 		facilityLocation.setLongitude(apiFacility.getFacilityLocation().getLongitude());
