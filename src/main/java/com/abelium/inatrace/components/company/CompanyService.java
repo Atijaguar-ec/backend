@@ -834,9 +834,12 @@ public class CompanyService extends BaseService {
 		userCustomer.setFarmerCompanyInternalId(apiUserCustomer.getFarmerCompanyInternalId());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
+		userCustomer.setPersonType(apiUserCustomer.getPersonType());
 		userCustomer.setEmail(apiUserCustomer.getEmail());
 		userCustomer.setName(apiUserCustomer.getName());
 		userCustomer.setSurname(apiUserCustomer.getSurname());
+		userCustomer.setCompanyName(apiUserCustomer.getCompanyName());
+		userCustomer.setLegalRepresentative(apiUserCustomer.getLegalRepresentative());
 		userCustomer.setPhone(apiUserCustomer.getPhone());
 		userCustomer.setHasSmartphone(apiUserCustomer.getHasSmartphone());
 
@@ -994,6 +997,9 @@ public class CompanyService extends BaseService {
 		userCustomer.setHasSmartphone(apiUserCustomer.getHasSmartphone());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
+		userCustomer.setPersonType(apiUserCustomer.getPersonType());
+		userCustomer.setCompanyName(apiUserCustomer.getCompanyName());
+		userCustomer.setLegalRepresentative(apiUserCustomer.getLegalRepresentative());
 
 		if (userCustomer.getBank() == null) {
 			userCustomer.setBank(new BankInformation());

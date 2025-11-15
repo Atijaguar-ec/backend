@@ -374,6 +374,9 @@ public class CompanyApiTools {
 		apiUserCustomer.setName(userCustomer.getName());
 		apiUserCustomer.setSurname(userCustomer.getSurname());
 		apiUserCustomer.setType(userCustomer.getType());
+		apiUserCustomer.setPersonType(userCustomer.getPersonType());
+		apiUserCustomer.setCompanyName(userCustomer.getCompanyName());
+		apiUserCustomer.setLegalRepresentative(userCustomer.getLegalRepresentative());
 		apiUserCustomer.setPhone(userCustomer.getPhone());
 		apiUserCustomer.setEmail(userCustomer.getEmail());
 		apiUserCustomer.setGender(userCustomer.getGender());
