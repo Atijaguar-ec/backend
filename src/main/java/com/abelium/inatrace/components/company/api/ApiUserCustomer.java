@@ -6,6 +6,7 @@ import com.abelium.inatrace.components.common.api.ApiCertification;
 import com.abelium.inatrace.components.product.api.ApiBankInformation;
 import com.abelium.inatrace.components.product.api.ApiFarmInformation;
 import com.abelium.inatrace.components.product.api.ApiProductType;
+import com.abelium.inatrace.types.PersonType;
 import com.abelium.inatrace.types.Gender;
 import com.abelium.inatrace.types.UserCustomerType;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,6 +27,9 @@ public class ApiUserCustomer extends ApiBaseEntity {
 	
 	@Schema(description = "Type")
 	public UserCustomerType type;
+
+	@Schema(description = "Person type: NATURAL (individual) or LEGAL (company)")
+	public PersonType personType;
 	
 	@Schema(description = "Name")
 	@Size(max = Lengths.NAME)
@@ -34,6 +38,14 @@ public class ApiUserCustomer extends ApiBaseEntity {
 	@Schema(description = "Surname")
 	@Size(max = Lengths.SURNAME)
 	public String surname;
+
+	@Schema(description = "Legal entity company name (when personType = LEGAL)")
+	@Size(max = Lengths.NAME)
+	public String companyName;
+
+	@Schema(description = "Legal representative full name (when personType = LEGAL)")
+	@Size(max = Lengths.NAME)
+	public String legalRepresentative;
 	
 	@Schema(description = "Phone")
 	@Size(max = Lengths.PHONE_NUMBER)
@@ -100,6 +112,14 @@ public class ApiUserCustomer extends ApiBaseEntity {
 		this.type = type;
 	}
 
+	public PersonType getPersonType() {
+		return personType;
+	}
+
+	public void setPersonType(PersonType personType) {
+		this.personType = personType;
+	}
+
 	public String getName() {
 		return name;
 	}
@@ -114,6 +134,22 @@ public class ApiUserCustomer extends ApiBaseEntity {
 
 	public void setSurname(String surname) {
 		this.surname = surname;
+	}
+
+	public String getCompanyName() {
+		return companyName;
+	}
+
+	public void setCompanyName(String companyName) {
+		this.companyName = companyName;
+	}
+
+	public String getLegalRepresentative() {
+		return legalRepresentative;
+	}
+
+	public void setLegalRepresentative(String legalRepresentative) {
+		this.legalRepresentative = legalRepresentative;
 	}
 
 	public String getPhone() {
