@@ -32,11 +32,20 @@ public class LaboratoryAnalysis extends TimestampEntity {
     private User updatedBy;
 
     /**
-     * Stock order associated with this analysis
+     * Stock order on which the laboratory analysis was performed (source).
      */
     @ManyToOne
     @JoinColumn(name = "stockOrder_id", nullable = false)
     private StockOrder stockOrder;
+
+    /**
+     * Destination stock order where this analysis is used/consumed (optional).
+     * When set, the analysis should no longer appear as available for linking
+     * to new deliveries.
+     */
+    @ManyToOne
+    @JoinColumn(name = "destinationStockOrder_id")
+    private StockOrder destinationStockOrder;
 
     /**
      * Type of analysis
@@ -105,6 +114,14 @@ public class LaboratoryAnalysis extends TimestampEntity {
 
     public void setStockOrder(StockOrder stockOrder) {
         this.stockOrder = stockOrder;
+    }
+
+    public StockOrder getDestinationStockOrder() {
+        return destinationStockOrder;
+    }
+
+    public void setDestinationStockOrder(StockOrder destinationStockOrder) {
+        this.destinationStockOrder = destinationStockOrder;
     }
 
     public AnalysisType getAnalysisType() {
