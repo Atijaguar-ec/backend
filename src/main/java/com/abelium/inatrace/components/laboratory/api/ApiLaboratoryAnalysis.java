@@ -56,6 +56,12 @@ public class ApiLaboratoryAnalysis {
     @Schema(description = "Quality observations and notes")
     private String qualityNotes;
 
+    @Schema(description = "Whether metabisulfite level is acceptable (yes/no)")
+    private Boolean metabisulfiteLevelAcceptable;
+
+    @Schema(description = "Whether this analysis is approved for purchase (yes/no)")
+    private Boolean approvedForPurchase;
+
     // Getters and Setters
 
     public Long getId() {
@@ -176,5 +182,21 @@ public class ApiLaboratoryAnalysis {
 
     public void setQualityNotes(String qualityNotes) {
         this.qualityNotes = qualityNotes;
+    }
+
+    public Boolean getMetabisulfiteLevelAcceptable() {
+        return metabisulfiteLevelAcceptable;
+    }
+
+    public void setMetabisulfiteLevelAcceptable(Boolean metabisulfiteLevelAcceptable) {
+        this.metabisulfiteLevelAcceptable = metabisulfiteLevelAcceptable;
+    }
+
+    public Boolean getApprovedForPurchase() {
+        return approvedForPurchase;
+    }
+
+    public void setApprovedForPurchase(Boolean approvedForPurchase) {
+        this.approvedForPurchase = approvedForPurchase;
     }
 }
