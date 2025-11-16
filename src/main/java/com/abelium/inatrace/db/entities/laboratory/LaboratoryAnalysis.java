@@ -75,6 +75,12 @@ public class LaboratoryAnalysis extends TimestampEntity {
     @Column(columnDefinition = "LONGTEXT")
     private String qualityNotes;
 
+    @Column
+    private Boolean metabisulfiteLevelAcceptable;
+
+    @Column
+    private Boolean approvedForPurchase;
+
     // Getters and Setters
 
     public User getCreatedBy() {
@@ -171,6 +177,22 @@ public class LaboratoryAnalysis extends TimestampEntity {
 
     public void setQualityNotes(String qualityNotes) {
         this.qualityNotes = qualityNotes;
+    }
+
+    public Boolean getMetabisulfiteLevelAcceptable() {
+        return metabisulfiteLevelAcceptable;
+    }
+
+    public void setMetabisulfiteLevelAcceptable(Boolean metabisulfiteLevelAcceptable) {
+        this.metabisulfiteLevelAcceptable = metabisulfiteLevelAcceptable;
+    }
+
+    public Boolean getApprovedForPurchase() {
+        return approvedForPurchase;
+    }
+
+    public void setApprovedForPurchase(Boolean approvedForPurchase) {
+        this.approvedForPurchase = approvedForPurchase;
     }
 
     /**
