@@ -347,8 +347,17 @@ public class ProcessingOrderService extends BaseService {
                 // Create or update LaboratoryAnalysis if laboratory data is present
                 createOrUpdateLaboratoryAnalysis(apiTargetStockOrder, targetStockOrder, user);
 
-                // Create or update ClassificationBatch if classification data is present
-                createOrUpdateClassificationBatch(apiTargetStockOrder, targetStockOrder);
+                // For TRANSFER, classification data should be associated with the SOURCE stock order
+                // (which is in the classification facility), not the target stock order
+                StockOrder sourceStockOrder = insertedTransaction.getSourceStockOrder();
+                if (sourceStockOrder != null && sourceStockOrder.getFacility() != null &&
+                    Boolean.TRUE.equals(sourceStockOrder.getFacility().getIsClassificationProcess())) {
+                    // Associate classification data with the source stock order
+                    createOrUpdateClassificationBatch(apiTargetStockOrder, sourceStockOrder);
+                } else {
+                    // Fallback: try to associate with target if it's a classification facility
+                    createOrUpdateClassificationBatch(apiTargetStockOrder, targetStockOrder);
+                }
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
