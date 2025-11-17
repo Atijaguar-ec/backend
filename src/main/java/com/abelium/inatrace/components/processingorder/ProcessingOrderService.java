@@ -12,7 +12,9 @@ import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
 import com.abelium.inatrace.components.transaction.TransactionService;
 import com.abelium.inatrace.components.transaction.api.ApiTransaction;
 import com.abelium.inatrace.db.entities.processingaction.ProcessingAction;
+import com.abelium.inatrace.components.stockorder.api.ApiClassificationDetail;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatch;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatchDetail;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.product.FinalProduct;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
@@ -345,6 +347,9 @@ public class ProcessingOrderService extends BaseService {
                 // Create or update LaboratoryAnalysis if laboratory data is present
                 createOrUpdateLaboratoryAnalysis(apiTargetStockOrder, targetStockOrder, user);
 
+                // Create or update ClassificationBatch if classification data is present
+                createOrUpdateClassificationBatch(apiTargetStockOrder, targetStockOrder);
+
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
         }
@@ -366,6 +371,9 @@ public class ProcessingOrderService extends BaseService {
 
                 // Create or update LaboratoryAnalysis if laboratory data is present
                 createOrUpdateLaboratoryAnalysis(apiTargetStockOrder, targetStockOrder, user);
+
+                // Create or update ClassificationBatch if classification data is present
+                createOrUpdateClassificationBatch(apiTargetStockOrder, targetStockOrder);
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
@@ -652,6 +660,92 @@ public class ProcessingOrderService extends BaseService {
         // Persist the analysis
         if (existingAnalyses.isEmpty()) {
             em.persist(analysis);
+        }
+        // If updating, JPA dirty checking will handle the update automatically
+    }
+
+    /**
+     * Create or update ProcessingClassificationBatch for a target StockOrder if classification data is present.
+     * This method extracts classification fields from ApiStockOrder and persists them in ProcessingClassificationBatch 
+     * and ProcessingClassificationBatchDetail tables.
+     * 
+     * @param apiTargetStockOrder The API stock order containing classification data
+     * @param targetStockOrder The persisted StockOrder entity
+     */
+    private void createOrUpdateClassificationBatch(ApiStockOrder apiTargetStockOrder, 
+                                                    StockOrder targetStockOrder) {
+        
+        // Check if facility is classification facility
+        if (targetStockOrder.getFacility() == null || 
+            !Boolean.TRUE.equals(targetStockOrder.getFacility().getIsClassificationProcess())) {
+            // Not a classification facility, skip
+            return;
+        }
+
+        // Check if any classification data is present in the API request
+        boolean hasClassificationData = apiTargetStockOrder.getClassificationStartTime() != null
+                || apiTargetStockOrder.getClassificationEndTime() != null
+                || apiTargetStockOrder.getProductionOrder() != null
+                || apiTargetStockOrder.getFreezingType() != null
+                || apiTargetStockOrder.getMachine() != null
+                || apiTargetStockOrder.getBrandHeader() != null
+                || (apiTargetStockOrder.getClassificationDetails() != null && 
+                    !apiTargetStockOrder.getClassificationDetails().isEmpty());
+
+        if (!hasClassificationData) {
+            // No classification data to persist
+            return;
+        }
+
+        // Find existing batch for this stock order or create a new one
+        TypedQuery<ProcessingClassificationBatch> query = em.createQuery(
+                "SELECT b FROM ProcessingClassificationBatch b " +
+                "WHERE b.targetStockOrder.id = :stockOrderId",
+                ProcessingClassificationBatch.class);
+        query.setParameter("stockOrderId", targetStockOrder.getId());
+
+        ProcessingClassificationBatch batch;
+        List<ProcessingClassificationBatch> existingBatches = query.getResultList();
+        
+        if (!existingBatches.isEmpty()) {
+            // Update existing batch
+            batch = existingBatches.get(0);
+            // Clear existing details to replace with new ones
+            batch.getDetails().clear();
+        } else {
+            // Create new batch
+            batch = new ProcessingClassificationBatch();
+            batch.setTargetStockOrder(targetStockOrder);
+        }
+
+        // Map classification header fields from API to entity
+        batch.setStartTime(apiTargetStockOrder.getClassificationStartTime());
+        batch.setEndTime(apiTargetStockOrder.getClassificationEndTime());
+        batch.setProductionOrder(apiTargetStockOrder.getProductionOrder());
+        batch.setFreezingType(apiTargetStockOrder.getFreezingType());
+        batch.setMachine(apiTargetStockOrder.getMachine());
+        batch.setBrandHeader(apiTargetStockOrder.getBrandHeader());
+
+        // Map classification details
+        if (apiTargetStockOrder.getClassificationDetails() != null) {
+            for (ApiClassificationDetail apiDetail : apiTargetStockOrder.getClassificationDetails()) {
+                ProcessingClassificationBatchDetail detail = new ProcessingClassificationBatchDetail();
+                detail.setBatch(batch);
+                detail.setBrandDetail(apiDetail.getBrandDetail());
+                detail.setSize(apiDetail.getSize());
+                detail.setBoxes(apiDetail.getBoxes());
+                detail.setClassificationU(apiDetail.getClassificationU());
+                detail.setClassificationNumber(apiDetail.getClassificationNumber());
+                detail.setWeightPerBox(apiDetail.getWeightPerBox());
+                detail.setWeightFormat(apiDetail.getWeightFormat());
+                
+                batch.getDetails().add(detail);
+            }
+        }
+
+        // Persist the batch (cascade will handle details)
+        if (existingBatches.isEmpty()) {
+            em.persist(batch);
         }
         // If updating, JPA dirty checking will handle the update automatically
     }

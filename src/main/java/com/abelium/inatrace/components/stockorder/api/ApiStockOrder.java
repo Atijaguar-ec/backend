@@ -267,6 +267,28 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(hidden = true, description = "Whether approved for purchase (stored in LaboratoryAnalysis)")
     private Boolean approvedForPurchase;
 
+    // 🦐 Classification-specific fields (stored in ProcessingClassificationBatch)
+    @Schema(hidden = true, description = "Classification start time (stored in ProcessingClassificationBatch)")
+    private String classificationStartTime;
+
+    @Schema(hidden = true, description = "Classification end time (stored in ProcessingClassificationBatch)")
+    private String classificationEndTime;
+
+    @Schema(hidden = true, description = "Production order number (stored in ProcessingClassificationBatch)")
+    private String productionOrder;
+
+    @Schema(hidden = true, description = "Freezing type (stored in ProcessingClassificationBatch)")
+    private String freezingType;
+
+    @Schema(hidden = true, description = "Machine used for classification (stored in ProcessingClassificationBatch)")
+    private String machine;
+
+    @Schema(hidden = true, description = "Brand header (stored in ProcessingClassificationBatch)")
+    private String brandHeader;
+
+    @Schema(hidden = true, description = "Classification details by size (stored in ProcessingClassificationBatchDetail)")
+    private List<ApiClassificationDetail> classificationDetails;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -905,6 +927,65 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setApprovedForPurchase(Boolean approvedForPurchase) {
         this.approvedForPurchase = approvedForPurchase;
+    }
+
+    public String getClassificationStartTime() {
+        return classificationStartTime;
+    }
+
+    public void setClassificationStartTime(String classificationStartTime) {
+        this.classificationStartTime = classificationStartTime;
+    }
+
+    public String getClassificationEndTime() {
+        return classificationEndTime;
+    }
+
+    public void setClassificationEndTime(String classificationEndTime) {
+        this.classificationEndTime = classificationEndTime;
+    }
+
+    public String getProductionOrder() {
+        return productionOrder;
+    }
+
+    public void setProductionOrder(String productionOrder) {
+        this.productionOrder = productionOrder;
+    }
+
+    public String getFreezingType() {
+        return freezingType;
+    }
+
+    public void setFreezingType(String freezingType) {
+        this.freezingType = freezingType;
+    }
+
+    public String getMachine() {
+        return machine;
+    }
+
+    public void setMachine(String machine) {
+        this.machine = machine;
+    }
+
+    public String getBrandHeader() {
+        return brandHeader;
+    }
+
+    public void setBrandHeader(String brandHeader) {
+        this.brandHeader = brandHeader;
+    }
+
+    public List<ApiClassificationDetail> getClassificationDetails() {
+        if (classificationDetails == null) {
+            classificationDetails = new ArrayList<>();
+        }
+        return classificationDetails;
+    }
+
+    public void setClassificationDetails(List<ApiClassificationDetail> classificationDetails) {
+        this.classificationDetails = classificationDetails;
     }
 
     public String getQrCodeTag() {
