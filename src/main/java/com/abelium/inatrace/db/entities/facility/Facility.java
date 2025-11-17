@@ -73,6 +73,18 @@ public class Facility extends TimestampEntity {
 	@Column(name = "isFreezingProcess")
 	private Boolean isFreezingProcess;
 
+	@Column(name = "isCuttingProcess")
+	private Boolean isCuttingProcess;
+
+	@Column(name = "isTreatmentProcess")
+	private Boolean isTreatmentProcess;
+
+	@Column(name = "isTunnelFreezing")
+	private Boolean isTunnelFreezing;
+
+	@Column(name = "isWashingArea")
+	private Boolean isWashingArea;
+
 	@Column
 	private Integer level;
 
@@ -226,6 +238,38 @@ public class Facility extends TimestampEntity {
 
 	public void setIsFreezingProcess(Boolean isFreezingProcess) {
 		this.isFreezingProcess = isFreezingProcess;
+	}
+
+	public Boolean getIsCuttingProcess() {
+		return isCuttingProcess;
+	}
+
+	public void setIsCuttingProcess(Boolean isCuttingProcess) {
+		this.isCuttingProcess = isCuttingProcess;
+	}
+
+	public Boolean getIsTreatmentProcess() {
+		return isTreatmentProcess;
+	}
+
+	public void setIsTreatmentProcess(Boolean isTreatmentProcess) {
+		this.isTreatmentProcess = isTreatmentProcess;
+	}
+
+	public Boolean getIsTunnelFreezing() {
+		return isTunnelFreezing;
+	}
+
+	public void setIsTunnelFreezing(Boolean isTunnelFreezing) {
+		this.isTunnelFreezing = isTunnelFreezing;
+	}
+
+	public Boolean getIsWashingArea() {
+		return isWashingArea;
+	}
+
+	public void setIsWashingArea(Boolean isWashingArea) {
+		this.isWashingArea = isWashingArea;
 	}
 
 	public Integer getLevel() {

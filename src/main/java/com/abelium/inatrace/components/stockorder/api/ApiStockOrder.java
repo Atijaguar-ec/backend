@@ -228,6 +228,64 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Remission guide number (shrimp-specific)")
     private String guiaRemisionNumber;
 
+    // 🦐 Shrimp processing-specific fields: cutting
+    @Schema(description = "Cutting type (shrimp processing)")
+    private String cuttingType;
+
+    @Schema(description = "Cutting entry date (shrimp processing)")
+    private LocalDate cuttingEntryDate;
+
+    @Schema(description = "Cutting exit date (shrimp processing)")
+    private LocalDate cuttingExitDate;
+
+    @Schema(description = "Temperature control during cutting (shrimp processing)")
+    private String cuttingTemperatureControl;
+
+    // 🦐 Shrimp processing-specific fields: treatment
+    @Schema(description = "Treatment type (shrimp processing)")
+    private String treatmentType;
+
+    @Schema(description = "Treatment entry date (shrimp processing)")
+    private LocalDate treatmentEntryDate;
+
+    @Schema(description = "Treatment exit date (shrimp processing)")
+    private LocalDate treatmentExitDate;
+
+    @Schema(description = "Temperature control during treatment (shrimp processing)")
+    private String treatmentTemperatureControl;
+
+    @Schema(description = "Chemical used in treatment (shrimp processing)")
+    private String treatmentChemicalUsed;
+
+    // 🦐 Shrimp processing-specific fields: tunnel freezing
+    @Schema(description = "Tunnel production date (shrimp processing)")
+    private LocalDate tunnelProductionDate;
+
+    @Schema(description = "Tunnel expiration date (shrimp processing)")
+    private LocalDate tunnelExpirationDate;
+
+    @Schema(description = "Tunnel net weight (shrimp processing)")
+    private BigDecimal tunnelNetWeight;
+
+    @Schema(description = "Tunnel supplier (shrimp processing)")
+    private String tunnelSupplier;
+
+    @Schema(description = "Tunnel freezing type (shrimp processing)")
+    private String tunnelFreezingType;
+
+    @Schema(description = "Tunnel entry date (shrimp processing)")
+    private LocalDate tunnelEntryDate;
+
+    @Schema(description = "Tunnel exit date (shrimp processing)")
+    private LocalDate tunnelExitDate;
+
+    // 🦐 Shrimp processing-specific fields: washing area
+    @Schema(description = "Washing water temperature (shrimp processing)")
+    private String washingWaterTemperature;
+
+    @Schema(description = "Shrimp temperature control in washing area (shrimp processing)")
+    private String washingShrimpTemperatureControl;
+
     // 🔬 Laboratory-specific fields
     @Schema(description = "Sample number (laboratory-specific)")
     private String sampleNumber;
@@ -831,6 +889,150 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setGuiaRemisionNumber(String guiaRemisionNumber) {
         this.guiaRemisionNumber = guiaRemisionNumber;
+    }
+
+    public String getCuttingType() {
+        return cuttingType;
+    }
+
+    public void setCuttingType(String cuttingType) {
+        this.cuttingType = cuttingType;
+    }
+
+    public LocalDate getCuttingEntryDate() {
+        return cuttingEntryDate;
+    }
+
+    public void setCuttingEntryDate(LocalDate cuttingEntryDate) {
+        this.cuttingEntryDate = cuttingEntryDate;
+    }
+
+    public LocalDate getCuttingExitDate() {
+        return cuttingExitDate;
+    }
+
+    public void setCuttingExitDate(LocalDate cuttingExitDate) {
+        this.cuttingExitDate = cuttingExitDate;
+    }
+
+    public String getCuttingTemperatureControl() {
+        return cuttingTemperatureControl;
+    }
+
+    public void setCuttingTemperatureControl(String cuttingTemperatureControl) {
+        this.cuttingTemperatureControl = cuttingTemperatureControl;
+    }
+
+    public String getTreatmentType() {
+        return treatmentType;
+    }
+
+    public void setTreatmentType(String treatmentType) {
+        this.treatmentType = treatmentType;
+    }
+
+    public LocalDate getTreatmentEntryDate() {
+        return treatmentEntryDate;
+    }
+
+    public void setTreatmentEntryDate(LocalDate treatmentEntryDate) {
+        this.treatmentEntryDate = treatmentEntryDate;
+    }
+
+    public LocalDate getTreatmentExitDate() {
+        return treatmentExitDate;
+    }
+
+    public void setTreatmentExitDate(LocalDate treatmentExitDate) {
+        this.treatmentExitDate = treatmentExitDate;
+    }
+
+    public String getTreatmentTemperatureControl() {
+        return treatmentTemperatureControl;
+    }
+
+    public void setTreatmentTemperatureControl(String treatmentTemperatureControl) {
+        this.treatmentTemperatureControl = treatmentTemperatureControl;
+    }
+
+    public String getTreatmentChemicalUsed() {
+        return treatmentChemicalUsed;
+    }
+
+    public void setTreatmentChemicalUsed(String treatmentChemicalUsed) {
+        this.treatmentChemicalUsed = treatmentChemicalUsed;
+    }
+
+    public LocalDate getTunnelProductionDate() {
+        return tunnelProductionDate;
+    }
+
+    public void setTunnelProductionDate(LocalDate tunnelProductionDate) {
+        this.tunnelProductionDate = tunnelProductionDate;
+    }
+
+    public LocalDate getTunnelExpirationDate() {
+        return tunnelExpirationDate;
+    }
+
+    public void setTunnelExpirationDate(LocalDate tunnelExpirationDate) {
+        this.tunnelExpirationDate = tunnelExpirationDate;
+    }
+
+    public BigDecimal getTunnelNetWeight() {
+        return tunnelNetWeight;
+    }
+
+    public void setTunnelNetWeight(BigDecimal tunnelNetWeight) {
+        this.tunnelNetWeight = tunnelNetWeight;
+    }
+
+    public String getTunnelSupplier() {
+        return tunnelSupplier;
+    }
+
+    public void setTunnelSupplier(String tunnelSupplier) {
+        this.tunnelSupplier = tunnelSupplier;
+    }
+
+    public String getTunnelFreezingType() {
+        return tunnelFreezingType;
+    }
+
+    public void setTunnelFreezingType(String tunnelFreezingType) {
+        this.tunnelFreezingType = tunnelFreezingType;
+    }
+
+    public LocalDate getTunnelEntryDate() {
+        return tunnelEntryDate;
+    }
+
+    public void setTunnelEntryDate(LocalDate tunnelEntryDate) {
+        this.tunnelEntryDate = tunnelEntryDate;
+    }
+
+    public LocalDate getTunnelExitDate() {
+        return tunnelExitDate;
+    }
+
+    public void setTunnelExitDate(LocalDate tunnelExitDate) {
+        this.tunnelExitDate = tunnelExitDate;
+    }
+
+    public String getWashingWaterTemperature() {
+        return washingWaterTemperature;
+    }
+
+    public void setWashingWaterTemperature(String washingWaterTemperature) {
+        this.washingWaterTemperature = washingWaterTemperature;
+    }
+
+    public String getWashingShrimpTemperatureControl() {
+        return washingShrimpTemperatureControl;
+    }
+
+    public void setWashingShrimpTemperatureControl(String washingShrimpTemperatureControl) {
+        this.washingShrimpTemperatureControl = washingShrimpTemperatureControl;
     }
 
     public String getSampleNumber() {

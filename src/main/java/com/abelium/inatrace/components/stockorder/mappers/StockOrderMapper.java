@@ -205,6 +205,25 @@ public class StockOrderMapper {
         apiStockOrder.setNumberOfBines(entity.getNumberOfBines());
         apiStockOrder.setNumberOfPiscinas(entity.getNumberOfPiscinas());
         apiStockOrder.setGuiaRemisionNumber(entity.getGuiaRemisionNumber());
+        // 🦐 Shrimp processing-specific fields
+        apiStockOrder.setCuttingType(entity.getCuttingType());
+        apiStockOrder.setCuttingEntryDate(entity.getCuttingEntryDate());
+        apiStockOrder.setCuttingExitDate(entity.getCuttingExitDate());
+        apiStockOrder.setCuttingTemperatureControl(entity.getCuttingTemperatureControl());
+        apiStockOrder.setTreatmentType(entity.getTreatmentType());
+        apiStockOrder.setTreatmentEntryDate(entity.getTreatmentEntryDate());
+        apiStockOrder.setTreatmentExitDate(entity.getTreatmentExitDate());
+        apiStockOrder.setTreatmentTemperatureControl(entity.getTreatmentTemperatureControl());
+        apiStockOrder.setTreatmentChemicalUsed(entity.getTreatmentChemicalUsed());
+        apiStockOrder.setTunnelProductionDate(entity.getTunnelProductionDate());
+        apiStockOrder.setTunnelExpirationDate(entity.getTunnelExpirationDate());
+        apiStockOrder.setTunnelNetWeight(entity.getTunnelNetWeight());
+        apiStockOrder.setTunnelSupplier(entity.getTunnelSupplier());
+        apiStockOrder.setTunnelFreezingType(entity.getTunnelFreezingType());
+        apiStockOrder.setTunnelEntryDate(entity.getTunnelEntryDate());
+        apiStockOrder.setTunnelExitDate(entity.getTunnelExitDate());
+        apiStockOrder.setWashingWaterTemperature(entity.getWashingWaterTemperature());
+        apiStockOrder.setWashingShrimpTemperatureControl(entity.getWashingShrimpTemperatureControl());
         // 🔬 Laboratory-specific fields
         apiStockOrder.setSampleNumber(entity.getSampleNumber());
         apiStockOrder.setReceptionTime(entity.getReceptionTime());

@@ -235,7 +235,7 @@ public class StockOrder extends TimestampEntity {
 	@Column(precision = 38, scale = 2)
 	private BigDecimal netQuantity;
 
-	// 🦐 Shrimp-specific fields (only for non-laboratory deliveries)
+	// Shrimp-specific fields (only for non-laboratory deliveries)
 	@Column
 	private Integer numberOfGavetas;
 
@@ -248,7 +248,65 @@ public class StockOrder extends TimestampEntity {
 	@Column(length = 100)
 	private String guiaRemisionNumber;
 
-	// 🔬 Laboratory-specific fields
+	// Shrimp processing-specific fields: cutting
+	@Column(length = 100)
+	private String cuttingType;
+
+	@Column
+	private LocalDate cuttingEntryDate;
+
+	@Column
+	private LocalDate cuttingExitDate;
+
+	@Column(length = 255)
+	private String cuttingTemperatureControl;
+
+	// Shrimp processing-specific fields: treatment
+	@Column(length = 100)
+	private String treatmentType;
+
+	@Column
+	private LocalDate treatmentEntryDate;
+
+	@Column
+	private LocalDate treatmentExitDate;
+
+	@Column(length = 255)
+	private String treatmentTemperatureControl;
+
+	@Column(length = 255)
+	private String treatmentChemicalUsed;
+
+	// Shrimp processing-specific fields: tunnel freezing
+	@Column
+	private LocalDate tunnelProductionDate;
+
+	@Column
+	private LocalDate tunnelExpirationDate;
+
+	@Column(precision = 38, scale = 2)
+	private BigDecimal tunnelNetWeight;
+
+	@Column(length = 255)
+	private String tunnelSupplier;
+
+	@Column(length = 100)
+	private String tunnelFreezingType;
+
+	@Column
+	private LocalDate tunnelEntryDate;
+
+	@Column
+	private LocalDate tunnelExitDate;
+
+	// Shrimp processing-specific fields: washing area
+	@Column(length = 100)
+	private String washingWaterTemperature;
+
+	@Column(length = 255)
+	private String washingShrimpTemperatureControl;
+
+	// Laboratory-specific fields
 	@Column(length = 100)
 	private String sampleNumber;
 
@@ -259,7 +317,7 @@ public class StockOrder extends TimestampEntity {
 	@JoinColumn(name = "quality_document_id")
 	private Document qualityDocument;
 
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne
 	private ProcessingOrder processingOrder;
 	
 	@Enumerated(EnumType.STRING)
@@ -848,6 +906,150 @@ public class StockOrder extends TimestampEntity {
 
 	public void setGuiaRemisionNumber(String guiaRemisionNumber) {
 		this.guiaRemisionNumber = guiaRemisionNumber;
+	}
+
+	public String getCuttingType() {
+		return cuttingType;
+	}
+
+	public void setCuttingType(String cuttingType) {
+		this.cuttingType = cuttingType;
+	}
+
+	public LocalDate getCuttingEntryDate() {
+		return cuttingEntryDate;
+	}
+
+	public void setCuttingEntryDate(LocalDate cuttingEntryDate) {
+		this.cuttingEntryDate = cuttingEntryDate;
+	}
+
+	public LocalDate getCuttingExitDate() {
+		return cuttingExitDate;
+	}
+
+	public void setCuttingExitDate(LocalDate cuttingExitDate) {
+		this.cuttingExitDate = cuttingExitDate;
+	}
+
+	public String getCuttingTemperatureControl() {
+		return cuttingTemperatureControl;
+	}
+
+	public void setCuttingTemperatureControl(String cuttingTemperatureControl) {
+		this.cuttingTemperatureControl = cuttingTemperatureControl;
+	}
+
+	public String getTreatmentType() {
+		return treatmentType;
+	}
+
+	public void setTreatmentType(String treatmentType) {
+		this.treatmentType = treatmentType;
+	}
+
+	public LocalDate getTreatmentEntryDate() {
+		return treatmentEntryDate;
+	}
+
+	public void setTreatmentEntryDate(LocalDate treatmentEntryDate) {
+		this.treatmentEntryDate = treatmentEntryDate;
+	}
+
+	public LocalDate getTreatmentExitDate() {
+		return treatmentExitDate;
+	}
+
+	public void setTreatmentExitDate(LocalDate treatmentExitDate) {
+		this.treatmentExitDate = treatmentExitDate;
+	}
+
+	public String getTreatmentTemperatureControl() {
+		return treatmentTemperatureControl;
+	}
+
+	public void setTreatmentTemperatureControl(String treatmentTemperatureControl) {
+		this.treatmentTemperatureControl = treatmentTemperatureControl;
+	}
+
+	public String getTreatmentChemicalUsed() {
+		return treatmentChemicalUsed;
+	}
+
+	public void setTreatmentChemicalUsed(String treatmentChemicalUsed) {
+		this.treatmentChemicalUsed = treatmentChemicalUsed;
+	}
+
+	public LocalDate getTunnelProductionDate() {
+		return tunnelProductionDate;
+	}
+
+	public void setTunnelProductionDate(LocalDate tunnelProductionDate) {
+		this.tunnelProductionDate = tunnelProductionDate;
+	}
+
+	public LocalDate getTunnelExpirationDate() {
+		return tunnelExpirationDate;
+	}
+
+	public void setTunnelExpirationDate(LocalDate tunnelExpirationDate) {
+		this.tunnelExpirationDate = tunnelExpirationDate;
+	}
+
+	public BigDecimal getTunnelNetWeight() {
+		return tunnelNetWeight;
+	}
+
+	public void setTunnelNetWeight(BigDecimal tunnelNetWeight) {
+		this.tunnelNetWeight = tunnelNetWeight;
+	}
+
+	public String getTunnelSupplier() {
+		return tunnelSupplier;
+	}
+
+	public void setTunnelSupplier(String tunnelSupplier) {
+		this.tunnelSupplier = tunnelSupplier;
+	}
+
+	public String getTunnelFreezingType() {
+		return tunnelFreezingType;
+	}
+
+	public void setTunnelFreezingType(String tunnelFreezingType) {
+		this.tunnelFreezingType = tunnelFreezingType;
+	}
+
+	public LocalDate getTunnelEntryDate() {
+		return tunnelEntryDate;
+	}
+
+	public void setTunnelEntryDate(LocalDate tunnelEntryDate) {
+		this.tunnelEntryDate = tunnelEntryDate;
+	}
+
+	public LocalDate getTunnelExitDate() {
+		return tunnelExitDate;
+	}
+
+	public void setTunnelExitDate(LocalDate tunnelExitDate) {
+		this.tunnelExitDate = tunnelExitDate;
+	}
+
+	public String getWashingWaterTemperature() {
+		return washingWaterTemperature;
+	}
+
+	public void setWashingWaterTemperature(String washingWaterTemperature) {
+		this.washingWaterTemperature = washingWaterTemperature;
+	}
+
+	public String getWashingShrimpTemperatureControl() {
+		return washingShrimpTemperatureControl;
+	}
+
+	public void setWashingShrimpTemperatureControl(String washingShrimpTemperatureControl) {
+		this.washingShrimpTemperatureControl = washingShrimpTemperatureControl;
 	}
 
 	public String getSampleNumber() {

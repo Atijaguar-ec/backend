@@ -85,6 +85,10 @@ public final class FacilityMapper {
 		apiFacility.setIsLaboratory(entity.getIsLaboratory());
 		apiFacility.setIsClassificationProcess(entity.getIsClassificationProcess());
 		apiFacility.setIsFreezingProcess(entity.getIsFreezingProcess());
+		apiFacility.setIsCuttingProcess(entity.getIsCuttingProcess());
+		apiFacility.setIsTreatmentProcess(entity.getIsTreatmentProcess());
+		apiFacility.setIsTunnelFreezing(entity.getIsTunnelFreezing());
+		apiFacility.setIsWashingArea(entity.getIsWashingArea());
 
 		// Map facility location data
 		ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();

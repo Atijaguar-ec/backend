@@ -1022,6 +1022,25 @@ public class StockOrderService extends BaseService {
         entity.setNumberOfBines(apiStockOrder.getNumberOfBines());
         entity.setNumberOfPiscinas(apiStockOrder.getNumberOfPiscinas());
         entity.setGuiaRemisionNumber(apiStockOrder.getGuiaRemisionNumber());
+        // 🦐 Shrimp processing-specific fields
+        entity.setCuttingType(apiStockOrder.getCuttingType());
+        entity.setCuttingEntryDate(apiStockOrder.getCuttingEntryDate());
+        entity.setCuttingExitDate(apiStockOrder.getCuttingExitDate());
+        entity.setCuttingTemperatureControl(apiStockOrder.getCuttingTemperatureControl());
+        entity.setTreatmentType(apiStockOrder.getTreatmentType());
+        entity.setTreatmentEntryDate(apiStockOrder.getTreatmentEntryDate());
+        entity.setTreatmentExitDate(apiStockOrder.getTreatmentExitDate());
+        entity.setTreatmentTemperatureControl(apiStockOrder.getTreatmentTemperatureControl());
+        entity.setTreatmentChemicalUsed(apiStockOrder.getTreatmentChemicalUsed());
+        entity.setTunnelProductionDate(apiStockOrder.getTunnelProductionDate());
+        entity.setTunnelExpirationDate(apiStockOrder.getTunnelExpirationDate());
+        entity.setTunnelNetWeight(apiStockOrder.getTunnelNetWeight());
+        entity.setTunnelSupplier(apiStockOrder.getTunnelSupplier());
+        entity.setTunnelFreezingType(apiStockOrder.getTunnelFreezingType());
+        entity.setTunnelEntryDate(apiStockOrder.getTunnelEntryDate());
+        entity.setTunnelExitDate(apiStockOrder.getTunnelExitDate());
+        entity.setWashingWaterTemperature(apiStockOrder.getWashingWaterTemperature());
+        entity.setWashingShrimpTemperatureControl(apiStockOrder.getWashingShrimpTemperatureControl());
         // 🔬 Laboratory-specific fields
         entity.setSampleNumber(apiStockOrder.getSampleNumber());
         entity.setReceptionTime(apiStockOrder.getReceptionTime());

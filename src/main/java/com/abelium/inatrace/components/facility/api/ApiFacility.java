@@ -61,6 +61,18 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Facility performs shrimp freezing process (specific for shrimp value chain)")
 	private Boolean isFreezingProcess;
 
+	@Schema(description = "Facility performs shrimp cutting process (specific for shrimp value chain)")
+	private Boolean isCuttingProcess;
+
+	@Schema(description = "Facility performs shrimp treatment process (specific for shrimp value chain)")
+	private Boolean isTreatmentProcess;
+
+	@Schema(description = "Facility has a shrimp tunnel freezing area (specific for shrimp value chain)")
+	private Boolean isTunnelFreezing;
+
+	@Schema(description = "Facility has a shrimp washing area (specific for shrimp value chain)")
+	private Boolean isWashingArea;
+
 	@Schema(description = "Custom facility level overriding facility type order")
 	private Integer level;
 
@@ -211,6 +223,38 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setIsFreezingProcess(Boolean isFreezingProcess) {
 		this.isFreezingProcess = isFreezingProcess;
+	}
+
+	public Boolean getIsCuttingProcess() {
+		return isCuttingProcess;
+	}
+
+	public void setIsCuttingProcess(Boolean isCuttingProcess) {
+		this.isCuttingProcess = isCuttingProcess;
+	}
+
+	public Boolean getIsTreatmentProcess() {
+		return isTreatmentProcess;
+	}
+
+	public void setIsTreatmentProcess(Boolean isTreatmentProcess) {
+		this.isTreatmentProcess = isTreatmentProcess;
+	}
+
+	public Boolean getIsTunnelFreezing() {
+		return isTunnelFreezing;
+	}
+
+	public void setIsTunnelFreezing(Boolean isTunnelFreezing) {
+		this.isTunnelFreezing = isTunnelFreezing;
+	}
+
+	public Boolean getIsWashingArea() {
+		return isWashingArea;
+	}
+
+	public void setIsWashingArea(Boolean isWashingArea) {
+		this.isWashingArea = isWashingArea;
 	}
 
 	public Integer getLevel() {
