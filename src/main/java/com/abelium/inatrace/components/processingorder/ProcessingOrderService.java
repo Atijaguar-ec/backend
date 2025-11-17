@@ -728,8 +728,8 @@ public class ProcessingOrderService extends BaseService {
         }
 
         // Map classification header fields from API to entity
-        batch.setStartTime(apiTargetStockOrder.getClassificationStartTime());
-        batch.setEndTime(apiTargetStockOrder.getClassificationEndTime());
+        batch.setStartTime(normalizeDateOrTime(apiTargetStockOrder.getClassificationStartTime()));
+        batch.setEndTime(normalizeDateOrTime(apiTargetStockOrder.getClassificationEndTime()));
         batch.setProductionOrder(apiTargetStockOrder.getProductionOrder());
         batch.setFreezingType(apiTargetStockOrder.getFreezingType());
         batch.setMachine(apiTargetStockOrder.getMachine());
@@ -757,6 +757,17 @@ public class ProcessingOrderService extends BaseService {
             em.persist(batch);
         }
         // If updating, JPA dirty checking will handle the update automatically
+    }
+
+    private String normalizeDateOrTime(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() > 10) {
+            return trimmed.substring(0, 10);
+        }
+        return trimmed;
     }
 
 }
