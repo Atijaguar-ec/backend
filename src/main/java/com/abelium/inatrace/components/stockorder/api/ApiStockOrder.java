@@ -238,6 +238,35 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Quality document (PDF) for laboratory analysis")
     private ApiDocument qualityDocument;
 
+    // 🧪 Laboratory analysis fields (transient - stored in LaboratoryAnalysis table)
+    // These fields are received from frontend but not persisted in StockOrder
+    @Schema(hidden = true, description = "Sensorial analysis - Raw odor (stored in LaboratoryAnalysis)")
+    private String sensorialRawOdor;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Raw taste (stored in LaboratoryAnalysis)")
+    private String sensorialRawTaste;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Raw color (stored in LaboratoryAnalysis)")
+    private String sensorialRawColor;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked odor (stored in LaboratoryAnalysis)")
+    private String sensorialCookedOdor;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked taste (stored in LaboratoryAnalysis)")
+    private String sensorialCookedTaste;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked color (stored in LaboratoryAnalysis)")
+    private String sensorialCookedColor;
+
+    @Schema(hidden = true, description = "Quality notes (stored in LaboratoryAnalysis)")
+    private String qualityNotes;
+
+    @Schema(hidden = true, description = "Whether metabisulfite level is acceptable (stored in LaboratoryAnalysis)")
+    private Boolean metabisulfiteLevelAcceptable;
+
+    @Schema(hidden = true, description = "Whether approved for purchase (stored in LaboratoryAnalysis)")
+    private Boolean approvedForPurchase;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -804,6 +833,78 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setQualityDocument(ApiDocument qualityDocument) {
         this.qualityDocument = qualityDocument;
+    }
+
+    public String getSensorialRawOdor() {
+        return sensorialRawOdor;
+    }
+
+    public void setSensorialRawOdor(String sensorialRawOdor) {
+        this.sensorialRawOdor = sensorialRawOdor;
+    }
+
+    public String getSensorialRawTaste() {
+        return sensorialRawTaste;
+    }
+
+    public void setSensorialRawTaste(String sensorialRawTaste) {
+        this.sensorialRawTaste = sensorialRawTaste;
+    }
+
+    public String getSensorialRawColor() {
+        return sensorialRawColor;
+    }
+
+    public void setSensorialRawColor(String sensorialRawColor) {
+        this.sensorialRawColor = sensorialRawColor;
+    }
+
+    public String getSensorialCookedOdor() {
+        return sensorialCookedOdor;
+    }
+
+    public void setSensorialCookedOdor(String sensorialCookedOdor) {
+        this.sensorialCookedOdor = sensorialCookedOdor;
+    }
+
+    public String getSensorialCookedTaste() {
+        return sensorialCookedTaste;
+    }
+
+    public void setSensorialCookedTaste(String sensorialCookedTaste) {
+        this.sensorialCookedTaste = sensorialCookedTaste;
+    }
+
+    public String getSensorialCookedColor() {
+        return sensorialCookedColor;
+    }
+
+    public void setSensorialCookedColor(String sensorialCookedColor) {
+        this.sensorialCookedColor = sensorialCookedColor;
+    }
+
+    public String getQualityNotes() {
+        return qualityNotes;
+    }
+
+    public void setQualityNotes(String qualityNotes) {
+        this.qualityNotes = qualityNotes;
+    }
+
+    public Boolean getMetabisulfiteLevelAcceptable() {
+        return metabisulfiteLevelAcceptable;
+    }
+
+    public void setMetabisulfiteLevelAcceptable(Boolean metabisulfiteLevelAcceptable) {
+        this.metabisulfiteLevelAcceptable = metabisulfiteLevelAcceptable;
+    }
+
+    public Boolean getApprovedForPurchase() {
+        return approvedForPurchase;
+    }
+
+    public void setApprovedForPurchase(Boolean approvedForPurchase) {
+        this.approvedForPurchase = approvedForPurchase;
     }
 
     public String getQrCodeTag() {

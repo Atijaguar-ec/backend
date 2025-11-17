@@ -18,6 +18,10 @@ import com.abelium.inatrace.db.entities.product.FinalProduct;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.db.entities.stockorder.Transaction;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
+import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis;
+import com.abelium.inatrace.db.entities.laboratory.enums.AnalysisType;
+import com.abelium.inatrace.db.entities.common.User;
+import com.abelium.inatrace.db.repositories.laboratory.LaboratoryAnalysisRepository;
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.security.utils.PermissionsUtil;
 import com.abelium.inatrace.tools.Queries;
@@ -50,14 +54,18 @@ public class ProcessingOrderService extends BaseService {
 
     private final ClassificationExcelService classificationExcelService;
 
+    private final LaboratoryAnalysisRepository laboratoryAnalysisRepository;
+
     @Autowired
     public ProcessingOrderService(StockOrderService stockOrderService,
                                   TransactionService transactionService,
                                   CompanyQueries companyQueries,
-                                  ClassificationExcelService classificationExcelService) {
+                                  ClassificationExcelService classificationExcelService,
+                                  LaboratoryAnalysisRepository laboratoryAnalysisRepository) {
         this.stockOrderService = stockOrderService;
         this.transactionService = transactionService;
         this.companyQueries = companyQueries;
+        this.laboratoryAnalysisRepository = laboratoryAnalysisRepository;
         this.classificationExcelService = classificationExcelService;
     }
 
@@ -70,7 +78,29 @@ public class ProcessingOrderService extends BaseService {
                 companyQueries.fetchCompanyProducts(processingOrder.getProcessingAction().getCompany().getId()),
                 authUser);
 
-        return ProcessingOrderMapper.toApiProcessingOrder(processingOrder, language);
+        ApiProcessingOrder apiProcessingOrder = ProcessingOrderMapper.toApiProcessingOrder(processingOrder, language);
+        
+        // Populate laboratory analysis data for each target stock order (if exists)
+        if (apiProcessingOrder.getTargetStockOrders() != null) {
+            apiProcessingOrder.getTargetStockOrders().forEach(apiTargetStockOrder -> {
+                if (apiTargetStockOrder.getId() != null) {
+                    // Find laboratory analysis for this stock order
+                    List<LaboratoryAnalysis> analyses = em.createQuery(
+                            "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                            LaboratoryAnalysis.class)
+                            .setParameter("stockOrderId", apiTargetStockOrder.getId())
+                            .getResultList();
+                    
+                    if (!analyses.isEmpty()) {
+                        // Populate lab analysis fields into the API stock order
+                        com.abelium.inatrace.components.stockorder.mappers.StockOrderMapper
+                                .populateLaboratoryAnalysisFields(apiTargetStockOrder, analyses.get(0));
+                    }
+                }
+            });
+        }
+        
+        return apiProcessingOrder;
     }
 
     /**
@@ -325,6 +355,9 @@ public class ProcessingOrderService extends BaseService {
                     targetStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
                 }
 
+                // Create or update LaboratoryAnalysis if laboratory data is present
+                createOrUpdateLaboratoryAnalysis(apiTargetStockOrder, targetStockOrder, user);
+
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
         }
@@ -547,6 +580,75 @@ public class ProcessingOrderService extends BaseService {
 
         // Generate Excel
         return classificationExcelService.generateLiquidacionExcel(batch);
+    }
+
+    /**
+     * Create or update LaboratoryAnalysis for a target StockOrder if laboratory analysis data is present.
+     * This method extracts sensorial analysis fields from ApiStockOrder and persists them in LaboratoryAnalysis table.
+     * 
+     * @param apiTargetStockOrder The API stock order containing laboratory analysis data
+     * @param targetStockOrder The persisted StockOrder entity
+     * @param user The current user performing the action
+     */
+    private void createOrUpdateLaboratoryAnalysis(ApiStockOrder apiTargetStockOrder, 
+                                                   StockOrder targetStockOrder, 
+                                                   CustomUserDetails user) {
+        
+        // Check if any laboratory analysis data is present in the API request
+        boolean hasAnalysisData = apiTargetStockOrder.getSensorialRawOdor() != null
+                || apiTargetStockOrder.getSensorialRawTaste() != null
+                || apiTargetStockOrder.getSensorialRawColor() != null
+                || apiTargetStockOrder.getSensorialCookedOdor() != null
+                || apiTargetStockOrder.getSensorialCookedTaste() != null
+                || apiTargetStockOrder.getSensorialCookedColor() != null
+                || apiTargetStockOrder.getQualityNotes() != null
+                || apiTargetStockOrder.getMetabisulfiteLevelAcceptable() != null
+                || apiTargetStockOrder.getApprovedForPurchase() != null;
+
+        if (!hasAnalysisData) {
+            // No laboratory analysis data to persist
+            return;
+        }
+
+        // Find existing analysis for this stock order or create a new one
+        List<LaboratoryAnalysis> existingAnalyses = em.createQuery(
+                "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                LaboratoryAnalysis.class)
+                .setParameter("stockOrderId", targetStockOrder.getId())
+                .getResultList();
+
+        LaboratoryAnalysis analysis;
+        if (!existingAnalyses.isEmpty()) {
+            // Update existing analysis (take the first one if multiple exist)
+            analysis = existingAnalyses.get(0);
+            analysis.setUpdatedBy(fetchEntity(user.getUserId(), User.class));
+        } else {
+            // Create new analysis
+            analysis = new LaboratoryAnalysis();
+            analysis.setStockOrder(targetStockOrder);
+            analysis.setCreatedBy(fetchEntity(user.getUserId(), User.class));
+            analysis.setAnalysisType(AnalysisType.SENSORIAL);
+            analysis.setAnalysisDate(targetStockOrder.getProductionDate() != null 
+                    ? targetStockOrder.getProductionDate().atStartOfDay().toInstant(java.time.ZoneOffset.UTC)
+                    : java.time.Instant.now());
+        }
+
+        // Map sensorial analysis fields from API to entity
+        analysis.setSensorialRawOdor(apiTargetStockOrder.getSensorialRawOdor());
+        analysis.setSensorialRawTaste(apiTargetStockOrder.getSensorialRawTaste());
+        analysis.setSensorialRawColor(apiTargetStockOrder.getSensorialRawColor());
+        analysis.setSensorialCookedOdor(apiTargetStockOrder.getSensorialCookedOdor());
+        analysis.setSensorialCookedTaste(apiTargetStockOrder.getSensorialCookedTaste());
+        analysis.setSensorialCookedColor(apiTargetStockOrder.getSensorialCookedColor());
+        analysis.setQualityNotes(apiTargetStockOrder.getQualityNotes());
+        analysis.setMetabisulfiteLevelAcceptable(apiTargetStockOrder.getMetabisulfiteLevelAcceptable());
+        analysis.setApprovedForPurchase(apiTargetStockOrder.getApprovedForPurchase());
+
+        // Persist the analysis
+        if (existingAnalyses.isEmpty()) {
+            em.persist(analysis);
+        }
+        // If updating, JPA dirty checking will handle the update automatically
     }
 
 }

@@ -16,6 +16,7 @@ import com.abelium.inatrace.components.productorder.mappers.ProductOrderMapper;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrderEvidenceTypeValue;
 import com.abelium.inatrace.components.user.mappers.UserMapper;
+import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.types.Language;
 import org.apache.commons.lang3.BooleanUtils;
@@ -23,6 +24,29 @@ import org.apache.commons.lang3.BooleanUtils;
 import java.util.stream.Collectors;
 
 public class StockOrderMapper {
+    
+    /**
+     * Populate laboratory analysis fields from LaboratoryAnalysis entity to ApiStockOrder.
+     * This method is used when reading stock orders for editing, to display existing lab data.
+     * 
+     * @param apiStockOrder The API stock order to populate
+     * @param laboratoryAnalysis The laboratory analysis entity with sensorial data
+     */
+    public static void populateLaboratoryAnalysisFields(ApiStockOrder apiStockOrder, LaboratoryAnalysis laboratoryAnalysis) {
+        if (laboratoryAnalysis == null) {
+            return;
+        }
+        
+        apiStockOrder.setSensorialRawOdor(laboratoryAnalysis.getSensorialRawOdor());
+        apiStockOrder.setSensorialRawTaste(laboratoryAnalysis.getSensorialRawTaste());
+        apiStockOrder.setSensorialRawColor(laboratoryAnalysis.getSensorialRawColor());
+        apiStockOrder.setSensorialCookedOdor(laboratoryAnalysis.getSensorialCookedOdor());
+        apiStockOrder.setSensorialCookedTaste(laboratoryAnalysis.getSensorialCookedTaste());
+        apiStockOrder.setSensorialCookedColor(laboratoryAnalysis.getSensorialCookedColor());
+        apiStockOrder.setQualityNotes(laboratoryAnalysis.getQualityNotes());
+        apiStockOrder.setMetabisulfiteLevelAcceptable(laboratoryAnalysis.getMetabisulfiteLevelAcceptable());
+        apiStockOrder.setApprovedForPurchase(laboratoryAnalysis.getApprovedForPurchase());
+    }
 
     public static ApiStockOrder toApiStockOrderBase(StockOrder entity) {
 
