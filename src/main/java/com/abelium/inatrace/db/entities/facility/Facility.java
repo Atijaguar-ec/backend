@@ -85,6 +85,9 @@ public class Facility extends TimestampEntity {
 	@Column(name = "isWashingArea")
 	private Boolean isWashingArea;
 
+	@Column(name = "isRestArea")
+	private Boolean isRestArea;
+
 	@Column
 	private Integer level;
 
@@ -270,6 +273,14 @@ public class Facility extends TimestampEntity {
 
 	public void setIsWashingArea(Boolean isWashingArea) {
 		this.isWashingArea = isWashingArea;
+	}
+
+	public Boolean getIsRestArea() {
+		return isRestArea;
+	}
+
+	public void setIsRestArea(Boolean isRestArea) {
+		this.isRestArea = isRestArea;
 	}
 
 	public Integer getLevel() {

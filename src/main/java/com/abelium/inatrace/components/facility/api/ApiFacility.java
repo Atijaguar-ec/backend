@@ -73,6 +73,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Facility has a shrimp washing area (specific for shrimp value chain)")
 	private Boolean isWashingArea;
 
+	@Schema(description = "Facility has a shrimp resting area (specific for shrimp value chain)")
+	private Boolean isRestArea;
+
 	@Schema(description = "Custom facility level overriding facility type order")
 	private Integer level;
 
@@ -255,6 +258,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setIsWashingArea(Boolean isWashingArea) {
 		this.isWashingArea = isWashingArea;
+	}
+
+	public Boolean getIsRestArea() {
+		return isRestArea;
+	}
+
+	public void setIsRestArea(Boolean isRestArea) {
+		this.isRestArea = isRestArea;
 	}
 
 	public Integer getLevel() {
