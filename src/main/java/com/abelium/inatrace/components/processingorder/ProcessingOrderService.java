@@ -328,13 +328,18 @@ public class ProcessingOrderService extends BaseService {
             // Set targetStockOrders for TRANSFER
             if (processingAction.getType() == ProcessingActionType.TRANSFER) {
 
-                Long targetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiProcessingOrder.getTargetStockOrders().get(i), user, entity).getId();
+                ApiStockOrder apiTargetStockOrder = apiProcessingOrder.getTargetStockOrders().get(i);
+
+                Long targetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiTargetStockOrder, user, entity).getId();
                 StockOrder targetStockOrder = fetchEntity(targetStockOrderId, StockOrder.class);
                 targetStockOrder.setProcessingOrder(entity);
 
                 // Transfer the QR code tag (if present) to the target Stock order
                 targetStockOrder.setQrCodeTag(presentQrCodeTag);
                 targetStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
+
+                // Create or update LaboratoryAnalysis if laboratory data is present
+                createOrUpdateLaboratoryAnalysis(apiTargetStockOrder, targetStockOrder, user);
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
