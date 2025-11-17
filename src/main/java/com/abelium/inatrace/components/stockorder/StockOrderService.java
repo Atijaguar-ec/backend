@@ -1028,8 +1028,15 @@ public class StockOrderService extends BaseService {
         
         // Set quality document if provided
         if (apiStockOrder.getQualityDocument() != null && apiStockOrder.getQualityDocument().getId() != null) {
-            entity.setQualityDocument(fetchEntity(apiStockOrder.getQualityDocument().getId(), Document.class));
+            System.out.println("DEBUG: Setting quality document with ID: " + apiStockOrder.getQualityDocument().getId());
+            Document qualityDoc = fetchEntity(apiStockOrder.getQualityDocument().getId(), Document.class);
+            System.out.println("DEBUG: Fetched quality document: " + (qualityDoc != null ? qualityDoc.getStorageKey() : "NULL"));
+            entity.setQualityDocument(qualityDoc);
+            System.out.println("DEBUG: Quality document set on entity: " + (entity.getQualityDocument() != null ? entity.getQualityDocument().getStorageKey() : "NULL"));
         } else {
+            System.out.println("DEBUG: Quality document is NULL or has no ID - apiStockOrder.qualityDocument=" + 
+                (apiStockOrder.getQualityDocument() != null ? "NOT NULL" : "NULL") + 
+                ", ID=" + (apiStockOrder.getQualityDocument() != null ? apiStockOrder.getQualityDocument().getId() : "N/A"));
             entity.setQualityDocument(null);
         }
         
@@ -1189,6 +1196,11 @@ public class StockOrderService extends BaseService {
 
         if (entity.getId() == null) {
             em.persist(entity);
+            System.out.println("DEBUG: After persist - StockOrder ID: " + entity.getId() + ", QualityDocument: " + 
+                (entity.getQualityDocument() != null ? entity.getQualityDocument().getId() : "NULL"));
+        } else {
+            System.out.println("DEBUG: Updating existing StockOrder ID: " + entity.getId() + ", QualityDocument: " + 
+                (entity.getQualityDocument() != null ? entity.getQualityDocument().getId() : "NULL"));
         }
 
         return new ApiBaseEntity(entity);
