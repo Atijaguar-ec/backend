@@ -19,7 +19,7 @@ import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.db.entities.stockorder.Transaction;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
 import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis;
-import com.abelium.inatrace.db.entities.laboratory.enums.AnalysisType;
+import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis.AnalysisType;
 import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.repositories.laboratory.LaboratoryAnalysisRepository;
 import com.abelium.inatrace.security.service.CustomUserDetails;
