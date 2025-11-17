@@ -1,5 +1,6 @@
 package com.abelium.inatrace.components.laboratory;
 
+import com.abelium.inatrace.components.common.CommonApiTools;
 import com.abelium.inatrace.components.laboratory.api.ApiLaboratoryAnalysis;
 import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis;
 
@@ -31,6 +32,7 @@ public final class LaboratoryAnalysisMapper {
         }
         if (entity.getStockOrder() != null) {
             api.setStockOrderId(entity.getStockOrder().getId());
+            api.setQualityDocument(CommonApiTools.toApiDocument(entity.getStockOrder().getQualityDocument(), null));
         }
 
         if (entity.getAnalysisType() != null) {

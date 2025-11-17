@@ -1,5 +1,6 @@
 package com.abelium.inatrace.components.laboratory.api;
 
+import com.abelium.inatrace.components.common.api.ApiDocument;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -61,6 +62,9 @@ public class ApiLaboratoryAnalysis {
 
     @Schema(description = "Whether this analysis is approved for purchase (yes/no)")
     private Boolean approvedForPurchase;
+
+    @Schema(description = "Quality document (PDF) attached to the stock order for this analysis")
+    private ApiDocument qualityDocument;
 
     // Getters and Setters
 
@@ -198,5 +202,13 @@ public class ApiLaboratoryAnalysis {
 
     public void setApprovedForPurchase(Boolean approvedForPurchase) {
         this.approvedForPurchase = approvedForPurchase;
+    }
+
+    public ApiDocument getQualityDocument() {
+        return qualityDocument;
+    }
+
+    public void setQualityDocument(ApiDocument qualityDocument) {
+        this.qualityDocument = qualityDocument;
     }
 }
