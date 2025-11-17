@@ -285,6 +285,10 @@ public class ProcessingOrderService extends BaseService {
             }
         }
 
+        if (entity.getId() == null) {
+            em.persist(entity);
+        }
+
         Boolean isProcessing = processingAction.getType() != ProcessingActionType.TRANSFER;
 
         // Get the first input Transaction with generated QR code tag (if present)
@@ -365,10 +369,6 @@ public class ProcessingOrderService extends BaseService {
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
-        }
-
-        if (entity.getId() == null) {
-            em.persist(entity);
         }
 
         return new ApiBaseEntity(entity);
