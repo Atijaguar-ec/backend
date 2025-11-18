@@ -14,7 +14,7 @@ public class CustomLanguageConfiguration {
 	@Bean
 	public LocaleResolver localeResolver() {
 		SessionLocaleResolver slr = new SessionLocaleResolver();
-		slr.setDefaultLocale(Locale.ENGLISH); // Set default Locale as EN
+		slr.setDefaultLocale(new Locale("es", "ES")); // Set default Locale as ES
 		return slr;
 	}
 

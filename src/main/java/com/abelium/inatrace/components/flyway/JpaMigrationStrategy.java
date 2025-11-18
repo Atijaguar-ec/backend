@@ -18,14 +18,9 @@ public class JpaMigrationStrategy implements FlywayMigrationStrategy {
 
     @Override
     public void migrate(Flyway flyway) {
-        // 1) Run default Flyway migrations (SQL and any default resolvers)
-        // This ensures SQL files under classpath:/db/migrations are executed.
-        flyway.migrate();
-
-        // 2) Run custom JPA migrations using our custom resolver
-        JpaMigrationResolver jpaMigrationResolver =
+        JpaMigrationResolver jpaMigrationResolver = 
                 new JpaMigrationResolver(flyway.getConfiguration(), entityManagerFactory, environment);
-
+        
         ClassicConfiguration configuration = new ClassicConfiguration(flyway.getConfiguration());
         configuration.setResolvers(jpaMigrationResolver);
         Flyway.configure().configuration(configuration).load().migrate();
