@@ -35,16 +35,16 @@ public class V2023_03_09_14_33__Update_Value_Chains_Add_Coffee_Product_Type impl
         em.persist(productTypeMacadamia);
 
         // Set coffee product type to all farmers (userCustomers)
-        List<UserCustomer> userCustomerList = Queries.getAll(em, UserCustomer.class);
+        List<Long> userCustomerIds = em
+                .createQuery("SELECT u.id FROM UserCustomer u", Long.class)
+                .getResultList();
 
-        if (userCustomerList != null) {
-            userCustomerList.forEach(userCustomer -> {
-                UserCustomerProductType userCustomerProductType = new UserCustomerProductType();
-                userCustomerProductType.setUserCustomer(userCustomer);
-                userCustomerProductType.setProductType(productTypeCoffee);
-
-                em.persist(userCustomerProductType);
-            });
+        for (Long userCustomerId : userCustomerIds) {
+            UserCustomer userCustomerRef = em.getReference(UserCustomer.class, userCustomerId);
+            UserCustomerProductType userCustomerProductType = new UserCustomerProductType();
+            userCustomerProductType.setUserCustomer(userCustomerRef);
+            userCustomerProductType.setProductType(productTypeCoffee);
+            em.persist(userCustomerProductType);
         }
     }
 }
