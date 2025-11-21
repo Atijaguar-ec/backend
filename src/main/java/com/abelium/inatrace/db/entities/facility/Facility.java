@@ -87,7 +87,7 @@ public class Facility extends TimestampEntity {
 
 	@Column(name = "isRestArea")
 	private Boolean isRestArea;
-
+Lois
 	@Column
 	private Integer level;
 

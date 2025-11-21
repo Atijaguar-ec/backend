@@ -167,3 +167,4 @@ ci/.env.local
 
 # Local deployment artifacts
 **/be-image.tar
+docs/DICCIONARIO_DATOS_INATRACE_2025.md
