@@ -167,3 +167,5 @@ ci/.env.local
 
 # Local deployment artifacts
 **/be-image.tar
+docs/*
+src/main/java/com/abelium/inatrace/db/migrations/README_PRODUCT_TYPE_MIGRATIONS.md
