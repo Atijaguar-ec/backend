@@ -16,14 +16,20 @@ import java.util.List;
 public class V2021_10_21_14_33__Update_Facility_Translations implements JpaMigration {
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        List<Facility> facilityList = Queries.getAll(em, Facility.class);
+        List<Object[]> facilityRows = em
+                .createQuery("SELECT f.id, f.name FROM Facility f", Object[].class)
+                .getResultList();
 
-        for (Facility facility : facilityList) {
+        for (Object[] row : facilityRows) {
+            Long facilityId = (Long) row[0];
+            String facilityName = (String) row[1];
+            Facility facilityRef = em.getReference(Facility.class, facilityId);
+
             for (Language language : List.of(Language.EN, Language.DE, Language.RW, Language.ES)) {
                 FacilityTranslation facilityTranslation = new FacilityTranslation();
-                facilityTranslation.setFacility(facility);
+                facilityTranslation.setFacility(facilityRef);
                 facilityTranslation.setLanguage(language);
-                facilityTranslation.setName(facility.getName());
+                facilityTranslation.setName(facilityName);
                 em.persist(facilityTranslation);
             }
         }

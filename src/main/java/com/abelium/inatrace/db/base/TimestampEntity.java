@@ -7,18 +7,18 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 
 /**
- * Base class for all entities with timestamp, creationTimestamp and updateTimestamp 
- * managed by Hibernate using @CreationTimestamp and @UpdateTimestamp.
+ * Base class for all entities with timestamp columns `creationTimestamp` and `updateTimestamp`
+ * managed by Hibernate using @CreationTimestamp and @UpdateTimestamp, matching the initial SQL schema.
  */
 @MappedSuperclass
 public class TimestampEntity extends BaseEntity {
 
     @CreationTimestamp
-    @Column(name = "createdAt", updatable = false)
+    @Column(name = "creationTimestamp", updatable = false)
     private Instant creationTimestamp;
     
     @UpdateTimestamp
-    @Column(name = "updatedAt")
+    @Column(name = "updateTimestamp")
     private Instant updateTimestamp;
     
     public Instant getCreationTimestamp() {
