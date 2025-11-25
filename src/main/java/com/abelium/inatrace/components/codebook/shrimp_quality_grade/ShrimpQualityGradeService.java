@@ -3,6 +3,7 @@ package com.abelium.inatrace.components.codebook.shrimp_quality_grade;
 import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.api.ApiPaginatedList;
 import com.abelium.inatrace.api.ApiPaginatedRequest;
+import com.abelium.inatrace.api.ApiStatus;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.codebook.shrimp_quality_grade.api.ApiShrimpQualityGrade;
 import com.abelium.inatrace.components.codebook.shrimp_quality_grade.api.ApiShrimpQualityGradeTranslation;
@@ -17,6 +18,7 @@ import com.abelium.inatrace.tools.QueryTools;
 import com.abelium.inatrace.types.Language;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.torpedoquery.jakarta.jpa.Torpedo;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,15 +35,33 @@ public class ShrimpQualityGradeService extends BaseService {
                 entity -> ShrimpQualityGradeMapper.toApiShrimpQualityGrade(entity, language));
     }
 
-    private Queries.QueryCreator<ShrimpQualityGrade> qualityGradeQueryObject(ApiPaginatedRequest request) {
-        return Queries.createQueryFrom(em, ShrimpQualityGrade.class)
-                .orderBy(request.sortBy, request.sort);
+    private ShrimpQualityGrade qualityGradeQueryObject(ApiPaginatedRequest request) {
+        ShrimpQualityGrade proxy = Torpedo.from(ShrimpQualityGrade.class);
+
+        switch (request.sortBy) {
+            case "code":
+                QueryTools.orderBy(request.sort, proxy.getCode());
+                break;
+            case "label":
+                QueryTools.orderBy(request.sort, proxy.getLabel());
+                break;
+            case "displayOrder":
+                QueryTools.orderBy(request.sort, proxy.getDisplayOrder());
+                break;
+            case "status":
+                QueryTools.orderBy(request.sort, proxy.getStatus());
+                break;
+            default:
+                QueryTools.orderBy(request.sort, proxy.getDisplayOrder());
+        }
+
+        return proxy;
     }
 
     public List<ApiShrimpQualityGrade> getActiveShrimpQualityGrades(Language language) {
         List<ShrimpQualityGrade> grades = em.createQuery(
-                        "SELECT q FROM ShrimpQualityGrade q WHERE q.status = :status ORDER BY q.displayOrder", 
-                        ShrimpQualityGrade.class)
+                "SELECT q FROM ShrimpQualityGrade q WHERE q.status = :status ORDER BY q.displayOrder", 
+                ShrimpQualityGrade.class)
                 .setParameter("status", CodebookStatus.ACTIVE)
                 .getResultList();
         return grades.stream()
@@ -95,5 +115,13 @@ public class ShrimpQualityGradeService extends BaseService {
         ShrimpQualityGrade entity = fetchEntity(id, ShrimpQualityGrade.class);
         em.remove(entity);
         return new ApiBaseEntity(entity);
+    }
+
+    private <E> E fetchEntity(Long id, Class<E> entityClass) throws ApiException {
+        E entity = Queries.get(em, entityClass, id);
+        if (entity == null) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, "Invalid " + entityClass.getSimpleName() + " ID");
+        }
+        return entity;
     }
 }

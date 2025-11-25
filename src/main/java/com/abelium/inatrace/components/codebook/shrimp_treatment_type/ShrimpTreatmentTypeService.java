@@ -3,6 +3,7 @@ package com.abelium.inatrace.components.codebook.shrimp_treatment_type;
 import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.api.ApiPaginatedList;
 import com.abelium.inatrace.api.ApiPaginatedRequest;
+import com.abelium.inatrace.api.ApiStatus;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.codebook.shrimp_treatment_type.api.ApiShrimpTreatmentType;
 import com.abelium.inatrace.components.codebook.shrimp_treatment_type.api.ApiShrimpTreatmentTypeTranslation;
@@ -13,9 +14,11 @@ import com.abelium.inatrace.db.enums.CodebookStatus;
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.tools.PaginationTools;
 import com.abelium.inatrace.tools.Queries;
+import com.abelium.inatrace.tools.QueryTools;
 import com.abelium.inatrace.types.Language;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.torpedoquery.jakarta.jpa.Torpedo;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,9 +35,27 @@ public class ShrimpTreatmentTypeService extends BaseService {
                 entity -> ShrimpTreatmentTypeMapper.toApiShrimpTreatmentType(entity, language));
     }
 
-    private Queries.QueryCreator<ShrimpTreatmentType> treatmentTypeQueryObject(ApiPaginatedRequest request) {
-        return Queries.createQueryFrom(em, ShrimpTreatmentType.class)
-                .orderBy(request.sortBy, request.sort);
+    private ShrimpTreatmentType treatmentTypeQueryObject(ApiPaginatedRequest request) {
+        ShrimpTreatmentType proxy = Torpedo.from(ShrimpTreatmentType.class);
+
+        switch (request.sortBy) {
+            case "code":
+                QueryTools.orderBy(request.sort, proxy.getCode());
+                break;
+            case "label":
+                QueryTools.orderBy(request.sort, proxy.getLabel());
+                break;
+            case "displayOrder":
+                QueryTools.orderBy(request.sort, proxy.getDisplayOrder());
+                break;
+            case "status":
+                QueryTools.orderBy(request.sort, proxy.getStatus());
+                break;
+            default:
+                QueryTools.orderBy(request.sort, proxy.getDisplayOrder());
+        }
+
+        return proxy;
     }
 
     public List<ApiShrimpTreatmentType> getActiveShrimpTreatmentTypes(Language language) {
@@ -93,5 +114,13 @@ public class ShrimpTreatmentTypeService extends BaseService {
         ShrimpTreatmentType entity = fetchEntity(id, ShrimpTreatmentType.class);
         em.remove(entity);
         return new ApiBaseEntity(entity);
+    }
+
+    private <E> E fetchEntity(Long id, Class<E> entityClass) throws ApiException {
+        E entity = Queries.get(em, entityClass, id);
+        if (entity == null) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, "Invalid " + entityClass.getSimpleName() + " ID");
+        }
+        return entity;
     }
 }

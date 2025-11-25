@@ -65,19 +65,6 @@ public class V2025_11_25_03__Complete_Shrimp_Catalogs implements JpaMigration {
         grade.setDisplayOrder(order);
         grade.setStatus(CodebookStatus.ACTIVE);
         em.persist(grade);
-
-        // Translations
-        ShrimpSizeGradeTranslation transEn = new ShrimpSizeGradeTranslation();
-        transEn.setShrimpSizeGrade(grade);
-        transEn.setLanguage(Language.EN);
-        transEn.setName(label);
-        em.persist(transEn);
-
-        ShrimpSizeGradeTranslation transEs = new ShrimpSizeGradeTranslation();
-        transEs.setShrimpSizeGrade(grade);
-        transEs.setLanguage(Language.ES);
-        transEs.setName(label);
-        em.persist(transEs);
     }
 
     /**
