@@ -317,6 +317,20 @@ public class StockOrder extends TimestampEntity {
 	@JoinColumn(name = "quality_document_id")
 	private Document qualityDocument;
 
+	// Field inspection (sensory testing) specific fields - for isFieldInspection facilities
+	@Column(length = 20)
+	private String flavorTestResult; // "NORMAL" or "DEFECT"
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "flavor_defect_type_id")
+	private com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect flavorDefectType;
+
+	@Column
+	private Boolean purchaseRecommended;
+
+	@Column(length = 1000)
+	private String inspectionNotes;
+
 	@ManyToOne
 	private ProcessingOrder processingOrder;
 	
@@ -1074,5 +1088,37 @@ public class StockOrder extends TimestampEntity {
 
 	public void setQualityDocument(Document qualityDocument) {
 		this.qualityDocument = qualityDocument;
+	}
+
+	public String getFlavorTestResult() {
+		return flavorTestResult;
+	}
+
+	public void setFlavorTestResult(String flavorTestResult) {
+		this.flavorTestResult = flavorTestResult;
+	}
+
+	public com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect getFlavorDefectType() {
+		return flavorDefectType;
+	}
+
+	public void setFlavorDefectType(com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect flavorDefectType) {
+		this.flavorDefectType = flavorDefectType;
+	}
+
+	public Boolean getPurchaseRecommended() {
+		return purchaseRecommended;
+	}
+
+	public void setPurchaseRecommended(Boolean purchaseRecommended) {
+		this.purchaseRecommended = purchaseRecommended;
+	}
+
+	public String getInspectionNotes() {
+		return inspectionNotes;
+	}
+
+	public void setInspectionNotes(String inspectionNotes) {
+		this.inspectionNotes = inspectionNotes;
 	}
 }

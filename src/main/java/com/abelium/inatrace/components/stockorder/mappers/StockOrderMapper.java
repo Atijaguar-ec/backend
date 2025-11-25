@@ -228,6 +228,15 @@ public class StockOrderMapper {
         apiStockOrder.setSampleNumber(entity.getSampleNumber());
         apiStockOrder.setReceptionTime(entity.getReceptionTime());
         apiStockOrder.setQualityDocument(CommonApiTools.toApiDocument(entity.getQualityDocument(), userId));
+        // 🔍 Field inspection (sensory testing) specific fields
+        apiStockOrder.setFlavorTestResult(entity.getFlavorTestResult());
+        if (entity.getFlavorDefectType() != null) {
+            apiStockOrder.setFlavorDefectTypeId(entity.getFlavorDefectType().getId());
+            apiStockOrder.setFlavorDefectTypeCode(entity.getFlavorDefectType().getCode());
+            apiStockOrder.setFlavorDefectTypeLabel(entity.getFlavorDefectType().getName());
+        }
+        apiStockOrder.setPurchaseRecommended(entity.getPurchaseRecommended());
+        apiStockOrder.setInspectionNotes(entity.getInspectionNotes());
         apiStockOrder.setCost(entity.getCost());
         apiStockOrder.setPaid(entity.getPaid());
         apiStockOrder.setBalance(entity.getBalance());

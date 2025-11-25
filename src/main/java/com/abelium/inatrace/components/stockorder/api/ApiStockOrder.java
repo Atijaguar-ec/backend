@@ -296,6 +296,25 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Quality document (PDF) for laboratory analysis")
     private ApiDocument qualityDocument;
 
+    // 🔍 Field inspection (sensory testing) specific fields - for isFieldInspection facilities
+    @Schema(description = "Flavor test result: NORMAL or DEFECT (field inspection)")
+    private String flavorTestResult;
+
+    @Schema(description = "Flavor defect type ID (field inspection)")
+    private Long flavorDefectTypeId;
+
+    @Schema(description = "Flavor defect type code (field inspection)")
+    private String flavorDefectTypeCode;
+
+    @Schema(description = "Flavor defect type label (field inspection)")
+    private String flavorDefectTypeLabel;
+
+    @Schema(description = "Purchase recommended by inspector (field inspection)")
+    private Boolean purchaseRecommended;
+
+    @Schema(description = "Inspection notes (field inspection)")
+    private String inspectionNotes;
+
     // 🧪 Laboratory analysis fields (transient - stored in LaboratoryAnalysis table)
     // These fields are received from frontend but not persisted in StockOrder
     @Schema(hidden = true, description = "Sensorial analysis - Raw odor (stored in LaboratoryAnalysis)")
@@ -1057,6 +1076,54 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setQualityDocument(ApiDocument qualityDocument) {
         this.qualityDocument = qualityDocument;
+    }
+
+    public String getFlavorTestResult() {
+        return flavorTestResult;
+    }
+
+    public void setFlavorTestResult(String flavorTestResult) {
+        this.flavorTestResult = flavorTestResult;
+    }
+
+    public Long getFlavorDefectTypeId() {
+        return flavorDefectTypeId;
+    }
+
+    public void setFlavorDefectTypeId(Long flavorDefectTypeId) {
+        this.flavorDefectTypeId = flavorDefectTypeId;
+    }
+
+    public String getFlavorDefectTypeCode() {
+        return flavorDefectTypeCode;
+    }
+
+    public void setFlavorDefectTypeCode(String flavorDefectTypeCode) {
+        this.flavorDefectTypeCode = flavorDefectTypeCode;
+    }
+
+    public String getFlavorDefectTypeLabel() {
+        return flavorDefectTypeLabel;
+    }
+
+    public void setFlavorDefectTypeLabel(String flavorDefectTypeLabel) {
+        this.flavorDefectTypeLabel = flavorDefectTypeLabel;
+    }
+
+    public Boolean getPurchaseRecommended() {
+        return purchaseRecommended;
+    }
+
+    public void setPurchaseRecommended(Boolean purchaseRecommended) {
+        this.purchaseRecommended = purchaseRecommended;
+    }
+
+    public String getInspectionNotes() {
+        return inspectionNotes;
+    }
+
+    public void setInspectionNotes(String inspectionNotes) {
+        this.inspectionNotes = inspectionNotes;
     }
 
     public String getSensorialRawOdor() {
