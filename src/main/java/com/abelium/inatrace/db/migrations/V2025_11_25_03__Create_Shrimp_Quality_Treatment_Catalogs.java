@@ -1,6 +1,4 @@
 package com.abelium.inatrace.db.migrations;
-
-import com.abelium.inatrace.components.flyway.JpaMigration;
 import com.abelium.inatrace.db.entities.codebook.ShrimpQualityGrade;
 import com.abelium.inatrace.db.entities.codebook.ShrimpQualityGradeTranslation;
 import com.abelium.inatrace.db.entities.codebook.ShrimpTreatmentType;
@@ -25,9 +23,8 @@ import jakarta.persistence.EntityManager;
  *
  * @author INATrace Team
  */
-public class V2025_11_25_03__Create_Shrimp_Quality_Treatment_Catalogs implements JpaMigration {
+public class V2025_11_25_03__Create_Shrimp_Quality_Treatment_Catalogs {
 
-    @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
         String productTypeConfig = environment.getProperty("INATrace.product.type", "COFFEE");
 
