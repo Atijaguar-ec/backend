@@ -52,7 +52,10 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Price determined later'")
 	private Boolean displayPriceDeterminedLater;
 
-	@Schema(description = "Facility is a laboratory (specific for shrimp value chain)")
+	@Schema(description = "Facility is a field inspection point for shrimp sensory testing (specific for shrimp value chain)")
+	private Boolean isFieldInspection;
+
+	@Schema(description = "Facility is a quality laboratory (specific for shrimp value chain)")
 	private Boolean isLaboratory;
 
 	@Schema(description = "Facility performs shrimp classification process (specific for shrimp value chain)")
@@ -202,6 +205,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean displayPriceDeterminedLater) {
 		this.displayPriceDeterminedLater = displayPriceDeterminedLater;
+	}
+
+	public Boolean getIsFieldInspection() {
+		return isFieldInspection;
+	}
+
+	public void setIsFieldInspection(Boolean isFieldInspection) {
+		this.isFieldInspection = isFieldInspection;
 	}
 
 	public Boolean getIsLaboratory() {

@@ -64,6 +64,9 @@ public class Facility extends TimestampEntity {
 	@Column
 	private Boolean displayPriceDeterminedLater;
 
+	@Column(name = "isFieldInspection")
+	private Boolean isFieldInspection;
+
 	@Column(name = "isLaboratory")
 	private Boolean isLaboratory;
 
@@ -216,6 +219,14 @@ public class Facility extends TimestampEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean priceDeterminedLater) {
 		this.displayPriceDeterminedLater = priceDeterminedLater;
+	}
+
+	public Boolean getIsFieldInspection() {
+		return isFieldInspection;
+	}
+
+	public void setIsFieldInspection(Boolean isFieldInspection) {
+		this.isFieldInspection = isFieldInspection;
 	}
 
 	public Boolean getIsLaboratory() {
