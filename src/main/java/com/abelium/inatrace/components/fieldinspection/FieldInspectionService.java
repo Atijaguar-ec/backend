@@ -6,6 +6,7 @@ import com.abelium.inatrace.components.common.BaseService;
 import com.abelium.inatrace.components.company.CompanyQueries;
 import com.abelium.inatrace.components.fieldinspection.api.ApiFieldInspection;
 import com.abelium.inatrace.db.entities.common.UserCustomer;
+import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.fieldinspection.FieldInspection;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
@@ -99,7 +100,7 @@ public class FieldInspectionService extends BaseService {
         FieldInspection inspection = new FieldInspection();
         
         // Set audit fields
-        inspection.setCreatedBy(user.getUser());
+        inspection.setCreatedBy(fetchEntity(user.getUserId(), User.class));
         
         // Set source stock order
         inspection.setSourceStockOrder(stockOrder);
@@ -142,7 +143,7 @@ public class FieldInspectionService extends BaseService {
         if (stockOrder.getFlavorDefectType() != null) {
             inspection.setFlavorDefectTypeId(stockOrder.getFlavorDefectType().getId());
             inspection.setFlavorDefectTypeCode(stockOrder.getFlavorDefectType().getCode());
-            inspection.setFlavorDefectTypeLabel(stockOrder.getFlavorDefectType().getLabel());
+            inspection.setFlavorDefectTypeLabel(stockOrder.getFlavorDefectType().getName());
         }
         
         // Set recommendation
@@ -154,8 +155,8 @@ public class FieldInspectionService extends BaseService {
         
         // Set reception data
         inspection.setNumberOfGavetas(stockOrder.getNumberOfGavetas());
-        inspection.setNumberOfBines(stockOrder.getNumberOfBines());
-        inspection.setNumberOfPiscinas(stockOrder.getNumberOfPiscinas());
+        inspection.setNumberOfBines(parseInteger(stockOrder.getNumberOfBines()));
+        inspection.setNumberOfPiscinas(parseInteger(stockOrder.getNumberOfPiscinas()));
         inspection.setGuiaRemisionNumber(stockOrder.getGuiaRemisionNumber());
         
         BigDecimal quantity = stockOrder.getTotalQuantity();
@@ -179,7 +180,7 @@ public class FieldInspectionService extends BaseService {
         }
 
         // Set audit
-        inspection.setUpdatedBy(user.getUser());
+        inspection.setUpdatedBy(fetchEntity(user.getUserId(), User.class));
 
         // Update inspection date/time
         if (stockOrder.getProductionDate() != null) {
@@ -212,7 +213,7 @@ public class FieldInspectionService extends BaseService {
         if (stockOrder.getFlavorDefectType() != null) {
             inspection.setFlavorDefectTypeId(stockOrder.getFlavorDefectType().getId());
             inspection.setFlavorDefectTypeCode(stockOrder.getFlavorDefectType().getCode());
-            inspection.setFlavorDefectTypeLabel(stockOrder.getFlavorDefectType().getLabel());
+            inspection.setFlavorDefectTypeLabel(stockOrder.getFlavorDefectType().getName());
         } else {
             inspection.setFlavorDefectTypeId(null);
             inspection.setFlavorDefectTypeCode(null);
@@ -230,8 +231,8 @@ public class FieldInspectionService extends BaseService {
 
         // Update reception data
         inspection.setNumberOfGavetas(stockOrder.getNumberOfGavetas());
-        inspection.setNumberOfBines(stockOrder.getNumberOfBines());
-        inspection.setNumberOfPiscinas(stockOrder.getNumberOfPiscinas());
+        inspection.setNumberOfBines(parseInteger(stockOrder.getNumberOfBines()));
+        inspection.setNumberOfPiscinas(parseInteger(stockOrder.getNumberOfPiscinas()));
         inspection.setGuiaRemisionNumber(stockOrder.getGuiaRemisionNumber());
 
         BigDecimal quantity = stockOrder.getTotalQuantity();
@@ -282,7 +283,7 @@ public class FieldInspectionService extends BaseService {
 
         // Link the inspection to destination
         inspection.setDestinationStockOrder(destinationStockOrder);
-        inspection.setUpdatedBy(user.getUser());
+        inspection.setUpdatedBy(fetchEntity(user.getUserId(), User.class));
 
         // Also set the field inspection reference on the stock order
         destinationStockOrder.setFieldInspection(inspection);
@@ -345,5 +346,22 @@ public class FieldInspectionService extends BaseService {
                 "Invalid " + entityClass.getSimpleName() + " ID");
         }
         return entity;
+    }
+
+    private Integer parseInteger(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return Integer.valueOf(trimmed);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

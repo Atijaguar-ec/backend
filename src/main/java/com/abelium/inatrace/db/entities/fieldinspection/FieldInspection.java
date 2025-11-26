@@ -103,7 +103,7 @@ public class FieldInspection extends TimestampEntity {
     /**
      * Cached producer name for quick display without joins
      */
-    @Column(name = "producer_name")
+    @Column(name = "producerName")
     private String producerName;
 
     // =========================================================================

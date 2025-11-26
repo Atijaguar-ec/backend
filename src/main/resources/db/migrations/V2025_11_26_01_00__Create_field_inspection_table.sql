@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS FieldInspection (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     
     -- Timestamps
-    creation_timestamp DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    update_timestamp DATETIME(6) NULL ON UPDATE CURRENT_TIMESTAMP(6),
+    creationTimestamp DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updateTimestamp DATETIME(6) NULL ON UPDATE CURRENT_TIMESTAMP(6),
     
     -- Audit
     created_by_id BIGINT NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS FieldInspection (
     
     -- Supplier/Producer info (denormalized for quick display)
     producer_user_customer_id BIGINT NULL,
-    producer_name VARCHAR(255) NULL COMMENT 'Cached producer name for display',
+    producerName VARCHAR(255) NULL COMMENT 'Cached producer name for display',
     
     -- Sensorial inspection results
     flavor_test_result VARCHAR(20) NOT NULL COMMENT 'NORMAL or DEFECT',
@@ -87,18 +87,64 @@ CREATE TABLE IF NOT EXISTS FieldInspection (
     INDEX idx_field_inspection_date (inspection_date)
     
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='Field inspection records for shrimp sensorial tests at farms';
+    COMMENT='Field inspection records for shrimp sensorial tests at farms';
 
 -- ============================================================================
--- Add reference from StockOrder to FieldInspection for reverse lookup
+-- Add reference from StockOrder to FieldInspection for reverse lookup (idempotent)
 -- ============================================================================
-ALTER TABLE StockOrder
-    ADD COLUMN field_inspection_id BIGINT NULL COMMENT 'Reference to linked field inspection'
-    AFTER quality_document_id;
 
-ALTER TABLE StockOrder
-    ADD CONSTRAINT fk_stock_order_field_inspection
-    FOREIGN KEY (field_inspection_id) REFERENCES FieldInspection(id)
-    ON DELETE SET NULL ON UPDATE CASCADE;
+-- Add column field_inspection_id only if it does not exist
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'StockOrder'
+      AND COLUMN_NAME = 'field_inspection_id'
+);
 
-CREATE INDEX idx_stock_order_field_inspection ON StockOrder(field_inspection_id);
+SET @ddl_add_column := IF(
+    @col_exists = 0,
+    'ALTER TABLE StockOrder ADD COLUMN field_inspection_id BIGINT NULL COMMENT ''Reference to linked field inspection'' AFTER quality_document_id',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @ddl_add_column;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add foreign key constraint only if it does not exist
+SET @fk_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.REFERENTIAL_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND CONSTRAINT_NAME = 'fk_stock_order_field_inspection'
+);
+
+SET @ddl_add_fk := IF(
+    @fk_exists = 0,
+    'ALTER TABLE StockOrder ADD CONSTRAINT fk_stock_order_field_inspection FOREIGN KEY (field_inspection_id) REFERENCES FieldInspection(id) ON DELETE SET NULL ON UPDATE CASCADE',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @ddl_add_fk;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add index on field_inspection_id only if it does not exist
+SET @idx_exists := (
+    SELECT COUNT(1)
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'StockOrder'
+      AND INDEX_NAME = 'idx_stock_order_field_inspection'
+);
+
+SET @ddl_add_index := IF(
+    @idx_exists = 0,
+    'CREATE INDEX idx_stock_order_field_inspection ON StockOrder(field_inspection_id)',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @ddl_add_index;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
