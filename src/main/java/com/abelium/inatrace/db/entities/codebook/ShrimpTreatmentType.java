@@ -13,7 +13,7 @@ import java.util.List;
  * @author INATrace Team
  */
 @Entity
-@Table(name = "shrimp_treatment_type")
+@Table(name = "ShrimpTreatmentType")
 public class ShrimpTreatmentType extends TimestampEntity {
 
     /**

@@ -14,7 +14,7 @@ import java.util.List;
  * @author INATrace Team
  */
 @Entity
-@Table(name = "shrimp_quality_grade")
+@Table(name = "ShrimpQualityGrade")
 public class ShrimpQualityGrade extends TimestampEntity {
 
     /**

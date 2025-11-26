@@ -10,7 +10,7 @@ import jakarta.persistence.*;
  * @author INATrace Team
  */
 @Entity
-@Table(name = "shrimp_treatment_type_translation")
+@Table(name = "ShrimpTreatmentTypeTranslation")
 public class ShrimpTreatmentTypeTranslation extends TimestampEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

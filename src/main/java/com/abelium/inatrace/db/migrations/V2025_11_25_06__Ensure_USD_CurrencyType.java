@@ -11,7 +11,7 @@ import org.springframework.core.env.Environment;
  * This migration is idempotent: if a CurrencyType with code "USD" already exists,
  * it does nothing. Otherwise it creates an enabled entry with label "US Dollar".
  */
-public class V2025_11_25_05__Ensure_USD_CurrencyType implements JpaMigration {
+public class V2025_11_25_06__Ensure_USD_CurrencyType implements JpaMigration {
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
