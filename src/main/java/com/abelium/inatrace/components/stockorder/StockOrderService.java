@@ -14,6 +14,8 @@ import com.abelium.inatrace.components.common.api.ApiActivityProof;
 import com.abelium.inatrace.components.common.api.ApiCertification;
 import com.abelium.inatrace.components.company.CompanyApiTools;
 import com.abelium.inatrace.components.company.CompanyQueries;
+import com.abelium.inatrace.components.fieldinspection.FieldInspectionService;
+import com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect;
 import com.abelium.inatrace.components.currencies.CurrencyService;
 import com.abelium.inatrace.components.facility.FacilityService;
 import com.abelium.inatrace.components.facility.api.ApiFacility;
@@ -102,6 +104,8 @@ public class StockOrderService extends BaseService {
 
     private final MessageSource messageSource;
 
+    private final FieldInspectionService fieldInspectionService;
+
     @Autowired
     public StockOrderService(FacilityService facilityService,
                              ProcessingEvidenceFieldService procEvidenceFieldService,
@@ -110,7 +114,8 @@ public class StockOrderService extends BaseService {
                              FinalProductService finalProductService,
                              CurrencyService currencyService,
                              CompanyQueries companyQueries,
-                             MessageSource messageSource) {
+                             MessageSource messageSource,
+                             @Lazy FieldInspectionService fieldInspectionService) {
         this.facilityService = facilityService;
         this.procEvidenceFieldService = procEvidenceFieldService;
         this.procEvidenceTypeService = procEvidenceTypeService;
@@ -119,6 +124,7 @@ public class StockOrderService extends BaseService {
         this.currencyService = currencyService;
         this.companyQueries = companyQueries;
         this.messageSource = messageSource;
+        this.fieldInspectionService = fieldInspectionService;
     }
 
     public ApiStockOrder getStockOrder(long id, CustomUserDetails user, Language language, Boolean withProcessingOrder) throws ApiException {
@@ -1058,6 +1064,19 @@ public class StockOrderService extends BaseService {
                 ", ID=" + (apiStockOrder.getQualityDocument() != null ? apiStockOrder.getQualityDocument().getId() : "N/A"));
             entity.setQualityDocument(null);
         }
+
+        // 🔍 Field inspection (sensory testing) fields
+        entity.setFlavorTestResult(apiStockOrder.getFlavorTestResult());
+        entity.setPurchaseRecommended(apiStockOrder.getPurchaseRecommended());
+        entity.setInspectionNotes(apiStockOrder.getInspectionNotes());
+        
+        // Set flavor defect type if provided
+        if (apiStockOrder.getFlavorDefectTypeId() != null) {
+            ShrimpFlavorDefect defect = fetchEntityOrElse(apiStockOrder.getFlavorDefectTypeId(), ShrimpFlavorDefect.class, null);
+            entity.setFlavorDefectType(defect);
+        } else {
+            entity.setFlavorDefectType(null);
+        }
         
         entity.setCurrency(apiStockOrder.getCurrency());
 
@@ -1220,6 +1239,18 @@ public class StockOrderService extends BaseService {
         } else {
             System.out.println("DEBUG: Updating existing StockOrder ID: " + entity.getId() + ", QualityDocument: " + 
                 (entity.getQualityDocument() != null ? entity.getQualityDocument().getId() : "NULL"));
+        }
+
+        // 🔍 If this is a field inspection facility, create/update FieldInspection record
+        if (Boolean.TRUE.equals(facility.getIsFieldInspection()) && 
+            apiStockOrder.getFlavorTestResult() != null) {
+            try {
+                fieldInspectionService.createFromStockOrder(entity, user);
+                System.out.println("DEBUG: Created/updated FieldInspection for StockOrder ID: " + entity.getId());
+            } catch (Exception e) {
+                System.out.println("DEBUG: Error creating FieldInspection: " + e.getMessage());
+                // Log but don't fail the main operation
+            }
         }
 
         return new ApiBaseEntity(entity);

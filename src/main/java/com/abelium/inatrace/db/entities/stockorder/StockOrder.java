@@ -10,6 +10,7 @@ import com.abelium.inatrace.db.entities.common.UserCustomer;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.company.CompanyCustomer;
 import com.abelium.inatrace.db.entities.facility.Facility;
+import com.abelium.inatrace.db.entities.fieldinspection.FieldInspection;
 import com.abelium.inatrace.db.entities.payment.Payment;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.product.FinalProduct;
@@ -316,6 +317,14 @@ public class StockOrder extends TimestampEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "quality_document_id")
 	private Document qualityDocument;
+
+	/**
+	 * Reference to the linked field inspection record.
+	 * Used when a delivery at the packing plant is linked to a prior field inspection.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "field_inspection_id")
+	private FieldInspection fieldInspection;
 
 	// Field inspection (sensory testing) specific fields - for isFieldInspection facilities
 	@Column(length = 20)
@@ -1088,6 +1097,14 @@ public class StockOrder extends TimestampEntity {
 
 	public void setQualityDocument(Document qualityDocument) {
 		this.qualityDocument = qualityDocument;
+	}
+
+	public FieldInspection getFieldInspection() {
+		return fieldInspection;
+	}
+
+	public void setFieldInspection(FieldInspection fieldInspection) {
+		this.fieldInspection = fieldInspection;
 	}
 
 	public String getFlavorTestResult() {
