@@ -68,6 +68,34 @@ public class ProcessingClassificationBatchDetail extends TimestampEntity {
     private String weightFormat;
 
     // =====================================================
+    // 🦐 Liquidación de Compra - Campos adicionales
+    // =====================================================
+
+    /**
+     * Quality grade: A, B, or C.
+     */
+    @Column(name = "qualityGrade", length = 10)
+    private String qualityGrade;
+
+    /**
+     * Presentation type: SHELL_ON_A, SHELL_ON_B, BROKEN_VS, TITI, etc.
+     */
+    @Column(name = "presentationType", length = 50)
+    private String presentationType;
+
+    /**
+     * Price per pound (USD).
+     */
+    @Column(name = "pricePerPound", precision = 10, scale = 4)
+    private BigDecimal pricePerPound;
+
+    /**
+     * Line total (calculated: pounds × pricePerPound).
+     */
+    @Column(name = "lineTotal", precision = 12, scale = 2)
+    private BigDecimal lineTotal;
+
+    // =====================================================
     // Calculated Fields (not persisted, calculated on-the-fly)
     // =====================================================
 
@@ -171,5 +199,50 @@ public class ProcessingClassificationBatchDetail extends TimestampEntity {
 
     public void setWeightFormat(String weightFormat) {
         this.weightFormat = weightFormat;
+    }
+
+    public String getQualityGrade() {
+        return qualityGrade;
+    }
+
+    public void setQualityGrade(String qualityGrade) {
+        this.qualityGrade = qualityGrade;
+    }
+
+    public String getPresentationType() {
+        return presentationType;
+    }
+
+    public void setPresentationType(String presentationType) {
+        this.presentationType = presentationType;
+    }
+
+    public BigDecimal getPricePerPound() {
+        return pricePerPound;
+    }
+
+    public void setPricePerPound(BigDecimal pricePerPound) {
+        this.pricePerPound = pricePerPound;
+    }
+
+    public BigDecimal getLineTotal() {
+        return lineTotal;
+    }
+
+    public void setLineTotal(BigDecimal lineTotal) {
+        this.lineTotal = lineTotal;
+    }
+
+    /**
+     * Calculate line total: pounds × pricePerPound.
+     * @return calculated line total
+     */
+    @Transient
+    public BigDecimal getCalculatedLineTotal() {
+        BigDecimal pounds = getPoundsPerSize();
+        if (pounds.compareTo(BigDecimal.ZERO) == 0 || pricePerPound == null) {
+            return BigDecimal.ZERO;
+        }
+        return pounds.multiply(pricePerPound);
     }
 }

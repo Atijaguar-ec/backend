@@ -14,7 +14,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Service for generating Excel "Liquidación de Pesca" reports.
+ * Service for generating Excel reports for shrimp processing:
+ * - Liquidación de Pesca (Fishing Settlement) - Classification by size
+ * - Liquidación de Compra (Purchase Settlement) - Full monetary settlement
+ * 
  * Follows the professional pattern used in PaymentService and DashboardService.
  * 
  * @author INATrace Team
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 public class ClassificationExcelService {
 
     private static final BigDecimal KG_TO_LB_FACTOR = new BigDecimal("2.20462");
+    private static final String CURRENCY = "USD";
 
     /**
      * Generate Excel file for classification batch.
@@ -206,6 +210,238 @@ public class ClassificationExcelService {
         return byteArrayOutputStream.toByteArray();
     }
 
+    /**
+     * Generate Excel file for Purchase Settlement (Liquidación de Compra).
+     * Includes pricing information and monetary totals.
+     * 
+     * @param batch The classification batch with details including prices
+     * @return Excel file as byte array
+     * @throws IOException if file generation fails
+     */
+    public byte[] generateLiquidacionCompraExcel(ProcessingClassificationBatch batch) throws IOException {
+
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+
+            Sheet sheet = workbook.createSheet("Liquidación de Compra");
+
+            // Create cell styles
+            CellStyle titleStyle = createTitleStyle(workbook);
+            CellStyle headerInfoStyle = createHeaderInfoStyle(workbook);
+            CellStyle tableHeaderStyle = createTableHeaderStyle(workbook);
+            CellStyle dataStyle = createDataStyle(workbook);
+            CellStyle numberStyle = createNumberStyle(workbook);
+            CellStyle currencyStyle = createCurrencyStyle(workbook);
+            CellStyle totalStyle = createTotalStyle(workbook);
+
+            int rowNum = 0;
+
+            // =====================================================
+            // Title Row
+            // =====================================================
+            Row titleRow = sheet.createRow(rowNum++);
+            Cell titleCell = titleRow.createCell(0);
+            titleCell.setCellValue("LIQUIDACIÓN DE COMPRA");
+            titleCell.setCellStyle(titleStyle);
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 9));
+            rowNum++; // Empty row
+
+            // =====================================================
+            // Header Information
+            // =====================================================
+            String lotNumber = batch.getTargetStockOrder() != null && batch.getTargetStockOrder().getInternalLotNumber() != null
+                    ? batch.getTargetStockOrder().getInternalLotNumber()
+                    : "N/A";
+            
+            String weekNumber = batch.getTargetStockOrder() != null && batch.getTargetStockOrder().getWeekNumber() != null
+                ? String.valueOf(batch.getTargetStockOrder().getWeekNumber())
+                : "N/A";
+
+            String settlementNumber = batch.getSettlementNumber() != null ? batch.getSettlementNumber() : "N/A";
+            String processType = batch.getProcessType() != null ? batch.getProcessType() : "N/A";
+
+            rowNum = createInfoRowExtended(sheet, rowNum, "N° Liquidación:", settlementNumber, headerInfoStyle, dataStyle);
+            rowNum = createInfoRowExtended(sheet, rowNum, "Lote:", lotNumber, headerInfoStyle, dataStyle);
+            rowNum = createInfoRowExtended(sheet, rowNum, "N° de Semana:", weekNumber, headerInfoStyle, dataStyle);
+            rowNum = createInfoRowExtended(sheet, rowNum, "Tipo de Proceso:", getProcessTypeLabel(processType), headerInfoStyle, dataStyle);
+            rowNum = createInfoRowExtended(sheet, rowNum, "Hora de Inicio:", batch.getStartTime() != null ? batch.getStartTime() : "", headerInfoStyle, dataStyle);
+            rowNum = createInfoRowExtended(sheet, rowNum, "Hora Termina:", batch.getEndTime() != null ? batch.getEndTime() : "", headerInfoStyle, dataStyle);
+            
+            // Weight summary
+            if (batch.getPoundsReceived() != null) {
+                rowNum = createInfoRowExtended(sheet, rowNum, "Libras Recibidas:", String.format("%.2f", batch.getPoundsReceived()), headerInfoStyle, dataStyle);
+            }
+            if (batch.getPoundsWaste() != null) {
+                rowNum = createInfoRowExtended(sheet, rowNum, "Libras Basura:", String.format("%.2f", batch.getPoundsWaste()), headerInfoStyle, dataStyle);
+            }
+            if (batch.getPoundsNetReceived() != null) {
+                rowNum = createInfoRowExtended(sheet, rowNum, "Libras Netas:", String.format("%.2f", batch.getPoundsNetReceived()), headerInfoStyle, dataStyle);
+            }
+            if (batch.getYieldPercentage() != null) {
+                rowNum = createInfoRowExtended(sheet, rowNum, "Rendimiento:", String.format("%.2f%%", batch.getYieldPercentage()), headerInfoStyle, dataStyle);
+            }
+            rowNum++; // Empty row
+
+            // =====================================================
+            // Table Header
+            // =====================================================
+            Row tableHeaderRow = sheet.createRow(rowNum++);
+            String[] headers = {"Clase", "Talla", "Presentación", "Cajas", "Peso/Caja", "Libras", "Precio/Lb", "Total " + CURRENCY, "%"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = tableHeaderRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(tableHeaderStyle);
+            }
+
+            // =====================================================
+            // Data Rows
+            // =====================================================
+            List<ProcessingClassificationBatchDetail> details = batch.getDetails().stream()
+                    .collect(Collectors.toList());
+
+            int grandTotalBoxes = 0;
+            BigDecimal grandTotalPounds = BigDecimal.ZERO;
+            BigDecimal grandTotalAmount = BigDecimal.ZERO;
+
+            for (ProcessingClassificationBatchDetail detail : details) {
+                Row dataRow = sheet.createRow(rowNum++);
+                int col = 0;
+
+                // Quality Grade (A, B, C)
+                Cell gradeCell = dataRow.createCell(col++);
+                gradeCell.setCellValue(detail.getQualityGrade() != null ? detail.getQualityGrade() : "");
+                gradeCell.setCellStyle(dataStyle);
+
+                // Size
+                Cell sizeCell = dataRow.createCell(col++);
+                sizeCell.setCellValue(detail.getSize() != null ? detail.getSize() : "");
+                sizeCell.setCellStyle(dataStyle);
+
+                // Presentation Type
+                Cell presentationCell = dataRow.createCell(col++);
+                presentationCell.setCellValue(detail.getPresentationType() != null ? detail.getPresentationType() : "");
+                presentationCell.setCellStyle(dataStyle);
+
+                // Boxes
+                Cell boxesCell = dataRow.createCell(col++);
+                int boxes = detail.getBoxes() != null ? detail.getBoxes() : 0;
+                boxesCell.setCellValue(boxes);
+                boxesCell.setCellStyle(numberStyle);
+                grandTotalBoxes += boxes;
+
+                // Weight per box
+                Cell weightCell = dataRow.createCell(col++);
+                if (detail.getWeightPerBox() != null) {
+                    weightCell.setCellValue(detail.getWeightPerBox().doubleValue());
+                }
+                weightCell.setCellStyle(numberStyle);
+
+                // Pounds
+                BigDecimal pounds = detail.getPoundsPerSize();
+                Cell poundsCell = dataRow.createCell(col++);
+                poundsCell.setCellValue(pounds.doubleValue());
+                poundsCell.setCellStyle(numberStyle);
+                grandTotalPounds = grandTotalPounds.add(pounds);
+
+                // Price per pound
+                Cell priceCell = dataRow.createCell(col++);
+                if (detail.getPricePerPound() != null) {
+                    priceCell.setCellValue(detail.getPricePerPound().doubleValue());
+                }
+                priceCell.setCellStyle(currencyStyle);
+
+                // Line total
+                BigDecimal lineTotal = detail.getLineTotal() != null ? detail.getLineTotal() : detail.getCalculatedLineTotal();
+                Cell lineTotalCell = dataRow.createCell(col++);
+                lineTotalCell.setCellValue(lineTotal.doubleValue());
+                lineTotalCell.setCellStyle(currencyStyle);
+                grandTotalAmount = grandTotalAmount.add(lineTotal);
+
+                // Percentage (calculated later)
+                Cell percentCell = dataRow.createCell(col);
+                percentCell.setCellStyle(numberStyle);
+            }
+
+            // Calculate percentages
+            if (grandTotalAmount.compareTo(BigDecimal.ZERO) > 0) {
+                int dataStartRow = rowNum - details.size();
+                for (int i = 0; i < details.size(); i++) {
+                    Row dataRow = sheet.getRow(dataStartRow + i);
+                    Cell lineTotalCell = dataRow.getCell(7);
+                    double lineTotal = lineTotalCell.getNumericCellValue();
+                    double percentage = (lineTotal / grandTotalAmount.doubleValue()) * 100;
+                    Cell percentCell = dataRow.getCell(8);
+                    percentCell.setCellValue(percentage);
+                }
+            }
+
+            rowNum++; // Empty row
+
+            // =====================================================
+            // Grand Total Row
+            // =====================================================
+            Row totalRow = sheet.createRow(rowNum++);
+            
+            Cell totalLabelCell = totalRow.createCell(0);
+            totalLabelCell.setCellValue("TOTAL A PAGAR");
+            totalLabelCell.setCellStyle(totalStyle);
+            sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 2));
+
+            Cell totalBoxesCell = totalRow.createCell(3);
+            totalBoxesCell.setCellValue(grandTotalBoxes);
+            totalBoxesCell.setCellStyle(totalStyle);
+
+            // Empty cells
+            for (int i = 4; i <= 4; i++) {
+                Cell emptyCell = totalRow.createCell(i);
+                emptyCell.setCellStyle(totalStyle);
+            }
+
+            Cell totalPoundsCell = totalRow.createCell(5);
+            totalPoundsCell.setCellValue(grandTotalPounds.doubleValue());
+            totalPoundsCell.setCellStyle(totalStyle);
+
+            // Average price
+            Cell avgPriceCell = totalRow.createCell(6);
+            if (grandTotalPounds.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal avgPrice = grandTotalAmount.divide(grandTotalPounds, 4, BigDecimal.ROUND_HALF_UP);
+                avgPriceCell.setCellValue(avgPrice.doubleValue());
+            }
+            avgPriceCell.setCellStyle(totalStyle);
+
+            Cell grandTotalCell = totalRow.createCell(7);
+            grandTotalCell.setCellValue(grandTotalAmount.doubleValue());
+            grandTotalCell.setCellStyle(totalStyle);
+
+            Cell totalPercentCell = totalRow.createCell(8);
+            totalPercentCell.setCellValue(100.0);
+            totalPercentCell.setCellStyle(totalStyle);
+
+            // =====================================================
+            // Auto-size columns
+            // =====================================================
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+                sheet.setColumnWidth(i, sheet.getColumnWidth(i) + 1024);
+            }
+
+            workbook.write(byteArrayOutputStream);
+        }
+
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    private String getProcessTypeLabel(String processType) {
+        if (processType == null) return "";
+        switch (processType) {
+            case "HEAD_ON": return "Con Cabeza";
+            case "SHELL_ON": return "En Cola";
+            case "VALUE_ADDED": return "Valor Agregado";
+            default: return processType;
+        }
+    }
+
     // =====================================================
     // Helper Methods for Row Creation
     // =====================================================
@@ -223,6 +459,23 @@ public class ClassificationExcelService {
         valueCell.setCellValue(value);
         valueCell.setCellStyle(valueStyle);
         sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2, 8));
+
+        return rowNum + 1;
+    }
+
+    private int createInfoRowExtended(Sheet sheet, int rowNum, String label, String value, 
+                              CellStyle labelStyle, CellStyle valueStyle) {
+        Row row = sheet.createRow(rowNum);
+        
+        Cell labelCell = row.createCell(0);
+        labelCell.setCellValue(label);
+        labelCell.setCellStyle(labelStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 2));
+
+        Cell valueCell = row.createCell(3);
+        valueCell.setCellValue(value);
+        valueCell.setCellStyle(valueStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 3, 8));
 
         return rowNum + 1;
     }
@@ -280,6 +533,15 @@ public class ClassificationExcelService {
         style.setAlignment(HorizontalAlignment.RIGHT);
         DataFormat format = workbook.createDataFormat();
         style.setDataFormat(format.getFormat("#,##0.00"));
+        setBorders(style);
+        return style;
+    }
+
+    private CellStyle createCurrencyStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.RIGHT);
+        DataFormat format = workbook.createDataFormat();
+        style.setDataFormat(format.getFormat("$#,##0.00"));
         setBorders(style);
         return style;
     }

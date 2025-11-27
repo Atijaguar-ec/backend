@@ -219,6 +219,11 @@ public class StockOrderMapper {
         apiStockOrder.setTreatmentExitDate(entity.getTreatmentExitDate());
         apiStockOrder.setTreatmentTemperatureControl(entity.getTreatmentTemperatureControl());
         apiStockOrder.setTreatmentChemicalUsed(entity.getTreatmentChemicalUsed());
+        // 🦐 Shrimp processing: freezing fields
+        apiStockOrder.setFreezingType(entity.getFreezingType());
+        apiStockOrder.setFreezingEntryDate(entity.getFreezingEntryDate());
+        apiStockOrder.setFreezingExitDate(entity.getFreezingExitDate());
+        apiStockOrder.setFreezingTemperatureControl(entity.getFreezingTemperatureControl());
         apiStockOrder.setTunnelProductionDate(entity.getTunnelProductionDate());
         apiStockOrder.setTunnelExpirationDate(entity.getTunnelExpirationDate());
         apiStockOrder.setTunnelNetWeight(entity.getTunnelNetWeight());

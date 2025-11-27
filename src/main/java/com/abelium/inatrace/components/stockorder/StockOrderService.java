@@ -1043,6 +1043,11 @@ public class StockOrderService extends BaseService {
         entity.setTreatmentExitDate(apiStockOrder.getTreatmentExitDate());
         entity.setTreatmentTemperatureControl(apiStockOrder.getTreatmentTemperatureControl());
         entity.setTreatmentChemicalUsed(apiStockOrder.getTreatmentChemicalUsed());
+        // 🦐 Shrimp processing: freezing fields
+        entity.setFreezingType(apiStockOrder.getFreezingType());
+        entity.setFreezingEntryDate(apiStockOrder.getFreezingEntryDate());
+        entity.setFreezingExitDate(apiStockOrder.getFreezingExitDate());
+        entity.setFreezingTemperatureControl(apiStockOrder.getFreezingTemperatureControl());
         entity.setTunnelProductionDate(apiStockOrder.getTunnelProductionDate());
         entity.setTunnelExpirationDate(apiStockOrder.getTunnelExpirationDate());
         entity.setTunnelNetWeight(apiStockOrder.getTunnelNetWeight());

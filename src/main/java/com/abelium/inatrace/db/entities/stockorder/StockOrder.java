@@ -278,6 +278,19 @@ public class StockOrder extends TimestampEntity {
 	@Column(length = 255)
 	private String treatmentChemicalUsed;
 
+	// Shrimp processing-specific fields: freezing (general, not tunnel)
+	@Column(length = 100)
+	private String freezingType;
+
+	@Column
+	private LocalDate freezingEntryDate;
+
+	@Column
+	private LocalDate freezingExitDate;
+
+	@Column(length = 255)
+	private String freezingTemperatureControl;
+
 	// Shrimp processing-specific fields: tunnel freezing
 	@Column
 	private LocalDate tunnelProductionDate;
@@ -1001,6 +1014,39 @@ public class StockOrder extends TimestampEntity {
 
 	public void setTreatmentChemicalUsed(String treatmentChemicalUsed) {
 		this.treatmentChemicalUsed = treatmentChemicalUsed;
+	}
+
+	// Freezing (general) getters and setters
+	public String getFreezingType() {
+		return freezingType;
+	}
+
+	public void setFreezingType(String freezingType) {
+		this.freezingType = freezingType;
+	}
+
+	public LocalDate getFreezingEntryDate() {
+		return freezingEntryDate;
+	}
+
+	public void setFreezingEntryDate(LocalDate freezingEntryDate) {
+		this.freezingEntryDate = freezingEntryDate;
+	}
+
+	public LocalDate getFreezingExitDate() {
+		return freezingExitDate;
+	}
+
+	public void setFreezingExitDate(LocalDate freezingExitDate) {
+		this.freezingExitDate = freezingExitDate;
+	}
+
+	public String getFreezingTemperatureControl() {
+		return freezingTemperatureControl;
+	}
+
+	public void setFreezingTemperatureControl(String freezingTemperatureControl) {
+		this.freezingTemperatureControl = freezingTemperatureControl;
 	}
 
 	public LocalDate getTunnelProductionDate() {

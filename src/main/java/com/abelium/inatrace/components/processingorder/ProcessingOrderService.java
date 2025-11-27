@@ -605,6 +605,34 @@ public class ProcessingOrderService extends BaseService {
     }
 
     /**
+     * Generate Excel file for Purchase Settlement (Liquidación de Compra).
+     * Includes pricing information and monetary totals.
+     * 
+     * @param stockOrderId ID of the target stock order
+     * @return Excel file as byte array
+     * @throws ApiException if stock order or batch not found
+     * @throws IOException if file generation fails
+     */
+    public byte[] generateLiquidacionCompraExcel(Long stockOrderId) throws ApiException, IOException {
+        // Find the classification batch for this stock order
+        TypedQuery<ProcessingClassificationBatch> query = em.createQuery(
+                "SELECT b FROM ProcessingClassificationBatch b WHERE b.targetStockOrder.id = :stockOrderId",
+                ProcessingClassificationBatch.class);
+        query.setParameter("stockOrderId", stockOrderId);
+
+        ProcessingClassificationBatch batch;
+        try {
+            batch = query.getSingleResult();
+        } catch (NoResultException e) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, 
+                    "No classification batch found for stock order ID: " + stockOrderId);
+        }
+
+        // Generate Excel (Purchase Settlement)
+        return classificationExcelService.generateLiquidacionCompraExcel(batch);
+    }
+
+    /**
      * Create or update LaboratoryAnalysis for a target StockOrder if laboratory analysis data is present.
      * This method extracts sensorial analysis fields from ApiStockOrder and persists them in LaboratoryAnalysis table.
      * 

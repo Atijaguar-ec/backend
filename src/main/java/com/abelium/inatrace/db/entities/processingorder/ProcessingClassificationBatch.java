@@ -63,6 +63,70 @@ public class ProcessingClassificationBatch extends TimestampEntity {
     @Column(name = "brandHeader", length = 100)
     private String brandHeader;
 
+    // =====================================================
+    // 🦐 Liquidación de Compra - Campos adicionales
+    // =====================================================
+
+    /**
+     * Settlement number for purchase (e.g., "71694").
+     */
+    @Column(name = "settlementNumber", length = 50)
+    private String settlementNumber;
+
+    /**
+     * Process type: HEAD_ON (Con Cabeza), SHELL_ON (En Cola), VALUE_ADDED.
+     */
+    @Column(name = "processType", length = 30)
+    private String processType;
+
+    /**
+     * Pounds received from supplier.
+     */
+    @Column(name = "poundsReceived", precision = 12, scale = 2)
+    private java.math.BigDecimal poundsReceived;
+
+    /**
+     * Pounds waste/trash.
+     */
+    @Column(name = "poundsWaste", precision = 12, scale = 2)
+    private java.math.BigDecimal poundsWaste;
+
+    /**
+     * Net pounds received (poundsReceived - poundsWaste).
+     */
+    @Column(name = "poundsNetReceived", precision = 12, scale = 2)
+    private java.math.BigDecimal poundsNetReceived;
+
+    /**
+     * Pounds processed (output).
+     */
+    @Column(name = "poundsProcessed", precision = 12, scale = 2)
+    private java.math.BigDecimal poundsProcessed;
+
+    /**
+     * Yield percentage (poundsProcessed / poundsNetReceived * 100).
+     */
+    @Column(name = "yieldPercentage", precision = 5, scale = 2)
+    private java.math.BigDecimal yieldPercentage;
+
+    /**
+     * Total amount to pay (sum of line totals).
+     */
+    @Column(name = "totalAmount", precision = 14, scale = 2)
+    private java.math.BigDecimal totalAmount;
+
+    /**
+     * Average price per pound.
+     */
+    @Column(name = "averagePrice", precision = 10, scale = 4)
+    private java.math.BigDecimal averagePrice;
+
+    /**
+     * Settlement status: DRAFT, APPROVED, PAID.
+     */
+    @Column(name = "settlementStatus", length = 20)
+    private String settlementStatus;
+
     /**
      * Details of the classification batch (by size).
      */
@@ -127,6 +191,88 @@ public class ProcessingClassificationBatch extends TimestampEntity {
 
     public void setBrandHeader(String brandHeader) {
         this.brandHeader = brandHeader;
+    }
+
+    // 🦐 Liquidación de Compra - Getters and Setters
+
+    public String getSettlementNumber() {
+        return settlementNumber;
+    }
+
+    public void setSettlementNumber(String settlementNumber) {
+        this.settlementNumber = settlementNumber;
+    }
+
+    public String getProcessType() {
+        return processType;
+    }
+
+    public void setProcessType(String processType) {
+        this.processType = processType;
+    }
+
+    public java.math.BigDecimal getPoundsReceived() {
+        return poundsReceived;
+    }
+
+    public void setPoundsReceived(java.math.BigDecimal poundsReceived) {
+        this.poundsReceived = poundsReceived;
+    }
+
+    public java.math.BigDecimal getPoundsWaste() {
+        return poundsWaste;
+    }
+
+    public void setPoundsWaste(java.math.BigDecimal poundsWaste) {
+        this.poundsWaste = poundsWaste;
+    }
+
+    public java.math.BigDecimal getPoundsNetReceived() {
+        return poundsNetReceived;
+    }
+
+    public void setPoundsNetReceived(java.math.BigDecimal poundsNetReceived) {
+        this.poundsNetReceived = poundsNetReceived;
+    }
+
+    public java.math.BigDecimal getPoundsProcessed() {
+        return poundsProcessed;
+    }
+
+    public void setPoundsProcessed(java.math.BigDecimal poundsProcessed) {
+        this.poundsProcessed = poundsProcessed;
+    }
+
+    public java.math.BigDecimal getYieldPercentage() {
+        return yieldPercentage;
+    }
+
+    public void setYieldPercentage(java.math.BigDecimal yieldPercentage) {
+        this.yieldPercentage = yieldPercentage;
+    }
+
+    public java.math.BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(java.math.BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public java.math.BigDecimal getAveragePrice() {
+        return averagePrice;
+    }
+
+    public void setAveragePrice(java.math.BigDecimal averagePrice) {
+        this.averagePrice = averagePrice;
+    }
+
+    public String getSettlementStatus() {
+        return settlementStatus;
+    }
+
+    public void setSettlementStatus(String settlementStatus) {
+        this.settlementStatus = settlementStatus;
     }
 
     public Set<ProcessingClassificationBatchDetail> getDetails() {
