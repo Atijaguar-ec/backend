@@ -320,8 +320,14 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(hidden = true, description = "Sensorial analysis - Raw odor (stored in LaboratoryAnalysis)")
     private String sensorialRawOdor;
 
+    @Schema(hidden = true, description = "Sensorial analysis - Raw odor intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialRawOdorIntensity;
+
     @Schema(hidden = true, description = "Sensorial analysis - Raw taste (stored in LaboratoryAnalysis)")
     private String sensorialRawTaste;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Raw taste intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialRawTasteIntensity;
 
     @Schema(hidden = true, description = "Sensorial analysis - Raw color (stored in LaboratoryAnalysis)")
     private String sensorialRawColor;
@@ -329,8 +335,14 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(hidden = true, description = "Sensorial analysis - Cooked odor (stored in LaboratoryAnalysis)")
     private String sensorialCookedOdor;
 
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked odor intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialCookedOdorIntensity;
+
     @Schema(hidden = true, description = "Sensorial analysis - Cooked taste (stored in LaboratoryAnalysis)")
     private String sensorialCookedTaste;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked taste intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialCookedTasteIntensity;
 
     @Schema(hidden = true, description = "Sensorial analysis - Cooked color (stored in LaboratoryAnalysis)")
     private String sensorialCookedColor;
@@ -1134,12 +1146,28 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.sensorialRawOdor = sensorialRawOdor;
     }
 
+    public String getSensorialRawOdorIntensity() {
+        return sensorialRawOdorIntensity;
+    }
+
+    public void setSensorialRawOdorIntensity(String sensorialRawOdorIntensity) {
+        this.sensorialRawOdorIntensity = sensorialRawOdorIntensity;
+    }
+
     public String getSensorialRawTaste() {
         return sensorialRawTaste;
     }
 
     public void setSensorialRawTaste(String sensorialRawTaste) {
         this.sensorialRawTaste = sensorialRawTaste;
+    }
+
+    public String getSensorialRawTasteIntensity() {
+        return sensorialRawTasteIntensity;
+    }
+
+    public void setSensorialRawTasteIntensity(String sensorialRawTasteIntensity) {
+        this.sensorialRawTasteIntensity = sensorialRawTasteIntensity;
     }
 
     public String getSensorialRawColor() {
@@ -1158,12 +1186,28 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.sensorialCookedOdor = sensorialCookedOdor;
     }
 
+    public String getSensorialCookedOdorIntensity() {
+        return sensorialCookedOdorIntensity;
+    }
+
+    public void setSensorialCookedOdorIntensity(String sensorialCookedOdorIntensity) {
+        this.sensorialCookedOdorIntensity = sensorialCookedOdorIntensity;
+    }
+
     public String getSensorialCookedTaste() {
         return sensorialCookedTaste;
     }
 
     public void setSensorialCookedTaste(String sensorialCookedTaste) {
         this.sensorialCookedTaste = sensorialCookedTaste;
+    }
+
+    public String getSensorialCookedTasteIntensity() {
+        return sensorialCookedTasteIntensity;
+    }
+
+    public void setSensorialCookedTasteIntensity(String sensorialCookedTasteIntensity) {
+        this.sensorialCookedTasteIntensity = sensorialCookedTasteIntensity;
     }
 
     public String getSensorialCookedColor() {

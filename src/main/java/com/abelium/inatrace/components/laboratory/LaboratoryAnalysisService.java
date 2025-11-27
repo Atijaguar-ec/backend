@@ -119,10 +119,14 @@ public class LaboratoryAnalysisService extends BaseService {
         // Map sensorial analysis fields from API to entity
         // Note: sampleNumber is stored on StockOrder, not on LaboratoryAnalysis
         analysis.setSensorialRawOdor(apiStockOrder.getSensorialRawOdor());
+        analysis.setSensorialRawOdorIntensity(apiStockOrder.getSensorialRawOdorIntensity());
         analysis.setSensorialRawTaste(apiStockOrder.getSensorialRawTaste());
+        analysis.setSensorialRawTasteIntensity(apiStockOrder.getSensorialRawTasteIntensity());
         analysis.setSensorialRawColor(apiStockOrder.getSensorialRawColor());
         analysis.setSensorialCookedOdor(apiStockOrder.getSensorialCookedOdor());
+        analysis.setSensorialCookedOdorIntensity(apiStockOrder.getSensorialCookedOdorIntensity());
         analysis.setSensorialCookedTaste(apiStockOrder.getSensorialCookedTaste());
+        analysis.setSensorialCookedTasteIntensity(apiStockOrder.getSensorialCookedTasteIntensity());
         analysis.setSensorialCookedColor(apiStockOrder.getSensorialCookedColor());
         analysis.setQualityNotes(apiStockOrder.getQualityNotes());
         analysis.setMetabisulfiteLevelAcceptable(apiStockOrder.getMetabisulfiteLevelAcceptable());

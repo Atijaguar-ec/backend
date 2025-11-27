@@ -64,8 +64,14 @@ public class LaboratoryAnalysis extends TimestampEntity {
     @Column
     private String sensorialRawOdor;
 
+    @Column(name = "sensorial_raw_odor_intensity", length = 20)
+    private String sensorialRawOdorIntensity;
+
     @Column
     private String sensorialRawTaste;
+
+    @Column(name = "sensorial_raw_taste_intensity", length = 20)
+    private String sensorialRawTasteIntensity;
 
     @Column
     private String sensorialRawColor;
@@ -74,8 +80,14 @@ public class LaboratoryAnalysis extends TimestampEntity {
     @Column
     private String sensorialCookedOdor;
 
+    @Column(name = "sensorial_cooked_odor_intensity", length = 20)
+    private String sensorialCookedOdorIntensity;
+
     @Column
     private String sensorialCookedTaste;
+
+    @Column(name = "sensorial_cooked_taste_intensity", length = 20)
+    private String sensorialCookedTasteIntensity;
 
     @Column
     private String sensorialCookedColor;
@@ -148,12 +160,28 @@ public class LaboratoryAnalysis extends TimestampEntity {
         this.sensorialRawOdor = sensorialRawOdor;
     }
 
+    public String getSensorialRawOdorIntensity() {
+        return sensorialRawOdorIntensity;
+    }
+
+    public void setSensorialRawOdorIntensity(String sensorialRawOdorIntensity) {
+        this.sensorialRawOdorIntensity = sensorialRawOdorIntensity;
+    }
+
     public String getSensorialRawTaste() {
         return sensorialRawTaste;
     }
 
     public void setSensorialRawTaste(String sensorialRawTaste) {
         this.sensorialRawTaste = sensorialRawTaste;
+    }
+
+    public String getSensorialRawTasteIntensity() {
+        return sensorialRawTasteIntensity;
+    }
+
+    public void setSensorialRawTasteIntensity(String sensorialRawTasteIntensity) {
+        this.sensorialRawTasteIntensity = sensorialRawTasteIntensity;
     }
 
     public String getSensorialRawColor() {
@@ -172,12 +200,28 @@ public class LaboratoryAnalysis extends TimestampEntity {
         this.sensorialCookedOdor = sensorialCookedOdor;
     }
 
+    public String getSensorialCookedOdorIntensity() {
+        return sensorialCookedOdorIntensity;
+    }
+
+    public void setSensorialCookedOdorIntensity(String sensorialCookedOdorIntensity) {
+        this.sensorialCookedOdorIntensity = sensorialCookedOdorIntensity;
+    }
+
     public String getSensorialCookedTaste() {
         return sensorialCookedTaste;
     }
 
     public void setSensorialCookedTaste(String sensorialCookedTaste) {
         this.sensorialCookedTaste = sensorialCookedTaste;
+    }
+
+    public String getSensorialCookedTasteIntensity() {
+        return sensorialCookedTasteIntensity;
+    }
+
+    public void setSensorialCookedTasteIntensity(String sensorialCookedTasteIntensity) {
+        this.sensorialCookedTasteIntensity = sensorialCookedTasteIntensity;
     }
 
     public String getSensorialCookedColor() {

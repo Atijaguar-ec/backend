@@ -38,10 +38,14 @@ public class StockOrderMapper {
         }
         
         apiStockOrder.setSensorialRawOdor(laboratoryAnalysis.getSensorialRawOdor());
+        apiStockOrder.setSensorialRawOdorIntensity(laboratoryAnalysis.getSensorialRawOdorIntensity());
         apiStockOrder.setSensorialRawTaste(laboratoryAnalysis.getSensorialRawTaste());
+        apiStockOrder.setSensorialRawTasteIntensity(laboratoryAnalysis.getSensorialRawTasteIntensity());
         apiStockOrder.setSensorialRawColor(laboratoryAnalysis.getSensorialRawColor());
         apiStockOrder.setSensorialCookedOdor(laboratoryAnalysis.getSensorialCookedOdor());
+        apiStockOrder.setSensorialCookedOdorIntensity(laboratoryAnalysis.getSensorialCookedOdorIntensity());
         apiStockOrder.setSensorialCookedTaste(laboratoryAnalysis.getSensorialCookedTaste());
+        apiStockOrder.setSensorialCookedTasteIntensity(laboratoryAnalysis.getSensorialCookedTasteIntensity());
         apiStockOrder.setSensorialCookedColor(laboratoryAnalysis.getSensorialCookedColor());
         apiStockOrder.setQualityNotes(laboratoryAnalysis.getQualityNotes());
         apiStockOrder.setMetabisulfiteLevelAcceptable(laboratoryAnalysis.getMetabisulfiteLevelAcceptable());
