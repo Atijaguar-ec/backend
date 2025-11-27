@@ -58,6 +58,97 @@ public class LaboratoryAnalysisService extends BaseService {
     }
 
     /**
+     * Create or update a LaboratoryAnalysis from API data for a StockOrder.
+     * This is used when a shrimp collection center captures sensorial analysis data at delivery time.
+     * Reutilizes the same pattern as ProcessingOrderService.createOrUpdateLaboratoryAnalysis.
+     * 
+     * @param apiStockOrder The API stock order containing sensorial analysis data
+     * @param stockOrder The persisted StockOrder entity
+     * @param userId The user ID for audit fields
+     * @return The created/updated LaboratoryAnalysis entity, or null if no sensorial data is present
+     */
+    @Transactional
+    public LaboratoryAnalysis createOrUpdateFromApiStockOrder(
+            com.abelium.inatrace.components.stockorder.api.ApiStockOrder apiStockOrder,
+            StockOrder stockOrder,
+            Long userId) {
+        
+        // Check if any laboratory analysis data is present in the API request
+        boolean hasAnalysisData = apiStockOrder.getSensorialRawOdor() != null
+                || apiStockOrder.getSensorialRawTaste() != null
+                || apiStockOrder.getSensorialRawColor() != null
+                || apiStockOrder.getSensorialCookedOdor() != null
+                || apiStockOrder.getSensorialCookedTaste() != null
+                || apiStockOrder.getSensorialCookedColor() != null
+                || apiStockOrder.getQualityNotes() != null
+                || apiStockOrder.getMetabisulfiteLevelAcceptable() != null
+                || apiStockOrder.getApprovedForPurchase() != null;
+
+        if (!hasAnalysisData) {
+            // No laboratory analysis data to persist
+            return null;
+        }
+
+        // Find existing analysis for this stock order or create a new one
+        List<LaboratoryAnalysis> existingAnalyses = em.createQuery(
+                "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                LaboratoryAnalysis.class)
+                .setParameter("stockOrderId", stockOrder.getId())
+                .getResultList();
+
+        LaboratoryAnalysis analysis;
+        if (!existingAnalyses.isEmpty()) {
+            // Update existing analysis (take the first one if multiple exist)
+            analysis = existingAnalyses.get(0);
+            if (userId != null) {
+                analysis.setUpdatedBy(Queries.get(em, com.abelium.inatrace.db.entities.common.User.class, userId));
+            }
+        } else {
+            // Create new analysis
+            analysis = new LaboratoryAnalysis();
+            analysis.setStockOrder(stockOrder);
+            if (userId != null) {
+                analysis.setCreatedBy(Queries.get(em, com.abelium.inatrace.db.entities.common.User.class, userId));
+            }
+            analysis.setAnalysisType(com.abelium.inatrace.db.entities.laboratory.enums.AnalysisType.SENSORIAL);
+            analysis.setAnalysisDate(stockOrder.getProductionDate() != null 
+                    ? stockOrder.getProductionDate().atStartOfDay().toInstant(java.time.ZoneOffset.UTC)
+                    : java.time.Instant.now());
+        }
+
+        // Map sensorial analysis fields from API to entity
+        analysis.setSampleNumber(apiStockOrder.getSampleNumber());
+        analysis.setSensorialRawOdor(apiStockOrder.getSensorialRawOdor());
+        analysis.setSensorialRawTaste(apiStockOrder.getSensorialRawTaste());
+        analysis.setSensorialRawColor(apiStockOrder.getSensorialRawColor());
+        analysis.setSensorialCookedOdor(apiStockOrder.getSensorialCookedOdor());
+        analysis.setSensorialCookedTaste(apiStockOrder.getSensorialCookedTaste());
+        analysis.setSensorialCookedColor(apiStockOrder.getSensorialCookedColor());
+        analysis.setQualityNotes(apiStockOrder.getQualityNotes());
+        analysis.setMetabisulfiteLevelAcceptable(apiStockOrder.getMetabisulfiteLevelAcceptable());
+        analysis.setApprovedForPurchase(apiStockOrder.getApprovedForPurchase());
+
+        // Handle quality document if provided
+        if (apiStockOrder.getQualityDocument() != null && apiStockOrder.getQualityDocument().getId() != null) {
+            com.abelium.inatrace.db.entities.common.Document qualityDoc = 
+                Queries.get(em, com.abelium.inatrace.db.entities.common.Document.class, apiStockOrder.getQualityDocument().getId());
+            analysis.setQualityDocument(qualityDoc);
+        }
+
+        // Persist the analysis
+        if (existingAnalyses.isEmpty()) {
+            em.persist(analysis);
+            System.out.println("DEBUG: Created LaboratoryAnalysis ID: " + analysis.getId() + 
+                " for StockOrder ID: " + stockOrder.getId());
+        } else {
+            System.out.println("DEBUG: Updated LaboratoryAnalysis ID: " + analysis.getId() + 
+                " for StockOrder ID: " + stockOrder.getId());
+        }
+        
+        return analysis;
+    }
+
+    /**
      * Mark a laboratory analysis as used by linking it to a destination stock order.
      */
     @Transactional
