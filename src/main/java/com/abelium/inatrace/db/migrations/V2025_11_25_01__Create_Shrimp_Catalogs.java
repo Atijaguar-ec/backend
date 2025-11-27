@@ -15,7 +15,7 @@ import jakarta.persistence.EntityManager;
  * This migration ONLY runs when INATrace.product.type is SHRIMP or CAMARON.
  * It creates the following catalogs:
  * <ul>
- *   <li>ShrimpFlavorDefect - Defectos de sabor (Arena, Palo, Tierra, Lodo, Yodo)</li>
+ *   <li>ShrimpFlavorDefect - Defectos de sabor (Arena, Palo, Tierra, Lodo, Combustible)</li>
  *   <li>ShrimpSizeGrade - Tallas de camarón (WHOLE and TAIL sizes)</li>
  *   <li>ShrimpColorGrade - Grados de color (A-1, A-2, A-3, A-4)</li>
  *   <li>ShrimpProcessType - Tipos de proceso (Head-On, Shell-On, Value Added)</li>
@@ -51,7 +51,7 @@ public class V2025_11_25_01__Create_Shrimp_Catalogs implements JpaMigration {
         createFlavorDefect(em, "PALO", "Wood", "Palo", "Woody taste in shrimp", "Sabor a madera/palo en el camarón", 2);
         createFlavorDefect(em, "TIERRA", "Earth", "Tierra", "Earthy taste in shrimp", "Sabor terroso en el camarón", 3);
         createFlavorDefect(em, "LODO", "Mud", "Lodo", "Muddy taste in shrimp", "Sabor a lodo en el camarón", 4);
-        createFlavorDefect(em, "YODO", "Iodine", "Yodo", "Iodine taste in shrimp", "Sabor a yodo en el camarón", 5);
+        createFlavorDefect(em, "COMBUSTIBLE", "Iodine", "Combustible", "Iodine taste in shrimp", "Sabor a Combustible en el camarón", 5);
         createFlavorDefect(em, "OTHER", "Other", "Otro", "Other flavor defect", "Otro defecto de sabor", 6);
     }
 
