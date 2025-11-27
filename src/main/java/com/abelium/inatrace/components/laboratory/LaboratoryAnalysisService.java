@@ -110,14 +110,14 @@ public class LaboratoryAnalysisService extends BaseService {
             if (userId != null) {
                 analysis.setCreatedBy(Queries.get(em, com.abelium.inatrace.db.entities.common.User.class, userId));
             }
-            analysis.setAnalysisType(com.abelium.inatrace.db.entities.laboratory.enums.AnalysisType.SENSORIAL);
+            analysis.setAnalysisType(LaboratoryAnalysis.AnalysisType.SENSORIAL);
             analysis.setAnalysisDate(stockOrder.getProductionDate() != null 
                     ? stockOrder.getProductionDate().atStartOfDay().toInstant(java.time.ZoneOffset.UTC)
                     : java.time.Instant.now());
         }
 
         // Map sensorial analysis fields from API to entity
-        analysis.setSampleNumber(apiStockOrder.getSampleNumber());
+        // Note: sampleNumber is stored on StockOrder, not on LaboratoryAnalysis
         analysis.setSensorialRawOdor(apiStockOrder.getSensorialRawOdor());
         analysis.setSensorialRawTaste(apiStockOrder.getSensorialRawTaste());
         analysis.setSensorialRawColor(apiStockOrder.getSensorialRawColor());
@@ -127,13 +127,7 @@ public class LaboratoryAnalysisService extends BaseService {
         analysis.setQualityNotes(apiStockOrder.getQualityNotes());
         analysis.setMetabisulfiteLevelAcceptable(apiStockOrder.getMetabisulfiteLevelAcceptable());
         analysis.setApprovedForPurchase(apiStockOrder.getApprovedForPurchase());
-
-        // Handle quality document if provided
-        if (apiStockOrder.getQualityDocument() != null && apiStockOrder.getQualityDocument().getId() != null) {
-            com.abelium.inatrace.db.entities.common.Document qualityDoc = 
-                Queries.get(em, com.abelium.inatrace.db.entities.common.Document.class, apiStockOrder.getQualityDocument().getId());
-            analysis.setQualityDocument(qualityDoc);
-        }
+        // Note: qualityDocument is stored on StockOrder, not on LaboratoryAnalysis
 
         // Persist the analysis
         if (existingAnalyses.isEmpty()) {
