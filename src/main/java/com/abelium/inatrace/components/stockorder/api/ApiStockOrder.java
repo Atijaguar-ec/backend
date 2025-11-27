@@ -379,9 +379,6 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(hidden = true, description = "Production order number (stored in ProcessingClassificationBatch)")
     private String productionOrder;
 
-    @Schema(hidden = true, description = "Freezing type (stored in ProcessingClassificationBatch)")
-    private String freezingType;
-
     @Schema(hidden = true, description = "Machine used for classification (stored in ProcessingClassificationBatch)")
     private String machine;
 
@@ -1310,14 +1307,6 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setProductionOrder(String productionOrder) {
         this.productionOrder = productionOrder;
-    }
-
-    public String getFreezingType() {
-        return freezingType;
-    }
-
-    public void setFreezingType(String freezingType) {
-        this.freezingType = freezingType;
     }
 
     public String getMachine() {
