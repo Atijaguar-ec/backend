@@ -175,7 +175,23 @@ public class StockOrderService extends BaseService {
                 () -> stockOrderQueryObject(
                         request,
                         queryRequest
-                ), stockOrder -> StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language));
+                ), stockOrder -> {
+                    ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language);
+
+                    // 🧪 Populate laboratory analysis fields (approvedForPurchase, sensorial fields) when available
+                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis laboratoryAnalysis = em.createQuery(
+                                    "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis.class)
+                            .setParameter("stockOrderId", stockOrder.getId())
+                            .setMaxResults(1)
+                            .getResultStream()
+                            .findFirst()
+                            .orElse(null);
+
+                    StockOrderMapper.populateLaboratoryAnalysisFields(apiStockOrder, laboratoryAnalysis);
+
+                    return apiStockOrder;
+                });
     }
 
     public ApiPaginatedList<ApiStockOrder> getStockOrderListForCompany(ApiPaginatedRequest request,
@@ -205,7 +221,23 @@ public class StockOrderService extends BaseService {
                 () -> stockOrderQueryObject(
                         request,
                         queryRequest
-                ), stockOrder -> StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language));
+                ), stockOrder -> {
+                    ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language);
+
+                    // 🧪 Populate laboratory analysis fields (approvedForPurchase, sensorial fields) when available
+                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis laboratoryAnalysis = em.createQuery(
+                                    "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis.class)
+                            .setParameter("stockOrderId", stockOrder.getId())
+                            .setMaxResults(1)
+                            .getResultStream()
+                            .findFirst()
+                            .orElse(null);
+
+                    StockOrderMapper.populateLaboratoryAnalysisFields(apiStockOrder, laboratoryAnalysis);
+
+                    return apiStockOrder;
+                });
     }
 
     private StockOrder stockOrderQueryObject(ApiPaginatedRequest request,

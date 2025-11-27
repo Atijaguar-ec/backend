@@ -16,6 +16,11 @@ public class UserCustomerMapper {
         apiUserCustomer.setName(entity.getName());
         apiUserCustomer.setSurname(entity.getSurname());
         apiUserCustomer.setType(entity.getType());
+        // Include person type and legal company name so frontend can distinguish
+        // between natural persons and legal entities (companies) when displaying
+        // providers/suppliers in listings.
+        apiUserCustomer.setPersonType(entity.getPersonType());
+        apiUserCustomer.setCompanyName(entity.getCompanyName());
 
         return apiUserCustomer;
     }
