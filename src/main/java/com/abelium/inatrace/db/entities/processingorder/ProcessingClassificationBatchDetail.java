@@ -72,6 +72,13 @@ public class ProcessingClassificationBatchDetail extends TimestampEntity {
     // =====================================================
 
     /**
+     * Process type: HEAD_ON (Entero) or SHELL_ON (Cola).
+     * Determines which size catalog and presentation options apply.
+     */
+    @Column(name = "processType", length = 20)
+    private String processType;
+
+    /**
      * Quality grade: A, B, or C.
      */
     @Column(name = "qualityGrade", length = 10)
@@ -199,6 +206,14 @@ public class ProcessingClassificationBatchDetail extends TimestampEntity {
 
     public void setWeightFormat(String weightFormat) {
         this.weightFormat = weightFormat;
+    }
+
+    public String getProcessType() {
+        return processType;
+    }
+
+    public void setProcessType(String processType) {
+        this.processType = processType;
     }
 
     public String getQualityGrade() {

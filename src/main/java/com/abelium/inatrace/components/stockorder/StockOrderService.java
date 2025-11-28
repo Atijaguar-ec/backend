@@ -207,6 +207,7 @@ public class StockOrderService extends BaseService {
                     java.util.List<ApiClassificationDetail> apiDetails = batch.getDetails().stream()
                             .map(detail -> {
                                 ApiClassificationDetail dto = new ApiClassificationDetail();
+                                dto.setProcessType(detail.getProcessType()); // 🦐 HEAD_ON o SHELL_ON
                                 dto.setBrandDetail(detail.getBrandDetail());
                                 dto.setSize(detail.getSize());
                                 dto.setBoxes(detail.getBoxes());

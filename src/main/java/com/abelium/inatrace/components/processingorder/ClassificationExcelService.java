@@ -60,7 +60,7 @@ public class ClassificationExcelService {
             Cell titleCell = titleRow.createCell(0);
             titleCell.setCellValue("LIQUIDACIÓN DE PESCA");
             titleCell.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 6));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 7));
             rowNum++; // Empty row
 
             // =====================================================
@@ -70,7 +70,11 @@ public class ClassificationExcelService {
                     ? batch.getTargetStockOrder().getInternalLotNumber()
                     : "N/A";
 
+            // Detect process type from first detail's size code
+            String processType = detectProcessType(batch);
+            
             rowNum = createInfoRow(sheet, rowNum, "Lote:", lotNumber, headerInfoStyle, dataStyle);
+            rowNum = createInfoRow(sheet, rowNum, "Tipo de Proceso:", getProcessTypeLabel(processType), headerInfoStyle, dataStyle);
             rowNum = createInfoRow(sheet, rowNum, "Hora de Inicio:", batch.getStartTime() != null ? batch.getStartTime() : "", headerInfoStyle, dataStyle);
             rowNum = createInfoRow(sheet, rowNum, "Hora Termina:", batch.getEndTime() != null ? batch.getEndTime() : "", headerInfoStyle, dataStyle);
             rowNum = createInfoRow(sheet, rowNum, "Orden de Producción:", batch.getProductionOrder() != null ? batch.getProductionOrder() : "", headerInfoStyle, dataStyle);
@@ -83,7 +87,7 @@ public class ClassificationExcelService {
             // Table Header
             // =====================================================
             Row tableHeaderRow = sheet.createRow(rowNum++);
-            String[] headers = {"Talla", "Aspecto", "Cajas", "Peso/caja", "Formato", "Peso Total", "Libras"};
+            String[] headers = {"Talla", "Aspecto", "Clase", "Cajas", "Peso/caja", "Formato", "Peso Total", "Libras"};
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = tableHeaderRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -104,15 +108,20 @@ public class ClassificationExcelService {
                 Row dataRow = sheet.createRow(rowNum++);
                 int col = 0;
 
-                // Size (Talla)
+                // Size (Talla) - Convert code to readable label
                 Cell sizeCell = dataRow.createCell(col++);
-                sizeCell.setCellValue(detail.getSize() != null ? detail.getSize() : "");
+                sizeCell.setCellValue(getSizeLabel(detail.getSize()));
                 sizeCell.setCellStyle(dataStyle);
 
                 // Presentation Type (Aspecto: SHELLON-A, SHELLON-B, BROKEN, etc.)
                 Cell presentationCell = dataRow.createCell(col++);
                 presentationCell.setCellValue(getPresentationTypeLabel(detail.getPresentationType()));
                 presentationCell.setCellStyle(dataStyle);
+
+                // Quality Grade (Clase A/B/C) - Only for SHELL_ON
+                Cell qualityCell = dataRow.createCell(col++);
+                qualityCell.setCellValue(detail.getQualityGrade() != null ? detail.getQualityGrade() : "");
+                qualityCell.setCellStyle(dataStyle);
 
                 // Boxes (Cajas)
                 Cell boxesCell = dataRow.createCell(col++);
@@ -156,23 +165,23 @@ public class ClassificationExcelService {
             Cell totalLabelCell = totalRow.createCell(0);
             totalLabelCell.setCellValue("GRAN TOTAL");
             totalLabelCell.setCellStyle(totalStyle);
-            sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 1));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 2));
 
-            Cell totalBoxesCell = totalRow.createCell(2);
+            Cell totalBoxesCell = totalRow.createCell(3);
             totalBoxesCell.setCellValue(grandTotalBoxes);
             totalBoxesCell.setCellStyle(totalStyle);
 
-            // Empty cells
-            for (int i = 3; i <= 4; i++) {
+            // Empty cells for Peso/caja and Formato
+            for (int i = 4; i <= 5; i++) {
                 Cell emptyCell = totalRow.createCell(i);
                 emptyCell.setCellStyle(totalStyle);
             }
 
-            Cell totalWeightCell = totalRow.createCell(5);
+            Cell totalWeightCell = totalRow.createCell(6);
             totalWeightCell.setCellValue(grandTotalWeight.doubleValue());
             totalWeightCell.setCellStyle(totalStyle);
 
-            Cell totalPoundsCell = totalRow.createCell(6);
+            Cell totalPoundsCell = totalRow.createCell(7);
             totalPoundsCell.setCellValue(grandTotalPounds.doubleValue());
             totalPoundsCell.setCellStyle(totalStyle);
 
@@ -436,6 +445,69 @@ public class ClassificationExcelService {
     }
 
     // =====================================================
+    // Process Type Detection
+    // =====================================================
+
+    /**
+     * Detect process type from the first detail's size code.
+     * WHOLE_* = HEAD_ON (Entero), TAIL_* = SHELL_ON (Cola)
+     */
+    private String detectProcessType(ProcessingClassificationBatch batch) {
+        if (batch.getDetails() == null || batch.getDetails().isEmpty()) {
+            return "SHELL_ON"; // Default
+        }
+        
+        String firstSize = batch.getDetails().stream()
+                .findFirst()
+                .map(ProcessingClassificationBatchDetail::getSize)
+                .orElse("");
+        
+        if (firstSize != null && firstSize.startsWith("WHOLE_")) {
+            return "HEAD_ON";
+        }
+        return "SHELL_ON";
+    }
+
+    /**
+     * Get readable label for process type.
+     */
+    private String getProcessTypeLabel(String processType) {
+        if (processType == null) return "N/A";
+        switch (processType) {
+            case "HEAD_ON": return "CON CABEZA (Entero)";
+            case "SHELL_ON": return "EN COLA (Shell-On)";
+            case "VALUE_ADDED": return "VALOR AGREGADO";
+            default: return processType;
+        }
+    }
+
+    /**
+     * Get readable label for size code.
+     * Converts WHOLE_30_40 → "30-40", TAIL_21_25 → "21-25"
+     */
+    private String getSizeLabel(String sizeCode) {
+        if (sizeCode == null) return "";
+        
+        // Remove prefix and convert underscores to dashes
+        String label = sizeCode
+                .replace("WHOLE_", "")
+                .replace("TAIL_", "")
+                .replace("_", "-");
+        
+        // Handle special cases
+        if (label.equals("POMADA")) return "Pomada";
+        if (label.equals("BASURA")) return "Basura";
+        if (label.equals("U-7")) return "U-7";
+        if (label.equals("U-8")) return "U-8";
+        if (label.equals("U-10")) return "U-10";
+        if (label.equals("U-12")) return "U-12";
+        if (label.equals("U-15")) return "U-15";
+        if (label.equals("150-UP")) return "150+";
+        
+        return label;
+    }
+
+    // =====================================================
     // Helper Methods for Row Creation
     // =====================================================
 
@@ -451,7 +523,7 @@ public class ClassificationExcelService {
         Cell valueCell = row.createCell(2);
         valueCell.setCellValue(value);
         valueCell.setCellStyle(valueStyle);
-        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2, 6));
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2, 7));
 
         return rowNum + 1;
     }

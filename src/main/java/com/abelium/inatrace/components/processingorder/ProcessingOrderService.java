@@ -768,6 +768,7 @@ public class ProcessingOrderService extends BaseService {
             for (ApiClassificationDetail apiDetail : apiTargetStockOrder.getClassificationDetails()) {
                 ProcessingClassificationBatchDetail detail = new ProcessingClassificationBatchDetail();
                 detail.setBatch(batch);
+                detail.setProcessType(apiDetail.getProcessType()); // 🦐 HEAD_ON o SHELL_ON
                 detail.setBrandDetail(apiDetail.getBrandDetail());
                 detail.setSize(apiDetail.getSize());
                 detail.setBoxes(apiDetail.getBoxes());

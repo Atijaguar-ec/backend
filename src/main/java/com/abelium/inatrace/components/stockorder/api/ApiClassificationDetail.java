@@ -14,10 +14,13 @@ import java.math.BigDecimal;
 @Validated
 public class ApiClassificationDetail {
 
+    @Schema(description = "Process type: HEAD_ON (Entero) or SHELL_ON (Cola)")
+    private String processType;
+
     @Schema(description = "Brand specific to this detail line (optional)")
     private String brandDetail;
 
-    @Schema(description = "Size classification (e.g., '16/20', '21/25') (optional)")
+    @Schema(description = "Size classification (e.g., 'WHOLE_30_40', 'TAIL_21_25')")
     private String size;
 
     @Schema(description = "Number of boxes", required = true)
@@ -43,6 +46,14 @@ public class ApiClassificationDetail {
     private BigDecimal lineTotal;
 
     // Getters and Setters
+
+    public String getProcessType() {
+        return processType;
+    }
+
+    public void setProcessType(String processType) {
+        this.processType = processType;
+    }
 
     public String getBrandDetail() {
         return brandDetail;

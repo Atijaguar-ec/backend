@@ -63,6 +63,12 @@ public class ProcessingClassificationBatch extends TimestampEntity {
     @Column(name = "brandHeader", length = 100)
     private String brandHeader;
 
+    /**
+     * Provider/Supplier name (Formato DUFER: "Cam. Dietab").
+     */
+    @Column(name = "providerName", length = 200)
+    private String providerName;
+
     // =====================================================
     // 🦐 Liquidación de Compra - Campos adicionales
     // =====================================================
@@ -191,6 +197,14 @@ public class ProcessingClassificationBatch extends TimestampEntity {
 
     public void setBrandHeader(String brandHeader) {
         this.brandHeader = brandHeader;
+    }
+
+    public String getProviderName() {
+        return providerName;
+    }
+
+    public void setProviderName(String providerName) {
+        this.providerName = providerName;
     }
 
     // 🦐 Liquidación de Compra - Getters and Setters
