@@ -52,6 +52,33 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Price determined later'")
 	private Boolean displayPriceDeterminedLater;
 
+	@Schema(description = "Facility is a field inspection point for shrimp sensory testing (specific for shrimp value chain)")
+	private Boolean isFieldInspection;
+
+	@Schema(description = "Facility is a quality laboratory (specific for shrimp value chain)")
+	private Boolean isLaboratory;
+
+	@Schema(description = "Facility performs shrimp classification process (specific for shrimp value chain)")
+	private Boolean isClassificationProcess;
+
+	@Schema(description = "Facility performs shrimp freezing process (specific for shrimp value chain)")
+	private Boolean isFreezingProcess;
+
+	@Schema(description = "Facility performs shrimp cutting process (specific for shrimp value chain)")
+	private Boolean isCuttingProcess;
+
+	@Schema(description = "Facility performs shrimp treatment process (specific for shrimp value chain)")
+	private Boolean isTreatmentProcess;
+
+	@Schema(description = "Facility has a shrimp tunnel freezing area (specific for shrimp value chain)")
+	private Boolean isTunnelFreezing;
+
+	@Schema(description = "Facility has a shrimp washing area (specific for shrimp value chain)")
+	private Boolean isWashingArea;
+
+	@Schema(description = "Facility has a shrimp resting area (specific for shrimp value chain)")
+	private Boolean isRestArea;
+
 	@Schema(description = "Custom facility level overriding facility type order")
 	private Integer level;
 
@@ -178,6 +205,78 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean displayPriceDeterminedLater) {
 		this.displayPriceDeterminedLater = displayPriceDeterminedLater;
+	}
+
+	public Boolean getIsFieldInspection() {
+		return isFieldInspection;
+	}
+
+	public void setIsFieldInspection(Boolean isFieldInspection) {
+		this.isFieldInspection = isFieldInspection;
+	}
+
+	public Boolean getIsLaboratory() {
+		return isLaboratory;
+	}
+
+	public void setIsLaboratory(Boolean isLaboratory) {
+		this.isLaboratory = isLaboratory;
+	}
+
+	public Boolean getIsClassificationProcess() {
+		return isClassificationProcess;
+	}
+
+	public void setIsClassificationProcess(Boolean isClassificationProcess) {
+		this.isClassificationProcess = isClassificationProcess;
+	}
+
+	public Boolean getIsFreezingProcess() {
+		return isFreezingProcess;
+	}
+
+	public void setIsFreezingProcess(Boolean isFreezingProcess) {
+		this.isFreezingProcess = isFreezingProcess;
+	}
+
+	public Boolean getIsCuttingProcess() {
+		return isCuttingProcess;
+	}
+
+	public void setIsCuttingProcess(Boolean isCuttingProcess) {
+		this.isCuttingProcess = isCuttingProcess;
+	}
+
+	public Boolean getIsTreatmentProcess() {
+		return isTreatmentProcess;
+	}
+
+	public void setIsTreatmentProcess(Boolean isTreatmentProcess) {
+		this.isTreatmentProcess = isTreatmentProcess;
+	}
+
+	public Boolean getIsTunnelFreezing() {
+		return isTunnelFreezing;
+	}
+
+	public void setIsTunnelFreezing(Boolean isTunnelFreezing) {
+		this.isTunnelFreezing = isTunnelFreezing;
+	}
+
+	public Boolean getIsWashingArea() {
+		return isWashingArea;
+	}
+
+	public void setIsWashingArea(Boolean isWashingArea) {
+		this.isWashingArea = isWashingArea;
+	}
+
+	public Boolean getIsRestArea() {
+		return isRestArea;
+	}
+
+	public void setIsRestArea(Boolean isRestArea) {
+		this.isRestArea = isRestArea;
 	}
 
 	public Integer getLevel() {

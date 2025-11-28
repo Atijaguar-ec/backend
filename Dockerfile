@@ -3,7 +3,7 @@
 # ═══════════════════════════════════════════════════════════════
 
 # Build stage
-FROM maven:3.8.5-openjdk-17-slim as build-stage
+FROM maven:3.8.5-openjdk-17-slim AS build-stage
 
 WORKDIR /src
 
@@ -27,14 +27,16 @@ RUN mvn clean package -B -DskipTests \
     -Dvcs.ref=${VCS_REF}
 
 # Runtime stage
-FROM eclipse-temurin:17-jre-alpine as runtime-stage
+FROM eclipse-temurin:17-jre-jammy AS runtime-stage
 
 # Install curl for health checks
-RUN apk add --no-cache curl
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN addgroup -g 1001 -S inatrace && \
-    adduser -S inatrace -u 1001 -G inatrace
+RUN groupadd --system --gid 1001 inatrace && \
+    useradd --system --uid 1001 --gid inatrace --shell /sbin/nologin --create-home inatrace
 
 # Create application directories
 RUN mkdir -p /app/files /app/import /app/documents /app/logs && \

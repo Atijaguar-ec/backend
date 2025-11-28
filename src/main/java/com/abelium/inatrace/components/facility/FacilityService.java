@@ -132,6 +132,14 @@ public class FacilityService extends BaseService {
 		entity.setDisplayWomenOnly(apiFacility.getDisplayWomenOnly() != null ? apiFacility.getDisplayWomenOnly() : Boolean.FALSE);
 		entity.setIsDeactivated(BooleanUtils.isTrue(apiFacility.getDeactivated()));
 		entity.setDisplayPriceDeterminedLater(BooleanUtils.isTrue(apiFacility.getDisplayPriceDeterminedLater()));
+		entity.setIsFieldInspection(BooleanUtils.isTrue(apiFacility.getIsFieldInspection()));
+		entity.setIsLaboratory(BooleanUtils.isTrue(apiFacility.getIsLaboratory()));
+		entity.setIsClassificationProcess(BooleanUtils.isTrue(apiFacility.getIsClassificationProcess()));
+		entity.setIsFreezingProcess(BooleanUtils.isTrue(apiFacility.getIsFreezingProcess()));
+		entity.setIsCuttingProcess(BooleanUtils.isTrue(apiFacility.getIsCuttingProcess()));
+		entity.setIsTreatmentProcess(BooleanUtils.isTrue(apiFacility.getIsTreatmentProcess()));
+		entity.setIsTunnelFreezing(BooleanUtils.isTrue(apiFacility.getIsTunnelFreezing()));
+		entity.setIsWashingArea(BooleanUtils.isTrue(apiFacility.getIsWashingArea()));
 
 		facilityLocation.setLatitude(apiFacility.getFacilityLocation().getLatitude());
 		facilityLocation.setLongitude(apiFacility.getFacilityLocation().getLongitude());

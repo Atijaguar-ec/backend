@@ -4,11 +4,13 @@ import com.abelium.inatrace.api.types.Lengths;
 import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.codebook.MeasureUnitType;
 import com.abelium.inatrace.db.entities.codebook.SemiProduct;
+import com.abelium.inatrace.db.entities.common.Document;
 import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.entities.common.UserCustomer;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.company.CompanyCustomer;
 import com.abelium.inatrace.db.entities.facility.Facility;
+import com.abelium.inatrace.db.entities.fieldinspection.FieldInspection;
 import com.abelium.inatrace.db.entities.payment.Payment;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.product.FinalProduct;
@@ -19,6 +21,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -233,7 +236,124 @@ public class StockOrder extends TimestampEntity {
 	@Column(precision = 38, scale = 2)
 	private BigDecimal netQuantity;
 
+	// Shrimp-specific fields (only for non-laboratory deliveries)
+	@Column
+	private Integer numberOfGavetas;
+
+	@Column(length = 50)
+	private String numberOfBines;
+
+	@Column(length = 50)
+	private String numberOfPiscinas;
+
+	@Column(length = 100)
+	private String guiaRemisionNumber;
+
+	// Shrimp processing-specific fields: cutting
+	@Column(length = 100)
+	private String cuttingType;
+
+	@Column
+	private LocalDate cuttingEntryDate;
+
+	@Column
+	private LocalDate cuttingExitDate;
+
+	@Column(length = 255)
+	private String cuttingTemperatureControl;
+
+	// Shrimp processing-specific fields: treatment
+	@Column(length = 100)
+	private String treatmentType;
+
+	@Column
+	private LocalDate treatmentEntryDate;
+
+	@Column
+	private LocalDate treatmentExitDate;
+
+	@Column(length = 255)
+	private String treatmentTemperatureControl;
+
+	@Column(length = 255)
+	private String treatmentChemicalUsed;
+
+	// Shrimp processing-specific fields: freezing (general, not tunnel)
+	@Column(length = 100)
+	private String freezingType;
+
+	@Column
+	private LocalDate freezingEntryDate;
+
+	@Column
+	private LocalDate freezingExitDate;
+
+	@Column(length = 255)
+	private String freezingTemperatureControl;
+
+	// Shrimp processing-specific fields: tunnel freezing
+	@Column
+	private LocalDate tunnelProductionDate;
+
+	@Column
+	private LocalDate tunnelExpirationDate;
+
+	@Column(precision = 38, scale = 2)
+	private BigDecimal tunnelNetWeight;
+
+	@Column(length = 255)
+	private String tunnelSupplier;
+
+	@Column(length = 100)
+	private String tunnelFreezingType;
+
+	@Column
+	private LocalDate tunnelEntryDate;
+
+	@Column
+	private LocalDate tunnelExitDate;
+
+	// Shrimp processing-specific fields: washing area
+	@Column(length = 100)
+	private String washingWaterTemperature;
+
+	@Column(length = 255)
+	private String washingShrimpTemperatureControl;
+
+	// Laboratory-specific fields
+	@Column(length = 100)
+	private String sampleNumber;
+
+	@Column
+	private LocalTime receptionTime;
+
 	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "quality_document_id")
+	private Document qualityDocument;
+
+	/**
+	 * Reference to the linked field inspection record.
+	 * Used when a delivery at the packing plant is linked to a prior field inspection.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "field_inspection_id")
+	private FieldInspection fieldInspection;
+
+	// Field inspection (sensory testing) specific fields - for isFieldInspection facilities
+	@Column(length = 20)
+	private String flavorTestResult; // "NORMAL" or "DEFECT"
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "flavor_defect_type_id")
+	private com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect flavorDefectType;
+
+	@Column
+	private Boolean purchaseRecommended;
+
+	@Column(length = 1000)
+	private String inspectionNotes;
+
+	@ManyToOne
 	private ProcessingOrder processingOrder;
 	
 	@Enumerated(EnumType.STRING)
@@ -790,5 +910,278 @@ public class StockOrder extends TimestampEntity {
 
 	public void setNetQuantity(BigDecimal netQuantity) {
 		this.netQuantity = netQuantity;
+	}
+
+	public Integer getNumberOfGavetas() {
+		return numberOfGavetas;
+	}
+
+	public void setNumberOfGavetas(Integer numberOfGavetas) {
+		this.numberOfGavetas = numberOfGavetas;
+	}
+
+	public String getNumberOfBines() {
+		return numberOfBines;
+	}
+
+	public void setNumberOfBines(String numberOfBines) {
+		this.numberOfBines = numberOfBines;
+	}
+
+	public String getNumberOfPiscinas() {
+		return numberOfPiscinas;
+	}
+
+	public void setNumberOfPiscinas(String numberOfPiscinas) {
+		this.numberOfPiscinas = numberOfPiscinas;
+	}
+
+	public String getGuiaRemisionNumber() {
+		return guiaRemisionNumber;
+	}
+
+	public void setGuiaRemisionNumber(String guiaRemisionNumber) {
+		this.guiaRemisionNumber = guiaRemisionNumber;
+	}
+
+	public String getCuttingType() {
+		return cuttingType;
+	}
+
+	public void setCuttingType(String cuttingType) {
+		this.cuttingType = cuttingType;
+	}
+
+	public LocalDate getCuttingEntryDate() {
+		return cuttingEntryDate;
+	}
+
+	public void setCuttingEntryDate(LocalDate cuttingEntryDate) {
+		this.cuttingEntryDate = cuttingEntryDate;
+	}
+
+	public LocalDate getCuttingExitDate() {
+		return cuttingExitDate;
+	}
+
+	public void setCuttingExitDate(LocalDate cuttingExitDate) {
+		this.cuttingExitDate = cuttingExitDate;
+	}
+
+	public String getCuttingTemperatureControl() {
+		return cuttingTemperatureControl;
+	}
+
+	public void setCuttingTemperatureControl(String cuttingTemperatureControl) {
+		this.cuttingTemperatureControl = cuttingTemperatureControl;
+	}
+
+	public String getTreatmentType() {
+		return treatmentType;
+	}
+
+	public void setTreatmentType(String treatmentType) {
+		this.treatmentType = treatmentType;
+	}
+
+	public LocalDate getTreatmentEntryDate() {
+		return treatmentEntryDate;
+	}
+
+	public void setTreatmentEntryDate(LocalDate treatmentEntryDate) {
+		this.treatmentEntryDate = treatmentEntryDate;
+	}
+
+	public LocalDate getTreatmentExitDate() {
+		return treatmentExitDate;
+	}
+
+	public void setTreatmentExitDate(LocalDate treatmentExitDate) {
+		this.treatmentExitDate = treatmentExitDate;
+	}
+
+	public String getTreatmentTemperatureControl() {
+		return treatmentTemperatureControl;
+	}
+
+	public void setTreatmentTemperatureControl(String treatmentTemperatureControl) {
+		this.treatmentTemperatureControl = treatmentTemperatureControl;
+	}
+
+	public String getTreatmentChemicalUsed() {
+		return treatmentChemicalUsed;
+	}
+
+	public void setTreatmentChemicalUsed(String treatmentChemicalUsed) {
+		this.treatmentChemicalUsed = treatmentChemicalUsed;
+	}
+
+	// Freezing (general) getters and setters
+	public String getFreezingType() {
+		return freezingType;
+	}
+
+	public void setFreezingType(String freezingType) {
+		this.freezingType = freezingType;
+	}
+
+	public LocalDate getFreezingEntryDate() {
+		return freezingEntryDate;
+	}
+
+	public void setFreezingEntryDate(LocalDate freezingEntryDate) {
+		this.freezingEntryDate = freezingEntryDate;
+	}
+
+	public LocalDate getFreezingExitDate() {
+		return freezingExitDate;
+	}
+
+	public void setFreezingExitDate(LocalDate freezingExitDate) {
+		this.freezingExitDate = freezingExitDate;
+	}
+
+	public String getFreezingTemperatureControl() {
+		return freezingTemperatureControl;
+	}
+
+	public void setFreezingTemperatureControl(String freezingTemperatureControl) {
+		this.freezingTemperatureControl = freezingTemperatureControl;
+	}
+
+	public LocalDate getTunnelProductionDate() {
+		return tunnelProductionDate;
+	}
+
+	public void setTunnelProductionDate(LocalDate tunnelProductionDate) {
+		this.tunnelProductionDate = tunnelProductionDate;
+	}
+
+	public LocalDate getTunnelExpirationDate() {
+		return tunnelExpirationDate;
+	}
+
+	public void setTunnelExpirationDate(LocalDate tunnelExpirationDate) {
+		this.tunnelExpirationDate = tunnelExpirationDate;
+	}
+
+	public BigDecimal getTunnelNetWeight() {
+		return tunnelNetWeight;
+	}
+
+	public void setTunnelNetWeight(BigDecimal tunnelNetWeight) {
+		this.tunnelNetWeight = tunnelNetWeight;
+	}
+
+	public String getTunnelSupplier() {
+		return tunnelSupplier;
+	}
+
+	public void setTunnelSupplier(String tunnelSupplier) {
+		this.tunnelSupplier = tunnelSupplier;
+	}
+
+	public String getTunnelFreezingType() {
+		return tunnelFreezingType;
+	}
+
+	public void setTunnelFreezingType(String tunnelFreezingType) {
+		this.tunnelFreezingType = tunnelFreezingType;
+	}
+
+	public LocalDate getTunnelEntryDate() {
+		return tunnelEntryDate;
+	}
+
+	public void setTunnelEntryDate(LocalDate tunnelEntryDate) {
+		this.tunnelEntryDate = tunnelEntryDate;
+	}
+
+	public LocalDate getTunnelExitDate() {
+		return tunnelExitDate;
+	}
+
+	public void setTunnelExitDate(LocalDate tunnelExitDate) {
+		this.tunnelExitDate = tunnelExitDate;
+	}
+
+	public String getWashingWaterTemperature() {
+		return washingWaterTemperature;
+	}
+
+	public void setWashingWaterTemperature(String washingWaterTemperature) {
+		this.washingWaterTemperature = washingWaterTemperature;
+	}
+
+	public String getWashingShrimpTemperatureControl() {
+		return washingShrimpTemperatureControl;
+	}
+
+	public void setWashingShrimpTemperatureControl(String washingShrimpTemperatureControl) {
+		this.washingShrimpTemperatureControl = washingShrimpTemperatureControl;
+	}
+
+	public String getSampleNumber() {
+		return sampleNumber;
+	}
+
+	public void setSampleNumber(String sampleNumber) {
+		this.sampleNumber = sampleNumber;
+	}
+
+	public LocalTime getReceptionTime() {
+		return receptionTime;
+	}
+
+	public void setReceptionTime(LocalTime receptionTime) {
+		this.receptionTime = receptionTime;
+	}
+
+	public Document getQualityDocument() {
+		return qualityDocument;
+	}
+
+	public void setQualityDocument(Document qualityDocument) {
+		this.qualityDocument = qualityDocument;
+	}
+
+	public FieldInspection getFieldInspection() {
+		return fieldInspection;
+	}
+
+	public void setFieldInspection(FieldInspection fieldInspection) {
+		this.fieldInspection = fieldInspection;
+	}
+
+	public String getFlavorTestResult() {
+		return flavorTestResult;
+	}
+
+	public void setFlavorTestResult(String flavorTestResult) {
+		this.flavorTestResult = flavorTestResult;
+	}
+
+	public com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect getFlavorDefectType() {
+		return flavorDefectType;
+	}
+
+	public void setFlavorDefectType(com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect flavorDefectType) {
+		this.flavorDefectType = flavorDefectType;
+	}
+
+	public Boolean getPurchaseRecommended() {
+		return purchaseRecommended;
+	}
+
+	public void setPurchaseRecommended(Boolean purchaseRecommended) {
+		this.purchaseRecommended = purchaseRecommended;
+	}
+
+	public String getInspectionNotes() {
+		return inspectionNotes;
+	}
+
+	public void setInspectionNotes(String inspectionNotes) {
+		this.inspectionNotes = inspectionNotes;
 	}
 }

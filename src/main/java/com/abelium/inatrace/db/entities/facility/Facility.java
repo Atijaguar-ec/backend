@@ -64,6 +64,32 @@ public class Facility extends TimestampEntity {
 	@Column
 	private Boolean displayPriceDeterminedLater;
 
+	@Column(name = "isFieldInspection")
+	private Boolean isFieldInspection;
+
+	@Column(name = "isLaboratory")
+	private Boolean isLaboratory;
+
+	@Column(name = "isClassificationProcess")
+	private Boolean isClassificationProcess;
+
+	@Column(name = "isFreezingProcess")
+	private Boolean isFreezingProcess;
+
+	@Column(name = "isCuttingProcess")
+	private Boolean isCuttingProcess;
+
+	@Column(name = "isTreatmentProcess")
+	private Boolean isTreatmentProcess;
+
+	@Column(name = "isTunnelFreezing")
+	private Boolean isTunnelFreezing;
+
+	@Column(name = "isWashingArea")
+	private Boolean isWashingArea;
+
+	@Column(name = "isRestArea")
+	private Boolean isRestArea;
 	@Column
 	private Integer level;
 
@@ -193,6 +219,78 @@ public class Facility extends TimestampEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean priceDeterminedLater) {
 		this.displayPriceDeterminedLater = priceDeterminedLater;
+	}
+
+	public Boolean getIsFieldInspection() {
+		return isFieldInspection;
+	}
+
+	public void setIsFieldInspection(Boolean isFieldInspection) {
+		this.isFieldInspection = isFieldInspection;
+	}
+
+	public Boolean getIsLaboratory() {
+		return isLaboratory;
+	}
+
+	public void setIsLaboratory(Boolean isLaboratory) {
+		this.isLaboratory = isLaboratory;
+	}
+
+	public Boolean getIsClassificationProcess() {
+		return isClassificationProcess;
+	}
+
+	public void setIsClassificationProcess(Boolean isClassificationProcess) {
+		this.isClassificationProcess = isClassificationProcess;
+	}
+
+	public Boolean getIsFreezingProcess() {
+		return isFreezingProcess;
+	}
+
+	public void setIsFreezingProcess(Boolean isFreezingProcess) {
+		this.isFreezingProcess = isFreezingProcess;
+	}
+
+	public Boolean getIsCuttingProcess() {
+		return isCuttingProcess;
+	}
+
+	public void setIsCuttingProcess(Boolean isCuttingProcess) {
+		this.isCuttingProcess = isCuttingProcess;
+	}
+
+	public Boolean getIsTreatmentProcess() {
+		return isTreatmentProcess;
+	}
+
+	public void setIsTreatmentProcess(Boolean isTreatmentProcess) {
+		this.isTreatmentProcess = isTreatmentProcess;
+	}
+
+	public Boolean getIsTunnelFreezing() {
+		return isTunnelFreezing;
+	}
+
+	public void setIsTunnelFreezing(Boolean isTunnelFreezing) {
+		this.isTunnelFreezing = isTunnelFreezing;
+	}
+
+	public Boolean getIsWashingArea() {
+		return isWashingArea;
+	}
+
+	public void setIsWashingArea(Boolean isWashingArea) {
+		this.isWashingArea = isWashingArea;
+	}
+
+	public Boolean getIsRestArea() {
+		return isRestArea;
+	}
+
+	public void setIsRestArea(Boolean isRestArea) {
+		this.isRestArea = isRestArea;
 	}
 
 	public Integer getLevel() {

@@ -14,6 +14,9 @@ import com.abelium.inatrace.components.common.api.ApiActivityProof;
 import com.abelium.inatrace.components.common.api.ApiCertification;
 import com.abelium.inatrace.components.company.CompanyApiTools;
 import com.abelium.inatrace.components.company.CompanyQueries;
+import com.abelium.inatrace.components.fieldinspection.FieldInspectionService;
+import com.abelium.inatrace.components.laboratory.LaboratoryAnalysisService;
+import com.abelium.inatrace.db.entities.codebook.ShrimpFlavorDefect;
 import com.abelium.inatrace.components.currencies.CurrencyService;
 import com.abelium.inatrace.components.facility.FacilityService;
 import com.abelium.inatrace.components.facility.api.ApiFacility;
@@ -35,6 +38,8 @@ import com.abelium.inatrace.db.entities.payment.Payment;
 import com.abelium.inatrace.db.entities.payment.PaymentPurposeType;
 import com.abelium.inatrace.db.entities.processingaction.ProcessingAction;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatch;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatchDetail;
 import com.abelium.inatrace.db.entities.product.ProductCompany;
 import com.abelium.inatrace.db.entities.productorder.ProductOrder;
 import com.abelium.inatrace.db.entities.stockorder.*;
@@ -102,6 +107,10 @@ public class StockOrderService extends BaseService {
 
     private final MessageSource messageSource;
 
+    private final FieldInspectionService fieldInspectionService;
+
+    private final LaboratoryAnalysisService laboratoryAnalysisService;
+
     @Autowired
     public StockOrderService(FacilityService facilityService,
                              ProcessingEvidenceFieldService procEvidenceFieldService,
@@ -110,7 +119,9 @@ public class StockOrderService extends BaseService {
                              FinalProductService finalProductService,
                              CurrencyService currencyService,
                              CompanyQueries companyQueries,
-                             MessageSource messageSource) {
+                             MessageSource messageSource,
+                             @Lazy FieldInspectionService fieldInspectionService,
+                             @Lazy LaboratoryAnalysisService laboratoryAnalysisService) {
         this.facilityService = facilityService;
         this.procEvidenceFieldService = procEvidenceFieldService;
         this.procEvidenceTypeService = procEvidenceTypeService;
@@ -119,6 +130,8 @@ public class StockOrderService extends BaseService {
         this.currencyService = currencyService;
         this.companyQueries = companyQueries;
         this.messageSource = messageSource;
+        this.fieldInspectionService = fieldInspectionService;
+        this.laboratoryAnalysisService = laboratoryAnalysisService;
     }
 
     public ApiStockOrder getStockOrder(long id, CustomUserDetails user, Language language, Boolean withProcessingOrder) throws ApiException {
@@ -135,7 +148,7 @@ public class StockOrderService extends BaseService {
 
         StockOrder stockOrder = fetchEntity(id, StockOrder.class);
 
-        // Check that the request user is form a company which is connected to the company that owns the quote order (or is a user of that company)
+        // Check that the request user is from a company which is connected to the company that owns the quote order (or is a user of that company)
         PermissionsUtil.checkUserIfConnectedWithProducts(companyQueries.fetchCompanyProducts(stockOrder.getCompany().getId()), user);
 
         // If Stock order has no Processing order set, exit with exception
@@ -143,7 +156,77 @@ public class StockOrderService extends BaseService {
             throw new ApiException(ApiStatus.INVALID_REQUEST, "The Stock order with ID: " + id + " doesn't have Processing order.");
         }
 
-        return ProcessingOrderMapper.toApiProcessingOrder(stockOrder.getProcessingOrder(), language);
+        // Map base processing order (includes target stock orders through StockOrderMapper)
+        ApiProcessingOrder apiProcessingOrder = ProcessingOrderMapper.toApiProcessingOrder(stockOrder.getProcessingOrder(), language);
+
+        // 🦐 Additionally populate shrimp classification data (header + details) from ProcessingClassificationBatch
+        if (apiProcessingOrder.getTargetStockOrders() != null && !apiProcessingOrder.getTargetStockOrders().isEmpty()) {
+
+            // Collect target stock order IDs that may have classification batches
+            java.util.List<Long> targetIds = apiProcessingOrder.getTargetStockOrders().stream()
+                    .map(ApiStockOrder::getId)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+
+            if (!targetIds.isEmpty()) {
+                java.util.List<ProcessingClassificationBatch> batches = em.createQuery(
+                                "SELECT b FROM ProcessingClassificationBatch b " +
+                                        "LEFT JOIN FETCH b.details " +
+                                        "WHERE b.targetStockOrder.id IN :ids",
+                                ProcessingClassificationBatch.class)
+                        .setParameter("ids", targetIds)
+                        .getResultList();
+
+                java.util.Map<Long, ProcessingClassificationBatch> batchByStockOrderId = batches.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                b -> b.getTargetStockOrder().getId(),
+                                b -> b,
+                                (b1, b2) -> b1 // in case of duplicates, keep the first
+                        ));
+
+                apiProcessingOrder.getTargetStockOrders().forEach(apiTso -> {
+                    Long tsoId = apiTso.getId();
+                    if (tsoId == null) {
+                        return;
+                    }
+
+                    ProcessingClassificationBatch batch = batchByStockOrderId.get(tsoId);
+                    if (batch == null) {
+                        return; // No classification batch for this stock order
+                    }
+
+                    // Header fields
+                    apiTso.setClassificationStartTime(batch.getStartTime());
+                    apiTso.setClassificationEndTime(batch.getEndTime());
+                    apiTso.setProductionOrder(batch.getProductionOrder());
+                    apiTso.setFreezingType(batch.getFreezingType());
+                    apiTso.setMachine(batch.getMachine());
+                    apiTso.setBrandHeader(batch.getBrandHeader());
+
+                    // Detail rows
+                    java.util.List<ApiClassificationDetail> apiDetails = batch.getDetails().stream()
+                            .map(detail -> {
+                                ApiClassificationDetail dto = new ApiClassificationDetail();
+                                dto.setProcessType(detail.getProcessType()); // 🦐 HEAD_ON o SHELL_ON
+                                dto.setBrandDetail(detail.getBrandDetail());
+                                dto.setSize(detail.getSize());
+                                dto.setBoxes(detail.getBoxes());
+                                dto.setWeightPerBox(detail.getWeightPerBox());
+                                dto.setWeightFormat(detail.getWeightFormat());
+                                dto.setQualityGrade(detail.getQualityGrade());
+                                dto.setPresentationType(detail.getPresentationType());
+                                dto.setPricePerPound(detail.getPricePerPound());
+                                dto.setLineTotal(detail.getLineTotal());
+                                return dto;
+                            })
+                            .toList();
+
+                    apiTso.setClassificationDetails(apiDetails);
+                });
+            }
+        }
+
+        return apiProcessingOrder;
     }
 
     public ApiPaginatedList<ApiStockOrder> getAvailableStockOrderListForFacility(ApiPaginatedRequest request,
@@ -164,7 +247,23 @@ public class StockOrderService extends BaseService {
                 () -> stockOrderQueryObject(
                         request,
                         queryRequest
-                ), stockOrder -> StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language));
+                ), stockOrder -> {
+                    ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language);
+
+                    // 🧪 Populate laboratory analysis fields (approvedForPurchase, sensorial fields) when available
+                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis laboratoryAnalysis = em.createQuery(
+                                    "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis.class)
+                            .setParameter("stockOrderId", stockOrder.getId())
+                            .setMaxResults(1)
+                            .getResultStream()
+                            .findFirst()
+                            .orElse(null);
+
+                    StockOrderMapper.populateLaboratoryAnalysisFields(apiStockOrder, laboratoryAnalysis);
+
+                    return apiStockOrder;
+                });
     }
 
     public ApiPaginatedList<ApiStockOrder> getStockOrderListForCompany(ApiPaginatedRequest request,
@@ -194,7 +293,23 @@ public class StockOrderService extends BaseService {
                 () -> stockOrderQueryObject(
                         request,
                         queryRequest
-                ), stockOrder -> StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language));
+                ), stockOrder -> {
+                    ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language);
+
+                    // 🧪 Populate laboratory analysis fields (approvedForPurchase, sensorial fields) when available
+                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis laboratoryAnalysis = em.createQuery(
+                                    "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                                    com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis.class)
+                            .setParameter("stockOrderId", stockOrder.getId())
+                            .setMaxResults(1)
+                            .getResultStream()
+                            .findFirst()
+                            .orElse(null);
+
+                    StockOrderMapper.populateLaboratoryAnalysisFields(apiStockOrder, laboratoryAnalysis);
+
+                    return apiStockOrder;
+                });
     }
 
     private StockOrder stockOrderQueryObject(ApiPaginatedRequest request,
@@ -1017,6 +1132,66 @@ public class StockOrderService extends BaseService {
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
         entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
+        // 🦐 Shrimp-specific fields
+        entity.setNumberOfGavetas(apiStockOrder.getNumberOfGavetas());
+        entity.setNumberOfBines(apiStockOrder.getNumberOfBines());
+        entity.setNumberOfPiscinas(apiStockOrder.getNumberOfPiscinas());
+        entity.setGuiaRemisionNumber(apiStockOrder.getGuiaRemisionNumber());
+        // 🦐 Shrimp processing-specific fields
+        entity.setCuttingType(apiStockOrder.getCuttingType());
+        entity.setCuttingEntryDate(apiStockOrder.getCuttingEntryDate());
+        entity.setCuttingExitDate(apiStockOrder.getCuttingExitDate());
+        entity.setCuttingTemperatureControl(apiStockOrder.getCuttingTemperatureControl());
+        entity.setTreatmentType(apiStockOrder.getTreatmentType());
+        entity.setTreatmentEntryDate(apiStockOrder.getTreatmentEntryDate());
+        entity.setTreatmentExitDate(apiStockOrder.getTreatmentExitDate());
+        entity.setTreatmentTemperatureControl(apiStockOrder.getTreatmentTemperatureControl());
+        entity.setTreatmentChemicalUsed(apiStockOrder.getTreatmentChemicalUsed());
+        // 🦐 Shrimp processing: freezing fields
+        entity.setFreezingType(apiStockOrder.getFreezingType());
+        entity.setFreezingEntryDate(apiStockOrder.getFreezingEntryDate());
+        entity.setFreezingExitDate(apiStockOrder.getFreezingExitDate());
+        entity.setFreezingTemperatureControl(apiStockOrder.getFreezingTemperatureControl());
+        entity.setTunnelProductionDate(apiStockOrder.getTunnelProductionDate());
+        entity.setTunnelExpirationDate(apiStockOrder.getTunnelExpirationDate());
+        entity.setTunnelNetWeight(apiStockOrder.getTunnelNetWeight());
+        entity.setTunnelSupplier(apiStockOrder.getTunnelSupplier());
+        entity.setTunnelFreezingType(apiStockOrder.getTunnelFreezingType());
+        entity.setTunnelEntryDate(apiStockOrder.getTunnelEntryDate());
+        entity.setTunnelExitDate(apiStockOrder.getTunnelExitDate());
+        entity.setWashingWaterTemperature(apiStockOrder.getWashingWaterTemperature());
+        entity.setWashingShrimpTemperatureControl(apiStockOrder.getWashingShrimpTemperatureControl());
+        // 🔬 Laboratory-specific fields
+        entity.setSampleNumber(apiStockOrder.getSampleNumber());
+        entity.setReceptionTime(apiStockOrder.getReceptionTime());
+        
+        // Set quality document if provided
+        if (apiStockOrder.getQualityDocument() != null && apiStockOrder.getQualityDocument().getId() != null) {
+            System.out.println("DEBUG: Setting quality document with ID: " + apiStockOrder.getQualityDocument().getId());
+            Document qualityDoc = fetchEntity(apiStockOrder.getQualityDocument().getId(), Document.class);
+            System.out.println("DEBUG: Fetched quality document: " + (qualityDoc != null ? qualityDoc.getStorageKey() : "NULL"));
+            entity.setQualityDocument(qualityDoc);
+            System.out.println("DEBUG: Quality document set on entity: " + (entity.getQualityDocument() != null ? entity.getQualityDocument().getStorageKey() : "NULL"));
+        } else {
+            System.out.println("DEBUG: Quality document is NULL or has no ID - apiStockOrder.qualityDocument=" + 
+                (apiStockOrder.getQualityDocument() != null ? "NOT NULL" : "NULL") + 
+                ", ID=" + (apiStockOrder.getQualityDocument() != null ? apiStockOrder.getQualityDocument().getId() : "N/A"));
+            entity.setQualityDocument(null);
+        }
+
+        // 🔍 Field inspection (sensory testing) fields
+        entity.setFlavorTestResult(apiStockOrder.getFlavorTestResult());
+        entity.setPurchaseRecommended(apiStockOrder.getPurchaseRecommended());
+        entity.setInspectionNotes(apiStockOrder.getInspectionNotes());
+        
+        // Set flavor defect type if provided
+        if (apiStockOrder.getFlavorDefectTypeId() != null) {
+            ShrimpFlavorDefect defect = fetchEntityOrElse(apiStockOrder.getFlavorDefectTypeId(), ShrimpFlavorDefect.class, null);
+            entity.setFlavorDefectType(defect);
+        } else {
+            entity.setFlavorDefectType(null);
+        }
+        
         entity.setCurrency(apiStockOrder.getCurrency());
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders
@@ -1173,6 +1348,40 @@ public class StockOrderService extends BaseService {
 
         if (entity.getId() == null) {
             em.persist(entity);
+            System.out.println("DEBUG: After persist - StockOrder ID: " + entity.getId() + ", QualityDocument: " + 
+                (entity.getQualityDocument() != null ? entity.getQualityDocument().getId() : "NULL"));
+        } else {
+            System.out.println("DEBUG: Updating existing StockOrder ID: " + entity.getId() + ", QualityDocument: " + 
+                (entity.getQualityDocument() != null ? entity.getQualityDocument().getId() : "NULL"));
+        }
+
+        // 🔍 If this is a field inspection facility, create/update FieldInspection record
+        if (Boolean.TRUE.equals(facility.getIsFieldInspection()) && 
+            apiStockOrder.getFlavorTestResult() != null) {
+            try {
+                fieldInspectionService.createFromStockOrder(entity, user);
+                System.out.println("DEBUG: Created/updated FieldInspection for StockOrder ID: " + entity.getId());
+            } catch (Exception e) {
+                System.out.println("DEBUG: Error creating FieldInspection: " + e.getMessage());
+                // Log but don't fail the main operation
+            }
+        }
+
+        // 🏭 If this is a collection facility (not field inspection), create LaboratoryAnalysis record
+        // This captures sensorial analysis data at the point of delivery for shrimp collection centers
+        // Reutilizes the same pattern as ProcessingOrderService.createOrUpdateLaboratoryAnalysis
+        if (Boolean.TRUE.equals(facility.getIsCollectionFacility()) && 
+            !Boolean.TRUE.equals(facility.getIsFieldInspection())) {
+            try {
+                laboratoryAnalysisService.createOrUpdateFromApiStockOrder(
+                    apiStockOrder, 
+                    entity, 
+                    user.getUserId()
+                );
+            } catch (Exception e) {
+                System.out.println("DEBUG: Error creating LaboratoryAnalysis: " + e.getMessage());
+                // Log but don't fail the main operation
+            }
         }
 
         return new ApiBaseEntity(entity);

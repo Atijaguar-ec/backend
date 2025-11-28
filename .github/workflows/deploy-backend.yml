@@ -359,6 +359,11 @@ jobs:
           MAIL_CONN_TIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
           MAIL_TIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
           MAIL_WRITETIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
+          ADMIN_EMAIL="${{ secrets.TEST_UNOCACE_ADMIN_EMAIL }}"; [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="inatrace@unocace.com"
+          ADMIN_PASSWORD="${{ secrets.TEST_UNOCACE_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD="Admin123!"
+          ADMIN_NAME="${{ secrets.TEST_UNOCACE_ADMIN_NAME }}"; [ -z "$ADMIN_NAME" ] && ADMIN_NAME="Administrador UNOCACE"
+          ADMIN_SURNAME="${{ secrets.TEST_UNOCACE_ADMIN_SURNAME }}"; [ -z "$ADMIN_SURNAME" ] && ADMIN_SURNAME="UNOCACE Admin"
+          ADMIN_COMPANY_NAME="${{ secrets.TEST_UNOCACE_ADMIN_COMPANY_NAME }}"; [ -z "$ADMIN_COMPANY_NAME" ] && ADMIN_COMPANY_NAME="UNOCACE - Administración de Sistema"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -399,6 +404,11 @@ jobs:
           INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
           INATRACE_AGSTACK_EMAIL=${{ secrets.TEST_UNOCACE_AGSTACK_EMAIL }}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.TEST_UNOCACE_AGSTACK_PASSWORD }}
+          INATRACE_ADMIN_EMAIL=$ADMIN_EMAIL
+          INATRACE_ADMIN_PASSWORD=$ADMIN_PASSWORD
+          INATRACE_ADMIN_NAME=$ADMIN_NAME
+          INATRACE_ADMIN_SURNAME=$ADMIN_SURNAME
+          INATRACE_ADMIN_COMPANY_NAME=$ADMIN_COMPANY_NAME
           EOF
 
       - name: 📤 Upload .env
@@ -530,6 +540,11 @@ jobs:
           MAIL_CONN_TIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
           MAIL_TIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
           MAIL_WRITETIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
+          ADMIN_EMAIL="${{ secrets.TEST_DUFER_ADMIN_EMAIL }}"; [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="inatrace@espam.edu.ec"
+          ADMIN_PASSWORD="${{ secrets.TEST_DUFER_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD="Admin123!"
+          ADMIN_NAME="${{ secrets.TEST_DUFER_ADMIN_NAME }}"; [ -z "$ADMIN_NAME" ] && ADMIN_NAME="Administrador DUFER"
+          ADMIN_SURNAME="${{ secrets.TEST_DUFER_ADMIN_SURNAME }}"; [ -z "$ADMIN_SURNAME" ] && ADMIN_SURNAME="DUFER Sistema"
+          ADMIN_COMPANY_NAME="${{ secrets.TEST_DUFER_ADMIN_COMPANY_NAME }}"; [ -z "$ADMIN_COMPANY_NAME" ] && ADMIN_COMPANY_NAME="DUFER - Administración del Sistema"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -567,6 +582,11 @@ jobs:
           INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
           INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
           INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
+          INATRACE_ADMIN_EMAIL=$ADMIN_EMAIL
+          INATRACE_ADMIN_PASSWORD=$ADMIN_PASSWORD
+          INATRACE_ADMIN_NAME=$ADMIN_NAME
+          INATRACE_ADMIN_SURNAME=$ADMIN_SURNAME
+          INATRACE_ADMIN_COMPANY_NAME=$ADMIN_COMPANY_NAME
           EOF
 
       - name: 📤 Upload .env
@@ -704,6 +724,11 @@ jobs:
           FE_URL="${{ secrets.DEV_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
           FE_CONFIRM_URL="${{ secrets.DEV_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
           FE_RESET_URL="${{ secrets.DEV_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
+          ADMIN_EMAIL="${{ secrets.DEV_ADMIN_EMAIL }}"; [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="admin.dev@inatrace.local"
+          ADMIN_PASSWORD="${{ secrets.DEV_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD="Admin123!"
+          ADMIN_NAME="${{ secrets.DEV_ADMIN_NAME }}"; [ -z "$ADMIN_NAME" ] && ADMIN_NAME="Admin"
+          ADMIN_SURNAME="${{ secrets.DEV_ADMIN_SURNAME }}"; [ -z "$ADMIN_SURNAME" ] && ADMIN_SURNAME="DEV"
+          ADMIN_COMPANY_NAME="${{ secrets.DEV_ADMIN_COMPANY_NAME }}"; [ -z "$ADMIN_COMPANY_NAME" ] && ADMIN_COMPANY_NAME="Demo Company"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=develop
@@ -909,6 +934,11 @@ jobs:
           FE_URL="${{ secrets.DEV_SHRIMP_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="http://camaron.atijaguar.com/"
           FE_CONFIRM_URL="${{ secrets.DEV_SHRIMP_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
           FE_RESET_URL="${{ secrets.DEV_SHRIMP_FE_RESET_URL }}"; [ -z "$FE_RESET_URL " ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
+          ADMIN_EMAIL="${{ secrets.DEV_SHRIMP_ADMIN_EMAIL }}"; [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="admin.shrimp@inatrace.local"
+          ADMIN_PASSWORD="${{ secrets.DEV_SHRIMP_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD="Admin123!"
+          ADMIN_NAME="${{ secrets.DEV_SHRIMP_ADMIN_NAME }}"; [ -z "$ADMIN_NAME" ] && ADMIN_NAME="Admin"
+          ADMIN_SURNAME="${{ secrets.DEV_SHRIMP_ADMIN_SURNAME }}"; [ -z "$ADMIN_SURNAME" ] && ADMIN_SURNAME="SHRIMP"
+          ADMIN_COMPANY_NAME="${{ secrets.DEV_SHRIMP_ADMIN_COMPANY_NAME }}"; [ -z "$ADMIN_COMPANY_NAME" ] && ADMIN_COMPANY_NAME="Shrimp Demo"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=develop
@@ -931,6 +961,11 @@ jobs:
           FE_URL=$FE_URL
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
+          INATRACE_ADMIN_EMAIL=$ADMIN_EMAIL
+          INATRACE_ADMIN_PASSWORD=$ADMIN_PASSWORD
+          INATRACE_ADMIN_NAME=$ADMIN_NAME
+          INATRACE_ADMIN_SURNAME=$ADMIN_SURNAME
+          INATRACE_ADMIN_COMPANY_NAME=$ADMIN_COMPANY_NAME
           SPRING_MAIL_HOST=$MAIL_HOST
           SPRING_MAIL_PORT=$MAIL_PORT
           SPRING_MAIL_USERNAME=$MAIL_USERNAME
@@ -1112,6 +1147,11 @@ jobs:
           DB_USER="${{ secrets.PROD_DUFER_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_prod_dufer"
           REQ_TOKEN="${{ secrets.PROD_DUFER_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="placeholder-requestlog-${GITHUB_RUN_ID}"
           EXR_KEY="${{ secrets.PROD_DUFER_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-prod-key"
+          ADMIN_EMAIL="${{ secrets.PROD_DUFER_ADMIN_EMAIL }}"; [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="admin.dufer@inatrace.com"
+          ADMIN_PASSWORD="${{ secrets.PROD_DUFER_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD="Admin123!"
+          ADMIN_NAME="${{ secrets.PROD_DUFER_ADMIN_NAME }}"; [ -z "$ADMIN_NAME" ] && ADMIN_NAME="Admin"
+          ADMIN_SURNAME="${{ secrets.PROD_DUFER_ADMIN_SURNAME }}"; [ -z "$ADMIN_SURNAME" ] && ADMIN_SURNAME="DUFER"
+          ADMIN_COMPANY_NAME="${{ secrets.PROD_DUFER_ADMIN_COMPANY_NAME }}"; [ -z "$ADMIN_COMPANY_NAME" ] && ADMIN_COMPANY_NAME="DUFER"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=latest
@@ -1128,6 +1168,11 @@ jobs:
           MAIL_PORT=465
           MAIL_USERNAME=desarrollo@atijaguar.com
           MAIL_PASSWORD=${{ secrets.PROD_DUFER_MAIL_PASSWORD }}
+          INATRACE_ADMIN_EMAIL=$ADMIN_EMAIL
+          INATRACE_ADMIN_PASSWORD=$ADMIN_PASSWORD
+          INATRACE_ADMIN_NAME=$ADMIN_NAME
+          INATRACE_ADMIN_SURNAME=$ADMIN_SURNAME
+          INATRACE_ADMIN_COMPANY_NAME=$ADMIN_COMPANY_NAME
           EOF
 
       - name: Upload .env (prod dufer)

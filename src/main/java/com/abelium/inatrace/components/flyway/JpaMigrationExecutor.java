@@ -5,6 +5,8 @@ import jakarta.persistence.EntityManagerFactory;
 import org.flywaydb.core.api.FlywayException;
 import org.flywaydb.core.api.executor.Context;
 import org.flywaydb.core.api.executor.MigrationExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 
 /**
@@ -12,6 +14,8 @@ import org.springframework.core.env.Environment;
  */
 public class JpaMigrationExecutor implements MigrationExecutor {
     
+    private static final Logger log = LoggerFactory.getLogger(JpaMigrationExecutor.class);
+
     /**
      * The JpaMigration to execute.
      */
@@ -37,11 +41,15 @@ public class JpaMigrationExecutor implements MigrationExecutor {
     public void execute(Context context) {
         EntityManager em = entityManagerFactory.createEntityManager();
         
+        String migrationClassName = migration.getClass().getName();
+        log.info("[Flyway] JpaMigrationExecutor.execute - starting migration: {}", migrationClassName);
         try {
             em.getTransaction().begin();
             migration.migrate(em, environment);
             em.getTransaction().commit();
+            log.info("[Flyway] JpaMigrationExecutor.execute - successfully finished migration: {}", migrationClassName);
         } catch (Exception e) {
+            log.error("[Flyway] JpaMigrationExecutor.execute - migration failed: {}", migrationClassName, e);
             if (em.getTransaction().isActive())
                 em.getTransaction().rollback();
             throw new FlywayException("Migration failed!", e);

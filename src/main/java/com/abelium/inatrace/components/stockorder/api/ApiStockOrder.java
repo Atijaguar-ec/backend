@@ -4,6 +4,7 @@ import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.components.codebook.measure_unit_type.api.ApiMeasureUnitType;
 import com.abelium.inatrace.components.codebook.semiproduct.api.ApiSemiProduct;
 import com.abelium.inatrace.components.common.api.ApiActivityProof;
+import com.abelium.inatrace.components.common.api.ApiDocument;
 import com.abelium.inatrace.components.company.api.ApiCompany;
 import com.abelium.inatrace.components.company.api.ApiCompanyCustomer;
 import com.abelium.inatrace.components.company.api.ApiUserCustomer;
@@ -21,6 +22,7 @@ import org.springframework.validation.annotation.Validated;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -212,6 +214,179 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Net quantity after all deductions (tare, damaged weight, moisture)")
     private BigDecimal netQuantity;
+
+    // 🦐 Shrimp-specific fields (only for non-laboratory deliveries)
+    @Schema(description = "Number of gavetas (shrimp-specific)")
+    private Integer numberOfGavetas;
+
+    @Schema(description = "N° de Bines (específico para camarón)")
+    private String numberOfBines;
+
+    @Schema(description = "Number of pools/piscinas (shrimp-specific)")
+    private String numberOfPiscinas;
+
+    @Schema(description = "Remission guide number (shrimp-specific)")
+    private String guiaRemisionNumber;
+
+    // 🦐 Shrimp processing-specific fields: cutting
+    @Schema(description = "Cutting type (shrimp processing)")
+    private String cuttingType;
+
+    @Schema(description = "Cutting entry date (shrimp processing)")
+    private LocalDate cuttingEntryDate;
+
+    @Schema(description = "Cutting exit date (shrimp processing)")
+    private LocalDate cuttingExitDate;
+
+    @Schema(description = "Temperature control during cutting (shrimp processing)")
+    private String cuttingTemperatureControl;
+
+    // 🦐 Shrimp processing-specific fields: treatment
+    @Schema(description = "Treatment type (shrimp processing)")
+    private String treatmentType;
+
+    @Schema(description = "Treatment entry date (shrimp processing)")
+    private LocalDate treatmentEntryDate;
+
+    @Schema(description = "Treatment exit date (shrimp processing)")
+    private LocalDate treatmentExitDate;
+
+    @Schema(description = "Temperature control during treatment (shrimp processing)")
+    private String treatmentTemperatureControl;
+
+    @Schema(description = "Chemical used in treatment (shrimp processing)")
+    private String treatmentChemicalUsed;
+
+    // 🦐 Shrimp processing-specific fields: freezing (general, not tunnel)
+    @Schema(description = "Freezing type (shrimp processing)")
+    private String freezingType;
+
+    @Schema(description = "Freezing entry date (shrimp processing)")
+    private LocalDate freezingEntryDate;
+
+    @Schema(description = "Freezing exit date (shrimp processing)")
+    private LocalDate freezingExitDate;
+
+    @Schema(description = "Temperature control during freezing (shrimp processing)")
+    private String freezingTemperatureControl;
+
+    // 🦐 Shrimp processing-specific fields: tunnel freezing
+    @Schema(description = "Tunnel production date (shrimp processing)")
+    private LocalDate tunnelProductionDate;
+
+    @Schema(description = "Tunnel expiration date (shrimp processing)")
+    private LocalDate tunnelExpirationDate;
+
+    @Schema(description = "Tunnel net weight (shrimp processing)")
+    private BigDecimal tunnelNetWeight;
+
+    @Schema(description = "Tunnel supplier (shrimp processing)")
+    private String tunnelSupplier;
+
+    @Schema(description = "Tunnel freezing type (shrimp processing)")
+    private String tunnelFreezingType;
+
+    @Schema(description = "Tunnel entry date (shrimp processing)")
+    private LocalDate tunnelEntryDate;
+
+    @Schema(description = "Tunnel exit date (shrimp processing)")
+    private LocalDate tunnelExitDate;
+
+    // 🦐 Shrimp processing-specific fields: washing area
+    @Schema(description = "Washing water temperature (shrimp processing)")
+    private String washingWaterTemperature;
+
+    @Schema(description = "Shrimp temperature control in washing area (shrimp processing)")
+    private String washingShrimpTemperatureControl;
+
+    // 🔬 Laboratory-specific fields
+    @Schema(description = "Sample number (laboratory-specific)")
+    private String sampleNumber;
+
+    @Schema(description = "Reception time (laboratory-specific)")
+    private LocalTime receptionTime;
+
+    @Schema(description = "Quality document (PDF) for laboratory analysis")
+    private ApiDocument qualityDocument;
+
+    // 🔍 Field inspection (sensory testing) specific fields - for isFieldInspection facilities
+    @Schema(description = "Flavor test result: NORMAL or DEFECT (field inspection)")
+    private String flavorTestResult;
+
+    @Schema(description = "Flavor defect type ID (field inspection)")
+    private Long flavorDefectTypeId;
+
+    @Schema(description = "Flavor defect type code (field inspection)")
+    private String flavorDefectTypeCode;
+
+    @Schema(description = "Flavor defect type label (field inspection)")
+    private String flavorDefectTypeLabel;
+
+    @Schema(description = "Purchase recommended by inspector (field inspection)")
+    private Boolean purchaseRecommended;
+
+    @Schema(description = "Inspection notes (field inspection)")
+    private String inspectionNotes;
+
+    // 🧪 Laboratory analysis fields (transient - stored in LaboratoryAnalysis table)
+    // These fields are received from frontend but not persisted in StockOrder
+    @Schema(hidden = true, description = "Sensorial analysis - Raw odor (stored in LaboratoryAnalysis)")
+    private String sensorialRawOdor;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Raw odor intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialRawOdorIntensity;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Raw taste (stored in LaboratoryAnalysis)")
+    private String sensorialRawTaste;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Raw taste intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialRawTasteIntensity;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Raw color (stored in LaboratoryAnalysis)")
+    private String sensorialRawColor;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked odor (stored in LaboratoryAnalysis)")
+    private String sensorialCookedOdor;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked odor intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialCookedOdorIntensity;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked taste (stored in LaboratoryAnalysis)")
+    private String sensorialCookedTaste;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked taste intensity: LEVE, MODERADO, FUERTE")
+    private String sensorialCookedTasteIntensity;
+
+    @Schema(hidden = true, description = "Sensorial analysis - Cooked color (stored in LaboratoryAnalysis)")
+    private String sensorialCookedColor;
+
+    @Schema(hidden = true, description = "Quality notes (stored in LaboratoryAnalysis)")
+    private String qualityNotes;
+
+    @Schema(hidden = true, description = "Whether metabisulfite level is acceptable (stored in LaboratoryAnalysis)")
+    private Boolean metabisulfiteLevelAcceptable;
+
+    @Schema(hidden = true, description = "Whether approved for purchase (stored in LaboratoryAnalysis)")
+    private Boolean approvedForPurchase;
+
+    // 🦐 Classification-specific fields (stored in ProcessingClassificationBatch)
+    @Schema(hidden = true, description = "Classification start time (stored in ProcessingClassificationBatch)")
+    private String classificationStartTime;
+
+    @Schema(hidden = true, description = "Classification end time (stored in ProcessingClassificationBatch)")
+    private String classificationEndTime;
+
+    @Schema(hidden = true, description = "Production order number (stored in ProcessingClassificationBatch)")
+    private String productionOrder;
+
+    @Schema(hidden = true, description = "Machine used for classification (stored in ProcessingClassificationBatch)")
+    private String machine;
+
+    @Schema(hidden = true, description = "Brand header (stored in ProcessingClassificationBatch)")
+    private String brandHeader;
+
+    @Schema(hidden = true, description = "Classification details by size (stored in ProcessingClassificationBatchDetail)")
+    private List<ApiClassificationDetail> classificationDetails;
 
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
@@ -723,6 +898,442 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setNetQuantity(BigDecimal netQuantity) {
         this.netQuantity = netQuantity;
+    }
+
+    public Integer getNumberOfGavetas() {
+        return numberOfGavetas;
+    }
+
+    public void setNumberOfGavetas(Integer numberOfGavetas) {
+        this.numberOfGavetas = numberOfGavetas;
+    }
+
+    public String getNumberOfBines() {
+        return numberOfBines;
+    }
+
+    public void setNumberOfBines(String numberOfBines) {
+        this.numberOfBines = numberOfBines;
+    }
+
+    public String getNumberOfPiscinas() {
+        return numberOfPiscinas;
+    }
+
+    public void setNumberOfPiscinas(String numberOfPiscinas) {
+        this.numberOfPiscinas = numberOfPiscinas;
+    }
+
+    public String getGuiaRemisionNumber() {
+        return guiaRemisionNumber;
+    }
+
+    public void setGuiaRemisionNumber(String guiaRemisionNumber) {
+        this.guiaRemisionNumber = guiaRemisionNumber;
+    }
+
+    public String getCuttingType() {
+        return cuttingType;
+    }
+
+    public void setCuttingType(String cuttingType) {
+        this.cuttingType = cuttingType;
+    }
+
+    public LocalDate getCuttingEntryDate() {
+        return cuttingEntryDate;
+    }
+
+    public void setCuttingEntryDate(LocalDate cuttingEntryDate) {
+        this.cuttingEntryDate = cuttingEntryDate;
+    }
+
+    public LocalDate getCuttingExitDate() {
+        return cuttingExitDate;
+    }
+
+    public void setCuttingExitDate(LocalDate cuttingExitDate) {
+        this.cuttingExitDate = cuttingExitDate;
+    }
+
+    public String getCuttingTemperatureControl() {
+        return cuttingTemperatureControl;
+    }
+
+    public void setCuttingTemperatureControl(String cuttingTemperatureControl) {
+        this.cuttingTemperatureControl = cuttingTemperatureControl;
+    }
+
+    public String getTreatmentType() {
+        return treatmentType;
+    }
+
+    public void setTreatmentType(String treatmentType) {
+        this.treatmentType = treatmentType;
+    }
+
+    public LocalDate getTreatmentEntryDate() {
+        return treatmentEntryDate;
+    }
+
+    public void setTreatmentEntryDate(LocalDate treatmentEntryDate) {
+        this.treatmentEntryDate = treatmentEntryDate;
+    }
+
+    public LocalDate getTreatmentExitDate() {
+        return treatmentExitDate;
+    }
+
+    public void setTreatmentExitDate(LocalDate treatmentExitDate) {
+        this.treatmentExitDate = treatmentExitDate;
+    }
+
+    public String getTreatmentTemperatureControl() {
+        return treatmentTemperatureControl;
+    }
+
+    public void setTreatmentTemperatureControl(String treatmentTemperatureControl) {
+        this.treatmentTemperatureControl = treatmentTemperatureControl;
+    }
+
+    public String getTreatmentChemicalUsed() {
+        return treatmentChemicalUsed;
+    }
+
+    public void setTreatmentChemicalUsed(String treatmentChemicalUsed) {
+        this.treatmentChemicalUsed = treatmentChemicalUsed;
+    }
+
+    // Freezing (general) getters and setters
+    public String getFreezingType() {
+        return freezingType;
+    }
+
+    public void setFreezingType(String freezingType) {
+        this.freezingType = freezingType;
+    }
+
+    public LocalDate getFreezingEntryDate() {
+        return freezingEntryDate;
+    }
+
+    public void setFreezingEntryDate(LocalDate freezingEntryDate) {
+        this.freezingEntryDate = freezingEntryDate;
+    }
+
+    public LocalDate getFreezingExitDate() {
+        return freezingExitDate;
+    }
+
+    public void setFreezingExitDate(LocalDate freezingExitDate) {
+        this.freezingExitDate = freezingExitDate;
+    }
+
+    public String getFreezingTemperatureControl() {
+        return freezingTemperatureControl;
+    }
+
+    public void setFreezingTemperatureControl(String freezingTemperatureControl) {
+        this.freezingTemperatureControl = freezingTemperatureControl;
+    }
+
+    public LocalDate getTunnelProductionDate() {
+        return tunnelProductionDate;
+    }
+
+    public void setTunnelProductionDate(LocalDate tunnelProductionDate) {
+        this.tunnelProductionDate = tunnelProductionDate;
+    }
+
+    public LocalDate getTunnelExpirationDate() {
+        return tunnelExpirationDate;
+    }
+
+    public void setTunnelExpirationDate(LocalDate tunnelExpirationDate) {
+        this.tunnelExpirationDate = tunnelExpirationDate;
+    }
+
+    public BigDecimal getTunnelNetWeight() {
+        return tunnelNetWeight;
+    }
+
+    public void setTunnelNetWeight(BigDecimal tunnelNetWeight) {
+        this.tunnelNetWeight = tunnelNetWeight;
+    }
+
+    public String getTunnelSupplier() {
+        return tunnelSupplier;
+    }
+
+    public void setTunnelSupplier(String tunnelSupplier) {
+        this.tunnelSupplier = tunnelSupplier;
+    }
+
+    public String getTunnelFreezingType() {
+        return tunnelFreezingType;
+    }
+
+    public void setTunnelFreezingType(String tunnelFreezingType) {
+        this.tunnelFreezingType = tunnelFreezingType;
+    }
+
+    public LocalDate getTunnelEntryDate() {
+        return tunnelEntryDate;
+    }
+
+    public void setTunnelEntryDate(LocalDate tunnelEntryDate) {
+        this.tunnelEntryDate = tunnelEntryDate;
+    }
+
+    public LocalDate getTunnelExitDate() {
+        return tunnelExitDate;
+    }
+
+    public void setTunnelExitDate(LocalDate tunnelExitDate) {
+        this.tunnelExitDate = tunnelExitDate;
+    }
+
+    public String getWashingWaterTemperature() {
+        return washingWaterTemperature;
+    }
+
+    public void setWashingWaterTemperature(String washingWaterTemperature) {
+        this.washingWaterTemperature = washingWaterTemperature;
+    }
+
+    public String getWashingShrimpTemperatureControl() {
+        return washingShrimpTemperatureControl;
+    }
+
+    public void setWashingShrimpTemperatureControl(String washingShrimpTemperatureControl) {
+        this.washingShrimpTemperatureControl = washingShrimpTemperatureControl;
+    }
+
+    public String getSampleNumber() {
+        return sampleNumber;
+    }
+
+    public void setSampleNumber(String sampleNumber) {
+        this.sampleNumber = sampleNumber;
+    }
+
+    public LocalTime getReceptionTime() {
+        return receptionTime;
+    }
+
+    public void setReceptionTime(LocalTime receptionTime) {
+        this.receptionTime = receptionTime;
+    }
+
+    public ApiDocument getQualityDocument() {
+        return qualityDocument;
+    }
+
+    public void setQualityDocument(ApiDocument qualityDocument) {
+        this.qualityDocument = qualityDocument;
+    }
+
+    public String getFlavorTestResult() {
+        return flavorTestResult;
+    }
+
+    public void setFlavorTestResult(String flavorTestResult) {
+        this.flavorTestResult = flavorTestResult;
+    }
+
+    public Long getFlavorDefectTypeId() {
+        return flavorDefectTypeId;
+    }
+
+    public void setFlavorDefectTypeId(Long flavorDefectTypeId) {
+        this.flavorDefectTypeId = flavorDefectTypeId;
+    }
+
+    public String getFlavorDefectTypeCode() {
+        return flavorDefectTypeCode;
+    }
+
+    public void setFlavorDefectTypeCode(String flavorDefectTypeCode) {
+        this.flavorDefectTypeCode = flavorDefectTypeCode;
+    }
+
+    public String getFlavorDefectTypeLabel() {
+        return flavorDefectTypeLabel;
+    }
+
+    public void setFlavorDefectTypeLabel(String flavorDefectTypeLabel) {
+        this.flavorDefectTypeLabel = flavorDefectTypeLabel;
+    }
+
+    public Boolean getPurchaseRecommended() {
+        return purchaseRecommended;
+    }
+
+    public void setPurchaseRecommended(Boolean purchaseRecommended) {
+        this.purchaseRecommended = purchaseRecommended;
+    }
+
+    public String getInspectionNotes() {
+        return inspectionNotes;
+    }
+
+    public void setInspectionNotes(String inspectionNotes) {
+        this.inspectionNotes = inspectionNotes;
+    }
+
+    public String getSensorialRawOdor() {
+        return sensorialRawOdor;
+    }
+
+    public void setSensorialRawOdor(String sensorialRawOdor) {
+        this.sensorialRawOdor = sensorialRawOdor;
+    }
+
+    public String getSensorialRawOdorIntensity() {
+        return sensorialRawOdorIntensity;
+    }
+
+    public void setSensorialRawOdorIntensity(String sensorialRawOdorIntensity) {
+        this.sensorialRawOdorIntensity = sensorialRawOdorIntensity;
+    }
+
+    public String getSensorialRawTaste() {
+        return sensorialRawTaste;
+    }
+
+    public void setSensorialRawTaste(String sensorialRawTaste) {
+        this.sensorialRawTaste = sensorialRawTaste;
+    }
+
+    public String getSensorialRawTasteIntensity() {
+        return sensorialRawTasteIntensity;
+    }
+
+    public void setSensorialRawTasteIntensity(String sensorialRawTasteIntensity) {
+        this.sensorialRawTasteIntensity = sensorialRawTasteIntensity;
+    }
+
+    public String getSensorialRawColor() {
+        return sensorialRawColor;
+    }
+
+    public void setSensorialRawColor(String sensorialRawColor) {
+        this.sensorialRawColor = sensorialRawColor;
+    }
+
+    public String getSensorialCookedOdor() {
+        return sensorialCookedOdor;
+    }
+
+    public void setSensorialCookedOdor(String sensorialCookedOdor) {
+        this.sensorialCookedOdor = sensorialCookedOdor;
+    }
+
+    public String getSensorialCookedOdorIntensity() {
+        return sensorialCookedOdorIntensity;
+    }
+
+    public void setSensorialCookedOdorIntensity(String sensorialCookedOdorIntensity) {
+        this.sensorialCookedOdorIntensity = sensorialCookedOdorIntensity;
+    }
+
+    public String getSensorialCookedTaste() {
+        return sensorialCookedTaste;
+    }
+
+    public void setSensorialCookedTaste(String sensorialCookedTaste) {
+        this.sensorialCookedTaste = sensorialCookedTaste;
+    }
+
+    public String getSensorialCookedTasteIntensity() {
+        return sensorialCookedTasteIntensity;
+    }
+
+    public void setSensorialCookedTasteIntensity(String sensorialCookedTasteIntensity) {
+        this.sensorialCookedTasteIntensity = sensorialCookedTasteIntensity;
+    }
+
+    public String getSensorialCookedColor() {
+        return sensorialCookedColor;
+    }
+
+    public void setSensorialCookedColor(String sensorialCookedColor) {
+        this.sensorialCookedColor = sensorialCookedColor;
+    }
+
+    public String getQualityNotes() {
+        return qualityNotes;
+    }
+
+    public void setQualityNotes(String qualityNotes) {
+        this.qualityNotes = qualityNotes;
+    }
+
+    public Boolean getMetabisulfiteLevelAcceptable() {
+        return metabisulfiteLevelAcceptable;
+    }
+
+    public void setMetabisulfiteLevelAcceptable(Boolean metabisulfiteLevelAcceptable) {
+        this.metabisulfiteLevelAcceptable = metabisulfiteLevelAcceptable;
+    }
+
+    public Boolean getApprovedForPurchase() {
+        return approvedForPurchase;
+    }
+
+    public void setApprovedForPurchase(Boolean approvedForPurchase) {
+        this.approvedForPurchase = approvedForPurchase;
+    }
+
+    public String getClassificationStartTime() {
+        return classificationStartTime;
+    }
+
+    public void setClassificationStartTime(String classificationStartTime) {
+        this.classificationStartTime = classificationStartTime;
+    }
+
+    public String getClassificationEndTime() {
+        return classificationEndTime;
+    }
+
+    public void setClassificationEndTime(String classificationEndTime) {
+        this.classificationEndTime = classificationEndTime;
+    }
+
+    public String getProductionOrder() {
+        return productionOrder;
+    }
+
+    public void setProductionOrder(String productionOrder) {
+        this.productionOrder = productionOrder;
+    }
+
+    public String getMachine() {
+        return machine;
+    }
+
+    public void setMachine(String machine) {
+        this.machine = machine;
+    }
+
+    public String getBrandHeader() {
+        return brandHeader;
+    }
+
+    public void setBrandHeader(String brandHeader) {
+        this.brandHeader = brandHeader;
+    }
+
+    public List<ApiClassificationDetail> getClassificationDetails() {
+        if (classificationDetails == null) {
+            classificationDetails = new ArrayList<>();
+        }
+        return classificationDetails;
+    }
+
+    public void setClassificationDetails(List<ApiClassificationDetail> classificationDetails) {
+        this.classificationDetails = classificationDetails;
     }
 
     public String getQrCodeTag() {

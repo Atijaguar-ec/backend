@@ -15,11 +15,46 @@ public class V2021_08_11_11_33__Prefill_FacilityTypes implements JpaMigration {
 	@Override
 	public void migrate(EntityManager em, Environment environment) throws Exception {
 
-		List<FacilityType> facilityTypes = List.of(
-				new FacilityType("WASHING_STATION", "Washing station"),
-				new FacilityType("DRYING_BED", "Drying bed"),
-				new FacilityType("HULLING_STATION", "Hulling station"),
-				new FacilityType("STORAGE", "Storage"));
+		Long count = em.createQuery("SELECT COUNT(ft) FROM FacilityType ft", Long.class).getSingleResult();
+		if (count != null && count > 0L) {
+			return;
+		}
+
+		String productType = environment.getProperty("INATrace.product.type", "COFFEE");
+		List<FacilityType> facilityTypes;
+
+		if ("SHRIMP".equalsIgnoreCase(productType) || "CAMARON".equalsIgnoreCase(productType)) {
+			facilityTypes = List.of(
+					new FacilityType("AREADERECIBO", "Área de Recibo", 1),
+					new FacilityType("LABORATORIODECALIDAD", "Laboratorio de Calidad", 2),
+					new FacilityType("TOLVADERECIBO", "Tolva de Recibo Camarón", 3),
+					new FacilityType("AREADECLASIFICADO", "Área de Clasificado Camarón Entero", 3),
+					new FacilityType("AREADECONGELACION", "Área de Congelación Camarón Entero", 3),
+					new FacilityType("TUNELDECONGELACION", "Túnel de Congelación Camarón Entero", 4),
+					new FacilityType("LOTEPARAEXPORTAR", "Lote para exportar Camarón Entero", 4),
+					new FacilityType("AREADEPESADO", "Área de Pesado Camarón Con Cola", 5),
+					new FacilityType("AREADEREPOSO", "Área de Reposo Camarón Con Cola", 5),
+					new FacilityType("AREADEDESCABEZADO", "Área de Descabezado", 5));
+		} else if ("COCOA".equalsIgnoreCase(productType)) {
+			facilityTypes = List.of(
+					new FacilityType("ACOPIO", "Collection Center", 1),
+					new FacilityType("ESCURRIDO", "Draining", 2),
+					new FacilityType("FERMENTACION", "Fermentation Area", 3),
+					new FacilityType("SECADO", "Drying Area", 4),
+					new FacilityType("SECADON", "Natural Drying", 5),
+					new FacilityType("SECADOA", "Artificial Drying", 6),
+					new FacilityType("ALIMPIEZA", "Cleaning Area", 7),
+					new FacilityType("ACLASIFICADO", "Grading Area", 8),
+					new FacilityType("AEMPACADO", "Packing Area", 9),
+					new FacilityType("ALMACEN", "Storage Area", 10),
+					new FacilityType("VENTA", "Point of Sale", 11));
+		} else {
+			facilityTypes = List.of(
+					new FacilityType("WASHING_STATION", "Washing station", 1),
+					new FacilityType("DRYING_BED", "Drying bed", 2),
+					new FacilityType("HULLING_STATION", "Hulling station", 3),
+					new FacilityType("STORAGE", "Storage", 4));
+		}
 
 		facilityTypes.forEach(em::persist);
 	}

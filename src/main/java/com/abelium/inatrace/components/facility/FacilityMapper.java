@@ -82,6 +82,14 @@ public final class FacilityMapper {
 		apiFacility.setDisplayTare(entity.getDisplayTare());
 		apiFacility.setDisplayWomenOnly(entity.getDisplayWomenOnly());
 		apiFacility.setDisplayPriceDeterminedLater(entity.getDisplayPriceDeterminedLater());
+		apiFacility.setIsFieldInspection(entity.getIsFieldInspection());
+		apiFacility.setIsLaboratory(entity.getIsLaboratory());
+		apiFacility.setIsClassificationProcess(entity.getIsClassificationProcess());
+		apiFacility.setIsFreezingProcess(entity.getIsFreezingProcess());
+		apiFacility.setIsCuttingProcess(entity.getIsCuttingProcess());
+		apiFacility.setIsTreatmentProcess(entity.getIsTreatmentProcess());
+		apiFacility.setIsTunnelFreezing(entity.getIsTunnelFreezing());
+		apiFacility.setIsWashingArea(entity.getIsWashingArea());
 
 		// Map facility location data
 		ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();

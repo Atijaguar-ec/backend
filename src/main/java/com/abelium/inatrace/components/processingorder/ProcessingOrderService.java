@@ -12,22 +12,32 @@ import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
 import com.abelium.inatrace.components.transaction.TransactionService;
 import com.abelium.inatrace.components.transaction.api.ApiTransaction;
 import com.abelium.inatrace.db.entities.processingaction.ProcessingAction;
+import com.abelium.inatrace.components.stockorder.api.ApiClassificationDetail;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatch;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatchDetail;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.product.FinalProduct;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.db.entities.stockorder.Transaction;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
+import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis;
+import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis.AnalysisType;
+import com.abelium.inatrace.db.entities.common.User;
+import com.abelium.inatrace.db.repositories.laboratory.LaboratoryAnalysisRepository;
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.security.utils.PermissionsUtil;
 import com.abelium.inatrace.tools.Queries;
 import com.abelium.inatrace.types.Language;
 import com.abelium.inatrace.types.ProcessingActionType;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.TypedQuery;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -44,13 +54,21 @@ public class ProcessingOrderService extends BaseService {
 
     private final CompanyQueries companyQueries;
 
+    private final ClassificationExcelService classificationExcelService;
+
+    private final LaboratoryAnalysisRepository laboratoryAnalysisRepository;
+
     @Autowired
     public ProcessingOrderService(StockOrderService stockOrderService,
                                   TransactionService transactionService,
-                                  CompanyQueries companyQueries) {
+                                  CompanyQueries companyQueries,
+                                  ClassificationExcelService classificationExcelService,
+                                  LaboratoryAnalysisRepository laboratoryAnalysisRepository) {
         this.stockOrderService = stockOrderService;
         this.transactionService = transactionService;
         this.companyQueries = companyQueries;
+        this.laboratoryAnalysisRepository = laboratoryAnalysisRepository;
+        this.classificationExcelService = classificationExcelService;
     }
 
     public ApiProcessingOrder getProcessingOrder(Long id, CustomUserDetails authUser, Language language) throws ApiException {
@@ -62,7 +80,29 @@ public class ProcessingOrderService extends BaseService {
                 companyQueries.fetchCompanyProducts(processingOrder.getProcessingAction().getCompany().getId()),
                 authUser);
 
-        return ProcessingOrderMapper.toApiProcessingOrder(processingOrder, language);
+        ApiProcessingOrder apiProcessingOrder = ProcessingOrderMapper.toApiProcessingOrder(processingOrder, language);
+        
+        // Populate laboratory analysis data for each target stock order (if exists)
+        if (apiProcessingOrder.getTargetStockOrders() != null) {
+            apiProcessingOrder.getTargetStockOrders().forEach(apiTargetStockOrder -> {
+                if (apiTargetStockOrder.getId() != null) {
+                    // Find laboratory analysis for this stock order
+                    List<LaboratoryAnalysis> analyses = em.createQuery(
+                            "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                            LaboratoryAnalysis.class)
+                            .setParameter("stockOrderId", apiTargetStockOrder.getId())
+                            .getResultList();
+                    
+                    if (!analyses.isEmpty()) {
+                        // Populate lab analysis fields into the API stock order
+                        com.abelium.inatrace.components.stockorder.mappers.StockOrderMapper
+                                .populateLaboratoryAnalysisFields(apiTargetStockOrder, analyses.get(0));
+                    }
+                }
+            });
+        }
+        
+        return apiProcessingOrder;
     }
 
     /**
@@ -247,6 +287,10 @@ public class ProcessingOrderService extends BaseService {
             }
         }
 
+        if (entity.getId() == null) {
+            em.persist(entity);
+        }
+
         Boolean isProcessing = processingAction.getType() != ProcessingActionType.TRANSFER;
 
         // Get the first input Transaction with generated QR code tag (if present)
@@ -290,13 +334,30 @@ public class ProcessingOrderService extends BaseService {
             // Set targetStockOrders for TRANSFER
             if (processingAction.getType() == ProcessingActionType.TRANSFER) {
 
-                Long targetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiProcessingOrder.getTargetStockOrders().get(i), user, entity).getId();
+                ApiStockOrder apiTargetStockOrder = apiProcessingOrder.getTargetStockOrders().get(i);
+
+                Long targetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiTargetStockOrder, user, entity).getId();
                 StockOrder targetStockOrder = fetchEntity(targetStockOrderId, StockOrder.class);
                 targetStockOrder.setProcessingOrder(entity);
 
                 // Transfer the QR code tag (if present) to the target Stock order
                 targetStockOrder.setQrCodeTag(presentQrCodeTag);
                 targetStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
+
+                // Create or update LaboratoryAnalysis if laboratory data is present
+                createOrUpdateLaboratoryAnalysis(apiTargetStockOrder, targetStockOrder, user);
+
+                // For TRANSFER, classification data should be associated with the SOURCE stock order
+                // (which is in the classification facility), not the target stock order
+                StockOrder sourceStockOrder = insertedTransaction.getSourceStockOrder();
+                if (sourceStockOrder != null && sourceStockOrder.getFacility() != null &&
+                    Boolean.TRUE.equals(sourceStockOrder.getFacility().getIsClassificationProcess())) {
+                    // Associate classification data with the source stock order
+                    createOrUpdateClassificationBatch(apiTargetStockOrder, sourceStockOrder);
+                } else {
+                    // Fallback: try to associate with target if it's a classification facility
+                    createOrUpdateClassificationBatch(apiTargetStockOrder, targetStockOrder);
+                }
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
@@ -317,12 +378,14 @@ public class ProcessingOrderService extends BaseService {
                     targetStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
                 }
 
+                // Create or update LaboratoryAnalysis if laboratory data is present
+                createOrUpdateLaboratoryAnalysis(apiTargetStockOrder, targetStockOrder, user);
+
+                // Create or update ClassificationBatch if classification data is present
+                createOrUpdateClassificationBatch(apiTargetStockOrder, targetStockOrder);
+
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
-        }
-
-        if (entity.getId() == null) {
-            em.persist(entity);
         }
 
         return new ApiBaseEntity(entity);
@@ -499,6 +562,245 @@ public class ProcessingOrderService extends BaseService {
     private <E> E fetchEntityOrElse(Long id, Class<E> entityClass, E defaultValue) {
         E entity = Queries.get(em, entityClass, id);
         return entity == null ? defaultValue : entity;
+    }
+
+    /**
+     * Export classification batch as Excel "Liquidación de Pesca".
+     * 
+     * @param stockOrderId The target stock order ID (output from processing order)
+     * @param authUser Authenticated user
+     * @return Excel file as byte array
+     * @throws ApiException if batch not found or permissions denied
+     * @throws IOException if Excel generation fails
+     */
+    public byte[] exportClassificationLiquidacion(Long stockOrderId, CustomUserDetails authUser) 
+            throws ApiException, IOException {
+
+        // Fetch the stock order
+        StockOrder stockOrder = fetchEntity(stockOrderId, StockOrder.class);
+
+        // Check permissions
+        PermissionsUtil.checkUserIfConnectedWithProducts(
+                companyQueries.fetchCompanyProducts(stockOrder.getCompany().getId()),
+                authUser);
+
+        // Find the classification batch for this stock order
+        TypedQuery<ProcessingClassificationBatch> query = em.createQuery(
+                "SELECT b FROM ProcessingClassificationBatch b " +
+                "LEFT JOIN FETCH b.details " +
+                "WHERE b.targetStockOrder.id = :stockOrderId",
+                ProcessingClassificationBatch.class);
+        query.setParameter("stockOrderId", stockOrderId);
+
+        ProcessingClassificationBatch batch;
+        try {
+            batch = query.getSingleResult();
+        } catch (NoResultException e) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, 
+                    "No classification batch found for stock order ID: " + stockOrderId);
+        }
+
+        // Generate Excel
+        return classificationExcelService.generateLiquidacionExcel(batch);
+    }
+
+    /**
+     * Generate Excel file for Purchase Settlement (Liquidación de Compra).
+     * Includes pricing information and monetary totals.
+     * 
+     * @param stockOrderId ID of the target stock order
+     * @return Excel file as byte array
+     * @throws ApiException if stock order or batch not found
+     * @throws IOException if file generation fails
+     */
+    public byte[] generateLiquidacionCompraExcel(Long stockOrderId) throws ApiException, IOException {
+        // Find the classification batch for this stock order
+        TypedQuery<ProcessingClassificationBatch> query = em.createQuery(
+                "SELECT b FROM ProcessingClassificationBatch b WHERE b.targetStockOrder.id = :stockOrderId",
+                ProcessingClassificationBatch.class);
+        query.setParameter("stockOrderId", stockOrderId);
+
+        ProcessingClassificationBatch batch;
+        try {
+            batch = query.getSingleResult();
+        } catch (NoResultException e) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, 
+                    "No classification batch found for stock order ID: " + stockOrderId);
+        }
+
+        // Generate Excel (Purchase Settlement)
+        return classificationExcelService.generateLiquidacionCompraExcel(batch);
+    }
+
+    /**
+     * Create or update LaboratoryAnalysis for a target StockOrder if laboratory analysis data is present.
+     * This method extracts sensorial analysis fields from ApiStockOrder and persists them in LaboratoryAnalysis table.
+     * 
+     * @param apiTargetStockOrder The API stock order containing laboratory analysis data
+     * @param targetStockOrder The persisted StockOrder entity
+     * @param user The current user performing the action
+     */
+    private void createOrUpdateLaboratoryAnalysis(ApiStockOrder apiTargetStockOrder, 
+                                                   StockOrder targetStockOrder, 
+                                                   CustomUserDetails user) {
+        
+        // Check if any laboratory analysis data is present in the API request
+        boolean hasAnalysisData = apiTargetStockOrder.getSensorialRawOdor() != null
+                || apiTargetStockOrder.getSensorialRawTaste() != null
+                || apiTargetStockOrder.getSensorialRawColor() != null
+                || apiTargetStockOrder.getSensorialCookedOdor() != null
+                || apiTargetStockOrder.getSensorialCookedTaste() != null
+                || apiTargetStockOrder.getSensorialCookedColor() != null
+                || apiTargetStockOrder.getQualityNotes() != null
+                || apiTargetStockOrder.getMetabisulfiteLevelAcceptable() != null
+                || apiTargetStockOrder.getApprovedForPurchase() != null;
+
+        if (!hasAnalysisData) {
+            // No laboratory analysis data to persist
+            return;
+        }
+
+        // Find existing analysis for this stock order or create a new one
+        List<LaboratoryAnalysis> existingAnalyses = em.createQuery(
+                "SELECT la FROM LaboratoryAnalysis la WHERE la.stockOrder.id = :stockOrderId",
+                LaboratoryAnalysis.class)
+                .setParameter("stockOrderId", targetStockOrder.getId())
+                .getResultList();
+
+        LaboratoryAnalysis analysis;
+        if (!existingAnalyses.isEmpty()) {
+            // Update existing analysis (take the first one if multiple exist)
+            analysis = existingAnalyses.get(0);
+            analysis.setUpdatedBy(fetchEntity(user.getUserId(), User.class));
+        } else {
+            // Create new analysis
+            analysis = new LaboratoryAnalysis();
+            analysis.setStockOrder(targetStockOrder);
+            analysis.setCreatedBy(fetchEntity(user.getUserId(), User.class));
+            analysis.setAnalysisType(AnalysisType.SENSORIAL);
+            analysis.setAnalysisDate(targetStockOrder.getProductionDate() != null 
+                    ? targetStockOrder.getProductionDate().atStartOfDay().toInstant(java.time.ZoneOffset.UTC)
+                    : java.time.Instant.now());
+        }
+
+        // Map sensorial analysis fields from API to entity
+        analysis.setSensorialRawOdor(apiTargetStockOrder.getSensorialRawOdor());
+        analysis.setSensorialRawTaste(apiTargetStockOrder.getSensorialRawTaste());
+        analysis.setSensorialRawColor(apiTargetStockOrder.getSensorialRawColor());
+        analysis.setSensorialCookedOdor(apiTargetStockOrder.getSensorialCookedOdor());
+        analysis.setSensorialCookedTaste(apiTargetStockOrder.getSensorialCookedTaste());
+        analysis.setSensorialCookedColor(apiTargetStockOrder.getSensorialCookedColor());
+        analysis.setQualityNotes(apiTargetStockOrder.getQualityNotes());
+        analysis.setMetabisulfiteLevelAcceptable(apiTargetStockOrder.getMetabisulfiteLevelAcceptable());
+        analysis.setApprovedForPurchase(apiTargetStockOrder.getApprovedForPurchase());
+
+        // Persist the analysis
+        if (existingAnalyses.isEmpty()) {
+            em.persist(analysis);
+        }
+        // If updating, JPA dirty checking will handle the update automatically
+    }
+
+    /**
+     * Create or update ProcessingClassificationBatch for a target StockOrder if classification data is present.
+     * This method extracts classification fields from ApiStockOrder and persists them in ProcessingClassificationBatch 
+     * and ProcessingClassificationBatchDetail tables.
+     * 
+     * @param apiTargetStockOrder The API stock order containing classification data
+     * @param targetStockOrder The persisted StockOrder entity
+     */
+    private void createOrUpdateClassificationBatch(ApiStockOrder apiTargetStockOrder, 
+                                                    StockOrder targetStockOrder) {
+        
+        // Check if facility is classification facility
+        if (targetStockOrder.getFacility() == null || 
+            !Boolean.TRUE.equals(targetStockOrder.getFacility().getIsClassificationProcess())) {
+            // Not a classification facility, skip
+            return;
+        }
+
+        // Check if any classification data is present in the API request
+        boolean hasClassificationData = apiTargetStockOrder.getClassificationStartTime() != null
+                || apiTargetStockOrder.getClassificationEndTime() != null
+                || apiTargetStockOrder.getProductionOrder() != null
+                || apiTargetStockOrder.getFreezingType() != null
+                || apiTargetStockOrder.getMachine() != null
+                || apiTargetStockOrder.getBrandHeader() != null
+                || (apiTargetStockOrder.getClassificationDetails() != null && 
+                    !apiTargetStockOrder.getClassificationDetails().isEmpty());
+
+        if (!hasClassificationData) {
+            // No classification data to persist
+            return;
+        }
+
+        // Find existing batch for this stock order or create a new one
+        TypedQuery<ProcessingClassificationBatch> query = em.createQuery(
+                "SELECT b FROM ProcessingClassificationBatch b " +
+                "WHERE b.targetStockOrder.id = :stockOrderId",
+                ProcessingClassificationBatch.class);
+        query.setParameter("stockOrderId", targetStockOrder.getId());
+
+        ProcessingClassificationBatch batch;
+        List<ProcessingClassificationBatch> existingBatches = query.getResultList();
+        
+        if (!existingBatches.isEmpty()) {
+            // Update existing batch
+            batch = existingBatches.get(0);
+            // Clear existing details to replace with new ones
+            batch.getDetails().clear();
+        } else {
+            // Create new batch
+            batch = new ProcessingClassificationBatch();
+            batch.setTargetStockOrder(targetStockOrder);
+        }
+
+        // Map classification header fields from API to entity
+        batch.setStartTime(normalizeDateOrTime(apiTargetStockOrder.getClassificationStartTime()));
+        batch.setEndTime(normalizeDateOrTime(apiTargetStockOrder.getClassificationEndTime()));
+        batch.setProductionOrder(apiTargetStockOrder.getProductionOrder());
+        batch.setFreezingType(apiTargetStockOrder.getFreezingType());
+        batch.setMachine(apiTargetStockOrder.getMachine());
+        batch.setBrandHeader(apiTargetStockOrder.getBrandHeader());
+
+        // Map classification details
+        if (apiTargetStockOrder.getClassificationDetails() != null) {
+            for (ApiClassificationDetail apiDetail : apiTargetStockOrder.getClassificationDetails()) {
+                ProcessingClassificationBatchDetail detail = new ProcessingClassificationBatchDetail();
+                detail.setBatch(batch);
+                detail.setProcessType(apiDetail.getProcessType()); // 🦐 HEAD_ON o SHELL_ON
+                detail.setBrandDetail(apiDetail.getBrandDetail());
+                detail.setSize(apiDetail.getSize());
+                detail.setBoxes(apiDetail.getBoxes());
+                detail.setWeightPerBox(apiDetail.getWeightPerBox());
+                detail.setWeightFormat(apiDetail.getWeightFormat());
+                
+                // 🦐 Campos de Liquidación de Pesca/Compra
+                detail.setQualityGrade(apiDetail.getQualityGrade());
+                detail.setPresentationType(apiDetail.getPresentationType());
+                detail.setPricePerPound(apiDetail.getPricePerPound());
+                detail.setLineTotal(apiDetail.getLineTotal());
+                
+                batch.getDetails().add(detail);
+            }
+        }
+
+        // Persist the batch (cascade will handle details)
+        if (existingBatches.isEmpty()) {
+            em.persist(batch);
+        }
+        // If updating, JPA dirty checking will handle the update automatically
+    }
+
+    private String normalizeDateOrTime(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() > 10) {
+            return trimmed.substring(0, 10);
+        }
+        return trimmed;
     }
 
 }
