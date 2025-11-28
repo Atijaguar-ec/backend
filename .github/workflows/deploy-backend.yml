@@ -1071,6 +1071,13 @@ jobs:
             echo "🔗 Ensuring shared network exists..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
 
+            # Ensure volume directories exist with correct permissions
+            echo "📁 Ensuring volume directories exist with correct permissions..."
+            sudo mkdir -p /opt/inatrace/volumes-shrimp/uploads
+            sudo mkdir -p /opt/inatrace/volumes-shrimp/import
+            sudo chmod -R 777 /opt/inatrace/volumes-shrimp/uploads
+            sudo chmod -R 755 /opt/inatrace/volumes-shrimp/import
+
             # Load new image
             echo "📦 Loading new shrimp backend image..."
             docker load -i be-image.tar

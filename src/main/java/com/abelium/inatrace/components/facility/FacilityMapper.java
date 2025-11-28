@@ -52,10 +52,12 @@ public final class FacilityMapper {
 		apiFacility.setIsPublic(entity.getIsPublic());
 		apiFacility.setDeactivated(entity.getIsDeactivated());
         
-        ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();
-        apiFacilityLocation.setLatitude(entity.getFacilityLocation().getLatitude());
-        apiFacilityLocation.setLongitude(entity.getFacilityLocation().getLongitude());
-        apiFacility.setFacilityLocation(apiFacilityLocation);
+        if (entity.getFacilityLocation() != null) {
+            ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();
+            apiFacilityLocation.setLatitude(entity.getFacilityLocation().getLatitude());
+            apiFacilityLocation.setLongitude(entity.getFacilityLocation().getLongitude());
+            apiFacility.setFacilityLocation(apiFacilityLocation);
+        }
 
 		apiFacility.setCompany(CompanyMapper.toApiCompanyBase(entity.getCompany()));
 
@@ -92,26 +94,29 @@ public final class FacilityMapper {
 		apiFacility.setIsWashingArea(entity.getIsWashingArea());
 
 		// Map facility location data
-		ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();
-		ApiAddress apiAddress = new ApiAddress();
+		if (entity.getFacilityLocation() != null) {
+			ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();
+			ApiAddress apiAddress = new ApiAddress();
 
-		apiAddress.setAddress(entity.getFacilityLocation().getAddress().getAddress());
-		apiAddress.setCity(entity.getFacilityLocation().getAddress().getCity());
-		apiAddress.setState(entity.getFacilityLocation().getAddress().getState());
-		apiAddress.setZip(entity.getFacilityLocation().getAddress().getZip());
-		apiAddress.setCell(entity.getFacilityLocation().getAddress().getCell());
-		apiAddress.setSector(entity.getFacilityLocation().getAddress().getSector());
-		apiAddress.setVillage(entity.getFacilityLocation().getAddress().getVillage());
+			if (entity.getFacilityLocation().getAddress() != null) {
+				apiAddress.setAddress(entity.getFacilityLocation().getAddress().getAddress());
+				apiAddress.setCity(entity.getFacilityLocation().getAddress().getCity());
+				apiAddress.setState(entity.getFacilityLocation().getAddress().getState());
+				apiAddress.setZip(entity.getFacilityLocation().getAddress().getZip());
+				apiAddress.setCell(entity.getFacilityLocation().getAddress().getCell());
+				apiAddress.setSector(entity.getFacilityLocation().getAddress().getSector());
+				apiAddress.setVillage(entity.getFacilityLocation().getAddress().getVillage());
+				apiAddress.setCountry(CountryMapper.toApiCountry(entity.getFacilityLocation().getAddress().getCountry()));
+			}
 
-		apiAddress.setCountry(CountryMapper.toApiCountry(entity.getFacilityLocation().getAddress().getCountry()));
-
-		apiFacilityLocation.setAddress(apiAddress);
-		apiFacilityLocation.setLatitude(entity.getFacilityLocation().getLatitude());
-		apiFacilityLocation.setLongitude(entity.getFacilityLocation().getLongitude());
-		apiFacilityLocation.setNumberOfFarmers(entity.getFacilityLocation().getNumberOfFarmers());
-		apiFacilityLocation.setPinName(entity.getFacilityLocation().getPinName());
-		apiFacilityLocation.setPubliclyVisible(entity.getFacilityLocation().getPubliclyVisible());
-		apiFacility.setFacilityLocation(apiFacilityLocation);
+			apiFacilityLocation.setAddress(apiAddress);
+			apiFacilityLocation.setLatitude(entity.getFacilityLocation().getLatitude());
+			apiFacilityLocation.setLongitude(entity.getFacilityLocation().getLongitude());
+			apiFacilityLocation.setNumberOfFarmers(entity.getFacilityLocation().getNumberOfFarmers());
+			apiFacilityLocation.setPinName(entity.getFacilityLocation().getPinName());
+			apiFacilityLocation.setPubliclyVisible(entity.getFacilityLocation().getPubliclyVisible());
+			apiFacility.setFacilityLocation(apiFacilityLocation);
+		}
 
 		// Map facility type
 		ApiFacilityType apiFacilityType = new ApiFacilityType();
