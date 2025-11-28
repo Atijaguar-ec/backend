@@ -230,7 +230,8 @@ public class V2025_11_28_01__Complete_Shrimp_FacilityTypes implements JpaMigrati
 
         // Create translations for all supported languages (required for Facility to display)
         for (Language language : List.of(Language.EN, Language.DE, Language.RW, Language.ES)) {
-            FacilityTranslation translation = new FacilityTranslation(language);
+            FacilityTranslation translation = new FacilityTranslation();
+            translation.setLanguage(language);
             translation.setFacility(facility);
             translation.setName(name);
             em.persist(translation);
