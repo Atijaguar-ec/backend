@@ -23,17 +23,24 @@ public class ApiClassificationDetail {
     @Schema(description = "Number of boxes", required = true)
     private Integer boxes;
 
-    @Schema(description = "Classification U value", required = true)
-    private BigDecimal classificationU;
-
-    @Schema(description = "Classification # value", required = true)
-    private BigDecimal classificationNumber;
-
     @Schema(description = "Weight per box", required = true)
     private BigDecimal weightPerBox;
 
     @Schema(description = "Weight format: 'LB' or 'KG'", required = true)
     private String weightFormat;
+
+    // 🦐 Campos para Liquidación de Pesca y Compra
+    @Schema(description = "Quality grade: A, B, or C (for purchase settlement)")
+    private String qualityGrade;
+
+    @Schema(description = "Presentation type: SHELL_ON_A, SHELL_ON_B, BROKEN_VS, TITI, etc.")
+    private String presentationType;
+
+    @Schema(description = "Price per pound in USD (for purchase settlement)")
+    private BigDecimal pricePerPound;
+
+    @Schema(description = "Calculated line total: pounds × pricePerPound")
+    private BigDecimal lineTotal;
 
     // Getters and Setters
 
@@ -61,22 +68,6 @@ public class ApiClassificationDetail {
         this.boxes = boxes;
     }
 
-    public BigDecimal getClassificationU() {
-        return classificationU;
-    }
-
-    public void setClassificationU(BigDecimal classificationU) {
-        this.classificationU = classificationU;
-    }
-
-    public BigDecimal getClassificationNumber() {
-        return classificationNumber;
-    }
-
-    public void setClassificationNumber(BigDecimal classificationNumber) {
-        this.classificationNumber = classificationNumber;
-    }
-
     public BigDecimal getWeightPerBox() {
         return weightPerBox;
     }
@@ -91,5 +82,39 @@ public class ApiClassificationDetail {
 
     public void setWeightFormat(String weightFormat) {
         this.weightFormat = weightFormat;
+    }
+
+    // 🦐 Getters/Setters para Liquidación
+
+    public String getQualityGrade() {
+        return qualityGrade;
+    }
+
+    public void setQualityGrade(String qualityGrade) {
+        this.qualityGrade = qualityGrade;
+    }
+
+    public String getPresentationType() {
+        return presentationType;
+    }
+
+    public void setPresentationType(String presentationType) {
+        this.presentationType = presentationType;
+    }
+
+    public BigDecimal getPricePerPound() {
+        return pricePerPound;
+    }
+
+    public void setPricePerPound(BigDecimal pricePerPound) {
+        this.pricePerPound = pricePerPound;
+    }
+
+    public BigDecimal getLineTotal() {
+        return lineTotal;
+    }
+
+    public void setLineTotal(BigDecimal lineTotal) {
+        this.lineTotal = lineTotal;
     }
 }

@@ -60,7 +60,7 @@ public class ClassificationExcelService {
             Cell titleCell = titleRow.createCell(0);
             titleCell.setCellValue("LIQUIDACIÓN DE PESCA");
             titleCell.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 8));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 6));
             rowNum++; // Empty row
 
             // =====================================================
@@ -69,13 +69,8 @@ public class ClassificationExcelService {
             String lotNumber = batch.getTargetStockOrder() != null && batch.getTargetStockOrder().getInternalLotNumber() != null
                     ? batch.getTargetStockOrder().getInternalLotNumber()
                     : "N/A";
-            
-            String weekNumber = batch.getTargetStockOrder() != null && batch.getTargetStockOrder().getWeekNumber() != null
-                ? String.valueOf(batch.getTargetStockOrder().getWeekNumber())
-                : "N/A";
 
             rowNum = createInfoRow(sheet, rowNum, "Lote:", lotNumber, headerInfoStyle, dataStyle);
-            rowNum = createInfoRow(sheet, rowNum, "N° de Semana:", weekNumber, headerInfoStyle, dataStyle);
             rowNum = createInfoRow(sheet, rowNum, "Hora de Inicio:", batch.getStartTime() != null ? batch.getStartTime() : "", headerInfoStyle, dataStyle);
             rowNum = createInfoRow(sheet, rowNum, "Hora Termina:", batch.getEndTime() != null ? batch.getEndTime() : "", headerInfoStyle, dataStyle);
             rowNum = createInfoRow(sheet, rowNum, "Orden de Producción:", batch.getProductionOrder() != null ? batch.getProductionOrder() : "", headerInfoStyle, dataStyle);
@@ -88,8 +83,7 @@ public class ClassificationExcelService {
             // Table Header
             // =====================================================
             Row tableHeaderRow = sheet.createRow(rowNum++);
-            String[] headers = {"Marca", "Tallas", "Cajas", "Clasificación U", "Clasificación #", 
-                                "Peso/caja", "Formato", "Totales", "Libras por tallas"};
+            String[] headers = {"Talla", "Aspecto", "Cajas", "Peso/caja", "Formato", "Peso Total", "Libras"};
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = tableHeaderRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -108,60 +102,47 @@ public class ClassificationExcelService {
 
             for (ProcessingClassificationBatchDetail detail : details) {
                 Row dataRow = sheet.createRow(rowNum++);
+                int col = 0;
 
-                // Brand
-                Cell brandCell = dataRow.createCell(0);
-                brandCell.setCellValue(detail.getBrandDetail() != null ? detail.getBrandDetail() : "");
-                brandCell.setCellStyle(dataStyle);
-
-                // Size
-                Cell sizeCell = dataRow.createCell(1);
+                // Size (Talla)
+                Cell sizeCell = dataRow.createCell(col++);
                 sizeCell.setCellValue(detail.getSize() != null ? detail.getSize() : "");
                 sizeCell.setCellStyle(dataStyle);
 
-                // Boxes
-                Cell boxesCell = dataRow.createCell(2);
+                // Presentation Type (Aspecto: SHELLON-A, SHELLON-B, BROKEN, etc.)
+                Cell presentationCell = dataRow.createCell(col++);
+                presentationCell.setCellValue(getPresentationTypeLabel(detail.getPresentationType()));
+                presentationCell.setCellStyle(dataStyle);
+
+                // Boxes (Cajas)
+                Cell boxesCell = dataRow.createCell(col++);
                 int boxes = detail.getBoxes() != null ? detail.getBoxes() : 0;
                 boxesCell.setCellValue(boxes);
                 boxesCell.setCellStyle(numberStyle);
                 grandTotalBoxes += boxes;
 
-                // Classification U
-                Cell classUCell = dataRow.createCell(3);
-                if (detail.getClassificationU() != null) {
-                    classUCell.setCellValue(detail.getClassificationU().doubleValue());
-                }
-                classUCell.setCellStyle(numberStyle);
-
-                // Classification #
-                Cell classNumCell = dataRow.createCell(4);
-                if (detail.getClassificationNumber() != null) {
-                    classNumCell.setCellValue(detail.getClassificationNumber().doubleValue());
-                }
-                classNumCell.setCellStyle(numberStyle);
-
-                // Weight per box
-                Cell weightCell = dataRow.createCell(5);
+                // Weight per box (Peso/caja)
+                Cell weightCell = dataRow.createCell(col++);
                 if (detail.getWeightPerBox() != null) {
                     weightCell.setCellValue(detail.getWeightPerBox().doubleValue());
                 }
                 weightCell.setCellStyle(numberStyle);
 
-                // Format
-                Cell formatCell = dataRow.createCell(6);
+                // Format (Formato)
+                Cell formatCell = dataRow.createCell(col++);
                 formatCell.setCellValue(detail.getWeightFormat() != null ? detail.getWeightFormat() : "LB");
                 formatCell.setCellStyle(dataStyle);
 
-                // Total weight
+                // Total weight (Peso Total)
                 BigDecimal totalWeight = detail.getTotalWeight();
-                Cell totalCell = dataRow.createCell(7);
+                Cell totalCell = dataRow.createCell(col++);
                 totalCell.setCellValue(totalWeight.doubleValue());
                 totalCell.setCellStyle(numberStyle);
                 grandTotalWeight = grandTotalWeight.add(totalWeight);
 
-                // Pounds per size
+                // Pounds per size (Libras)
                 BigDecimal poundsPerSize = detail.getPoundsPerSize();
-                Cell poundsCell = dataRow.createCell(8);
+                Cell poundsCell = dataRow.createCell(col++);
                 poundsCell.setCellValue(poundsPerSize.doubleValue());
                 poundsCell.setCellStyle(numberStyle);
                 grandTotalPounds = grandTotalPounds.add(poundsPerSize);
@@ -181,17 +162,17 @@ public class ClassificationExcelService {
             totalBoxesCell.setCellValue(grandTotalBoxes);
             totalBoxesCell.setCellStyle(totalStyle);
 
-            // Empty cells for classifications
-            for (int i = 3; i <= 6; i++) {
+            // Empty cells
+            for (int i = 3; i <= 4; i++) {
                 Cell emptyCell = totalRow.createCell(i);
                 emptyCell.setCellStyle(totalStyle);
             }
 
-            Cell totalWeightCell = totalRow.createCell(7);
+            Cell totalWeightCell = totalRow.createCell(5);
             totalWeightCell.setCellValue(grandTotalWeight.doubleValue());
             totalWeightCell.setCellStyle(totalStyle);
 
-            Cell totalPoundsCell = totalRow.createCell(8);
+            Cell totalPoundsCell = totalRow.createCell(6);
             totalPoundsCell.setCellValue(grandTotalPounds.doubleValue());
             totalPoundsCell.setCellStyle(totalStyle);
 
@@ -244,7 +225,7 @@ public class ClassificationExcelService {
             Cell titleCell = titleRow.createCell(0);
             titleCell.setCellValue("LIQUIDACIÓN DE COMPRA");
             titleCell.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 9));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 7));
             rowNum++; // Empty row
 
             // =====================================================
@@ -287,7 +268,7 @@ public class ClassificationExcelService {
             // Table Header
             // =====================================================
             Row tableHeaderRow = sheet.createRow(rowNum++);
-            String[] headers = {"Clase", "Talla", "Presentación", "Cajas", "Peso/Caja", "Libras", "Precio/Lb", "Total " + CURRENCY, "%"};
+            String[] headers = {"Talla", "Aspecto", "Cajas", "Peso/Caja", "Libras", "Precio/Lb", "Total " + CURRENCY, "%"};
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = tableHeaderRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -308,19 +289,14 @@ public class ClassificationExcelService {
                 Row dataRow = sheet.createRow(rowNum++);
                 int col = 0;
 
-                // Quality Grade (A, B, C)
-                Cell gradeCell = dataRow.createCell(col++);
-                gradeCell.setCellValue(detail.getQualityGrade() != null ? detail.getQualityGrade() : "");
-                gradeCell.setCellStyle(dataStyle);
-
-                // Size
+                // Size (Talla)
                 Cell sizeCell = dataRow.createCell(col++);
                 sizeCell.setCellValue(detail.getSize() != null ? detail.getSize() : "");
                 sizeCell.setCellStyle(dataStyle);
 
-                // Presentation Type
+                // Presentation Type (Aspecto)
                 Cell presentationCell = dataRow.createCell(col++);
-                presentationCell.setCellValue(detail.getPresentationType() != null ? detail.getPresentationType() : "");
+                presentationCell.setCellValue(getPresentationTypeLabel(detail.getPresentationType()));
                 presentationCell.setCellStyle(dataStyle);
 
                 // Boxes
@@ -368,10 +344,10 @@ public class ClassificationExcelService {
                 int dataStartRow = rowNum - details.size();
                 for (int i = 0; i < details.size(); i++) {
                     Row dataRow = sheet.getRow(dataStartRow + i);
-                    Cell lineTotalCell = dataRow.getCell(7);
+                    Cell lineTotalCell = dataRow.getCell(6);
                     double lineTotal = lineTotalCell.getNumericCellValue();
                     double percentage = (lineTotal / grandTotalAmount.doubleValue()) * 100;
-                    Cell percentCell = dataRow.getCell(8);
+                    Cell percentCell = dataRow.getCell(7);
                     percentCell.setCellValue(percentage);
                 }
             }
@@ -386,35 +362,33 @@ public class ClassificationExcelService {
             Cell totalLabelCell = totalRow.createCell(0);
             totalLabelCell.setCellValue("TOTAL A PAGAR");
             totalLabelCell.setCellStyle(totalStyle);
-            sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 2));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 1));
 
-            Cell totalBoxesCell = totalRow.createCell(3);
+            Cell totalBoxesCell = totalRow.createCell(2);
             totalBoxesCell.setCellValue(grandTotalBoxes);
             totalBoxesCell.setCellStyle(totalStyle);
 
-            // Empty cells
-            for (int i = 4; i <= 4; i++) {
-                Cell emptyCell = totalRow.createCell(i);
-                emptyCell.setCellStyle(totalStyle);
-            }
+            // Empty cell for Peso/Caja
+            Cell emptyCell = totalRow.createCell(3);
+            emptyCell.setCellStyle(totalStyle);
 
-            Cell totalPoundsCell = totalRow.createCell(5);
+            Cell totalPoundsCell = totalRow.createCell(4);
             totalPoundsCell.setCellValue(grandTotalPounds.doubleValue());
             totalPoundsCell.setCellStyle(totalStyle);
 
             // Average price
-            Cell avgPriceCell = totalRow.createCell(6);
+            Cell avgPriceCell = totalRow.createCell(5);
             if (grandTotalPounds.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal avgPrice = grandTotalAmount.divide(grandTotalPounds, 4, BigDecimal.ROUND_HALF_UP);
                 avgPriceCell.setCellValue(avgPrice.doubleValue());
             }
             avgPriceCell.setCellStyle(totalStyle);
 
-            Cell grandTotalCell = totalRow.createCell(7);
+            Cell grandTotalCell = totalRow.createCell(6);
             grandTotalCell.setCellValue(grandTotalAmount.doubleValue());
             grandTotalCell.setCellStyle(totalStyle);
 
-            Cell totalPercentCell = totalRow.createCell(8);
+            Cell totalPercentCell = totalRow.createCell(7);
             totalPercentCell.setCellValue(100.0);
             totalPercentCell.setCellStyle(totalStyle);
 
@@ -442,6 +416,25 @@ public class ClassificationExcelService {
         }
     }
 
+    /**
+     * Convert presentation type code to readable label
+     */
+    private String getPresentationTypeLabel(String presentationType) {
+        if (presentationType == null) return "";
+        switch (presentationType) {
+            case "SHELL_ON_A": return "Shell-On A";
+            case "SHELL_ON_B": return "Shell-On B";
+            case "BROKEN_VS": return "Broken VS";
+            case "BROKEN_SMALL": return "Broken Small";
+            case "BROKEN_MEDIUM": return "Broken Medium";
+            case "BROKEN_LARGE": return "Broken Large";
+            case "TITI": return "TITI";
+            case "ROJO": return "ROJO";
+            case "BVS": return "BVS";
+            default: return presentationType;
+        }
+    }
+
     // =====================================================
     // Helper Methods for Row Creation
     // =====================================================
@@ -458,7 +451,7 @@ public class ClassificationExcelService {
         Cell valueCell = row.createCell(2);
         valueCell.setCellValue(value);
         valueCell.setCellStyle(valueStyle);
-        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2, 8));
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2, 6));
 
         return rowNum + 1;
     }
@@ -475,7 +468,7 @@ public class ClassificationExcelService {
         Cell valueCell = row.createCell(3);
         valueCell.setCellValue(value);
         valueCell.setCellStyle(valueStyle);
-        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 3, 8));
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 3, 7));
 
         return rowNum + 1;
     }
