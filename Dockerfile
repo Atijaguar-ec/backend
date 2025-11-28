@@ -47,6 +47,9 @@ ARG JAR_FILE=target/*.jar
 COPY --from=build-stage /src/${JAR_FILE} /app/app.jar
 RUN chown inatrace:inatrace /app/app.jar
 
+# Copy import files (countries.csv for Flyway migrations)
+COPY --chown=inatrace:inatrace import/ /app/import/
+
 # Switch to non-root user
 USER inatrace
 
