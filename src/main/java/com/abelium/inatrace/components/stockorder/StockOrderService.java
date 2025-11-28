@@ -38,6 +38,8 @@ import com.abelium.inatrace.db.entities.payment.Payment;
 import com.abelium.inatrace.db.entities.payment.PaymentPurposeType;
 import com.abelium.inatrace.db.entities.processingaction.ProcessingAction;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatch;
+import com.abelium.inatrace.db.entities.processingorder.ProcessingClassificationBatchDetail;
 import com.abelium.inatrace.db.entities.product.ProductCompany;
 import com.abelium.inatrace.db.entities.productorder.ProductOrder;
 import com.abelium.inatrace.db.entities.stockorder.*;
@@ -146,7 +148,7 @@ public class StockOrderService extends BaseService {
 
         StockOrder stockOrder = fetchEntity(id, StockOrder.class);
 
-        // Check that the request user is form a company which is connected to the company that owns the quote order (or is a user of that company)
+        // Check that the request user is from a company which is connected to the company that owns the quote order (or is a user of that company)
         PermissionsUtil.checkUserIfConnectedWithProducts(companyQueries.fetchCompanyProducts(stockOrder.getCompany().getId()), user);
 
         // If Stock order has no Processing order set, exit with exception
@@ -154,7 +156,76 @@ public class StockOrderService extends BaseService {
             throw new ApiException(ApiStatus.INVALID_REQUEST, "The Stock order with ID: " + id + " doesn't have Processing order.");
         }
 
-        return ProcessingOrderMapper.toApiProcessingOrder(stockOrder.getProcessingOrder(), language);
+        // Map base processing order (includes target stock orders through StockOrderMapper)
+        ApiProcessingOrder apiProcessingOrder = ProcessingOrderMapper.toApiProcessingOrder(stockOrder.getProcessingOrder(), language);
+
+        // 🦐 Additionally populate shrimp classification data (header + details) from ProcessingClassificationBatch
+        if (apiProcessingOrder.getTargetStockOrders() != null && !apiProcessingOrder.getTargetStockOrders().isEmpty()) {
+
+            // Collect target stock order IDs that may have classification batches
+            java.util.List<Long> targetIds = apiProcessingOrder.getTargetStockOrders().stream()
+                    .map(ApiStockOrder::getId)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+
+            if (!targetIds.isEmpty()) {
+                java.util.List<ProcessingClassificationBatch> batches = em.createQuery(
+                                "SELECT b FROM ProcessingClassificationBatch b " +
+                                        "LEFT JOIN FETCH b.details " +
+                                        "WHERE b.targetStockOrder.id IN :ids",
+                                ProcessingClassificationBatch.class)
+                        .setParameter("ids", targetIds)
+                        .getResultList();
+
+                java.util.Map<Long, ProcessingClassificationBatch> batchByStockOrderId = batches.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                b -> b.getTargetStockOrder().getId(),
+                                b -> b,
+                                (b1, b2) -> b1 // in case of duplicates, keep the first
+                        ));
+
+                apiProcessingOrder.getTargetStockOrders().forEach(apiTso -> {
+                    Long tsoId = apiTso.getId();
+                    if (tsoId == null) {
+                        return;
+                    }
+
+                    ProcessingClassificationBatch batch = batchByStockOrderId.get(tsoId);
+                    if (batch == null) {
+                        return; // No classification batch for this stock order
+                    }
+
+                    // Header fields
+                    apiTso.setClassificationStartTime(batch.getStartTime());
+                    apiTso.setClassificationEndTime(batch.getEndTime());
+                    apiTso.setProductionOrder(batch.getProductionOrder());
+                    apiTso.setFreezingType(batch.getFreezingType());
+                    apiTso.setMachine(batch.getMachine());
+                    apiTso.setBrandHeader(batch.getBrandHeader());
+
+                    // Detail rows
+                    java.util.List<ApiClassificationDetail> apiDetails = batch.getDetails().stream()
+                            .map(detail -> {
+                                ApiClassificationDetail dto = new ApiClassificationDetail();
+                                dto.setBrandDetail(detail.getBrandDetail());
+                                dto.setSize(detail.getSize());
+                                dto.setBoxes(detail.getBoxes());
+                                dto.setWeightPerBox(detail.getWeightPerBox());
+                                dto.setWeightFormat(detail.getWeightFormat());
+                                dto.setQualityGrade(detail.getQualityGrade());
+                                dto.setPresentationType(detail.getPresentationType());
+                                dto.setPricePerPound(detail.getPricePerPound());
+                                dto.setLineTotal(detail.getLineTotal());
+                                return dto;
+                            })
+                            .toList();
+
+                    apiTso.setClassificationDetails(apiDetails);
+                });
+            }
+        }
+
+        return apiProcessingOrder;
     }
 
     public ApiPaginatedList<ApiStockOrder> getAvailableStockOrderListForFacility(ApiPaginatedRequest request,

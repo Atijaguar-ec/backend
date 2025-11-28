@@ -771,10 +771,14 @@ public class ProcessingOrderService extends BaseService {
                 detail.setBrandDetail(apiDetail.getBrandDetail());
                 detail.setSize(apiDetail.getSize());
                 detail.setBoxes(apiDetail.getBoxes());
-                detail.setClassificationU(apiDetail.getClassificationU());
-                detail.setClassificationNumber(apiDetail.getClassificationNumber());
                 detail.setWeightPerBox(apiDetail.getWeightPerBox());
                 detail.setWeightFormat(apiDetail.getWeightFormat());
+                
+                // 🦐 Campos de Liquidación de Pesca/Compra
+                detail.setQualityGrade(apiDetail.getQualityGrade());
+                detail.setPresentationType(apiDetail.getPresentationType());
+                detail.setPricePerPound(apiDetail.getPricePerPound());
+                detail.setLineTotal(apiDetail.getLineTotal());
                 
                 batch.getDetails().add(detail);
             }
