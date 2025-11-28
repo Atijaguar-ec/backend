@@ -1000,6 +1000,16 @@ jobs:
           target: "/opt/inatrace/backend/dev-shrimp"
           debug: true
 
+      - name: Upload import files (countries.csv) (dev-shrimp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "import/countries.csv"
+          target: "/opt/inatrace/volumes-shrimp/import"
+          debug: true
+
       - name: Download backend image artifact (dev-shrimp)
         uses: actions/download-artifact@v4
         with:
