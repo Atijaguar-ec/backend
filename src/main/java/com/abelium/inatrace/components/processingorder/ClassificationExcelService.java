@@ -415,16 +415,6 @@ public class ClassificationExcelService {
         return byteArrayOutputStream.toByteArray();
     }
 
-    private String getProcessTypeLabel(String processType) {
-        if (processType == null) return "";
-        switch (processType) {
-            case "HEAD_ON": return "Con Cabeza";
-            case "SHELL_ON": return "En Cola";
-            case "VALUE_ADDED": return "Valor Agregado";
-            default: return processType;
-        }
-    }
-
     /**
      * Convert presentation type code to readable label
      */
