@@ -4,6 +4,8 @@ import com.abelium.inatrace.components.flyway.JpaMigration;
 import com.abelium.inatrace.db.entities.codebook.FacilityType;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.facility.Facility;
+import com.abelium.inatrace.db.entities.facility.FacilityTranslation;
+import com.abelium.inatrace.types.Language;
 import org.springframework.core.env.Environment;
 
 import jakarta.persistence.EntityManager;
@@ -225,5 +227,13 @@ public class V2025_11_28_01__Complete_Shrimp_FacilityTypes implements JpaMigrati
         facility.setIsRestArea(isRestArea ? true : null);
 
         em.persist(facility);
+
+        // Create translations for all supported languages (required for Facility to display)
+        for (Language language : List.of(Language.EN, Language.DE, Language.RW, Language.ES)) {
+            FacilityTranslation translation = new FacilityTranslation(language);
+            translation.setFacility(facility);
+            translation.setName(name);
+            em.persist(translation);
+        }
     }
 }
