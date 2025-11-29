@@ -90,6 +90,8 @@ public final class FacilityMapper {
 		apiFacility.setIsTreatmentProcess(entity.getIsTreatmentProcess());
 		apiFacility.setIsTunnelFreezing(entity.getIsTunnelFreezing());
 		apiFacility.setIsWashingArea(entity.getIsWashingArea());
+		apiFacility.setIsRestArea(entity.getIsRestArea());
+		apiFacility.setIsDeheadingProcess(entity.getIsDeheadingProcess());
 
 		// Map facility location data
 		ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();

@@ -45,6 +45,10 @@ public class SpringSecurityConfig {
 				.csrf(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)
 				.httpBasic(AbstractHttpConfigurer::disable)
+				// STATELESS session - prevents "Cannot create a session after the response has been committed" error
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				// Disable request cache to prevent HttpSessionRequestCache from trying to save requests
+				.requestCache(AbstractHttpConfigurer::disable)
 				.exceptionHandling(ehc -> ehc.authenticationEntryPoint(new RestAuthenticationEntryPoint()))
 				.authorizeHttpRequests(matcherRegistry -> {
 					matcherRegistry.requestMatchers(

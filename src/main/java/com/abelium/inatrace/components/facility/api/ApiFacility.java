@@ -79,6 +79,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Facility has a shrimp resting area (specific for shrimp value chain)")
 	private Boolean isRestArea;
 
+	@Schema(description = "Facility performs shrimp deheading process - descabezado (specific for shrimp value chain)")
+	private Boolean isDeheadingProcess;
+
 	@Schema(description = "Custom facility level overriding facility type order")
 	private Integer level;
 
@@ -277,6 +280,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setIsRestArea(Boolean isRestArea) {
 		this.isRestArea = isRestArea;
+	}
+
+	public Boolean getIsDeheadingProcess() {
+		return isDeheadingProcess;
+	}
+
+	public void setIsDeheadingProcess(Boolean isDeheadingProcess) {
+		this.isDeheadingProcess = isDeheadingProcess;
 	}
 
 	public Integer getLevel() {

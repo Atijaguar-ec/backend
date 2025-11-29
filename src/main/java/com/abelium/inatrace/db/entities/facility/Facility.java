@@ -90,6 +90,9 @@ public class Facility extends TimestampEntity {
 
 	@Column(name = "isRestArea")
 	private Boolean isRestArea;
+
+	@Column(name = "isDeheadingProcess")
+	private Boolean isDeheadingProcess;
 	@Column
 	private Integer level;
 
@@ -291,6 +294,14 @@ public class Facility extends TimestampEntity {
 
 	public void setIsRestArea(Boolean isRestArea) {
 		this.isRestArea = isRestArea;
+	}
+
+	public Boolean getIsDeheadingProcess() {
+		return isDeheadingProcess;
+	}
+
+	public void setIsDeheadingProcess(Boolean isDeheadingProcess) {
+		this.isDeheadingProcess = isDeheadingProcess;
 	}
 
 	public Integer getLevel() {

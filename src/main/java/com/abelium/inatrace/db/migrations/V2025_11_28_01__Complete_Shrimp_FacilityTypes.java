@@ -2,8 +2,11 @@ package com.abelium.inatrace.db.migrations;
 
 import com.abelium.inatrace.components.flyway.JpaMigration;
 import com.abelium.inatrace.db.entities.codebook.FacilityType;
+import com.abelium.inatrace.db.entities.common.Address;
+import com.abelium.inatrace.db.entities.common.Country;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.facility.Facility;
+import com.abelium.inatrace.db.entities.facility.FacilityLocation;
 import com.abelium.inatrace.db.entities.facility.FacilityTranslation;
 import com.abelium.inatrace.types.Language;
 import org.springframework.core.env.Environment;
@@ -78,84 +81,84 @@ public class V2025_11_28_01__Complete_Shrimp_FacilityTypes implements JpaMigrati
     /**
      * Create all shrimp processing facilities for a company.
      * Parameters: isFieldInspection, isCollectionFacility, isLaboratory, isClassificationProcess,
-     *             isFreezingProcess, isCuttingProcess, isTreatmentProcess, isTunnelFreezing, isWashingArea, isRestArea
+     *             isFreezingProcess, isCuttingProcess, isTreatmentProcess, isTunnelFreezing, isWashingArea, isRestArea, isDeheadingProcess
      */
     private void createShrimpFacilitiesForCompany(EntityManager em, Company company) {
         // 1. Inspección de Campo - isFieldInspection
         createFacilityIfNotExists(em, company, "INSPECCIONCAMPO", "Inspección de Campo", 
-                true, false, false, false, false, false, false, false, false, false);
+                true, false, false, false, false, false, false, false, false, false, false);
 
         // 2. Centro de Acopio - isCollectionFacility
         createFacilityIfNotExists(em, company, "CENTROACOPIO", "Centro de Acopio",
-                false, true, false, false, false, false, false, false, false, false);
+                false, true, false, false, false, false, false, false, false, false, false);
 
         // 3. Área de Recibo (ya existe en catálogo original)
         createFacilityIfNotExists(em, company, "AREADERECIBO", "Área de Recibo",
-                false, false, false, false, false, false, false, false, false, false);
+                false, false, false, false, false, false, false, false, false, false, false);
 
         // 4. Laboratorio de Calidad - isLaboratory
         createFacilityIfNotExists(em, company, "LABORATORIODECALIDAD", "Laboratorio de Calidad",
-                false, false, true, false, false, false, false, false, false, false);
+                false, false, true, false, false, false, false, false, false, false, false);
 
         // 5. Área de Pesado
         createFacilityIfNotExists(em, company, "AREADEPESADO", "Área de Pesado",
-                false, false, false, false, false, false, false, false, false, false);
+                false, false, false, false, false, false, false, false, false, false, false);
 
         // 6. Tolva de Recibo
         createFacilityIfNotExists(em, company, "TOLVADERECIBO", "Tolva de Recibo",
-                false, false, false, false, false, false, false, false, false, false);
+                false, false, false, false, false, false, false, false, false, false, false);
 
         // 7. Área de Clasificado - isClassificationProcess
         createFacilityIfNotExists(em, company, "AREADECLASIFICADO", "Área de Clasificado",
-                false, false, false, true, false, false, false, false, false, false);
+                false, false, false, true, false, false, false, false, false, false, false);
 
         // 8. Área de Reposo - isRestArea
         createFacilityIfNotExists(em, company, "AREADEREPOSO", "Área de Reposo",
-                false, false, false, false, false, false, false, false, false, true);
+                false, false, false, false, false, false, false, false, false, true, false);
 
-        // 9. Área de Descabezado
+        // 9. Área de Descabezado - isDeheadingProcess
         createFacilityIfNotExists(em, company, "AREADEDESCABEZADO", "Área de Descabezado",
-                false, false, false, false, false, false, false, false, false, false);
+                false, false, false, false, false, false, false, false, false, false, true);
 
         // 10. Área de Lavado - isWashingArea
         createFacilityIfNotExists(em, company, "AREADELAVADO", "Área de Lavado",
-                false, false, false, false, false, false, false, false, true, false);
+                false, false, false, false, false, false, false, false, true, false, false);
 
         // 11. Área de Congelación (Entero) - isFreezingProcess
         createFacilityIfNotExists(em, company, "AREADECONGELACION", "Área de Congelación Entero",
-                false, false, false, false, true, false, false, false, false, false);
+                false, false, false, false, true, false, false, false, false, false, false);
 
         // 12. Túnel de Congelación (Entero) - isTunnelFreezing
         createFacilityIfNotExists(em, company, "TUNELDECONGELACION", "Túnel de Congelación Entero",
-                false, false, false, false, false, false, false, true, false, false);
+                false, false, false, false, false, false, false, true, false, false, false);
 
         // 13. Lote para Exportar (Entero)
         createFacilityIfNotExists(em, company, "LOTEPARAEXPORTAR", "Lote para Exportar Entero",
-                false, false, false, false, false, false, false, false, false, false);
+                false, false, false, false, false, false, false, false, false, false, false);
 
         // 14. Área de Cortado - isCuttingProcess
         createFacilityIfNotExists(em, company, "AREADECORTADO", "Área de Cortado",
-                false, false, false, false, false, true, false, false, false, false);
+                false, false, false, false, false, true, false, false, false, false, false);
 
         // 15. Área de Tratado - isTreatmentProcess
         createFacilityIfNotExists(em, company, "AREADETRATADO", "Área de Tratado",
-                false, false, false, false, false, false, true, false, false, false);
+                false, false, false, false, false, false, true, false, false, false, false);
 
         // 16. Área de Congelación (Cola) - isFreezingProcess
         createFacilityIfNotExists(em, company, "AREADECONGELACIONCOLA", "Área de Congelación Cola",
-                false, false, false, false, true, false, false, false, false, false);
+                false, false, false, false, true, false, false, false, false, false, false);
 
         // 17. Túnel de Congelación (Cola) - isTunnelFreezing
         createFacilityIfNotExists(em, company, "TUNELDECONGELACIONCOLA", "Túnel de Congelación Cola",
-                false, false, false, false, false, false, false, true, false, false);
+                false, false, false, false, false, false, false, true, false, false, false);
 
         // 18. Lote para Exportar (Cola)
         createFacilityIfNotExists(em, company, "LOTEPARAEXPORTARCOLA", "Lote para Exportar Cola",
-                false, false, false, false, false, false, false, false, false, false);
+                false, false, false, false, false, false, false, false, false, false, false);
 
         // 19. Área de Valor Agregado
         createFacilityIfNotExists(em, company, "AREAVARORAGREGADO", "Área de Valor Agregado",
-                false, false, false, false, false, false, false, false, false, false);
+                false, false, false, false, false, false, false, false, false, false, false);
     }
 
     /**
@@ -177,12 +180,13 @@ public class V2025_11_28_01__Complete_Shrimp_FacilityTypes implements JpaMigrati
     /**
      * Create Facility if not exists for a company.
      * Parameters order: isFieldInspection, isCollectionFacility, isLaboratory, isClassificationProcess,
-     *                   isFreezingProcess, isCuttingProcess, isTreatmentProcess, isTunnelFreezing, isWashingArea, isRestArea
+     *                   isFreezingProcess, isCuttingProcess, isTreatmentProcess, isTunnelFreezing, isWashingArea, isRestArea, isDeheadingProcess
      */
     private void createFacilityIfNotExists(EntityManager em, Company company, String facilityTypeCode, String name,
                                             boolean isFieldInspection, boolean isCollectionFacility, boolean isLaboratory,
                                             boolean isClassificationProcess, boolean isFreezingProcess, boolean isCuttingProcess,
-                                            boolean isTreatmentProcess, boolean isTunnelFreezing, boolean isWashingArea, boolean isRestArea) {
+                                            boolean isTreatmentProcess, boolean isTunnelFreezing, boolean isWashingArea, boolean isRestArea,
+                                            boolean isDeheadingProcess) {
         // Check if facility already exists for this company with this type
         Long count = em.createQuery(
                 "SELECT COUNT(f) FROM Facility f WHERE f.company.id = :companyId AND f.facilityType.code = :ftCode", Long.class)
@@ -225,8 +229,34 @@ public class V2025_11_28_01__Complete_Shrimp_FacilityTypes implements JpaMigrati
         facility.setIsTunnelFreezing(isTunnelFreezing ? true : null);
         facility.setIsWashingArea(isWashingArea ? true : null);
         facility.setIsRestArea(isRestArea ? true : null);
+        facility.setIsDeheadingProcess(isDeheadingProcess ? true : null);
 
         em.persist(facility);
+
+        // Create FacilityLocation with basic Address to avoid frontend null errors
+        FacilityLocation facilityLocation = new FacilityLocation();
+        facilityLocation.setPubliclyVisible(false);
+        
+        // Create basic Address with Ecuador as default country for shrimp facilities
+        Address address = new Address();
+        Country ecuador = em.createQuery(
+                "SELECT c FROM Country c WHERE c.code = :code", Country.class)
+                .setParameter("code", "EC")
+                .getResultStream()
+                .findFirst()
+                .orElse(null);
+        
+        if (ecuador != null) {
+            address.setCountry(ecuador);
+        }
+        address.setCity(""); // Empty but not null
+        
+        facilityLocation.setAddress(address);
+        em.persist(facilityLocation);
+        
+        // Link FacilityLocation to Facility
+        facility.setFacilityLocation(facilityLocation);
+        em.merge(facility);
 
         // Create translations for all supported languages (required for Facility to display)
         for (Language language : List.of(Language.EN, Language.DE, Language.RW, Language.ES)) {

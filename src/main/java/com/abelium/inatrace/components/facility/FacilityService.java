@@ -140,6 +140,8 @@ public class FacilityService extends BaseService {
 		entity.setIsTreatmentProcess(BooleanUtils.isTrue(apiFacility.getIsTreatmentProcess()));
 		entity.setIsTunnelFreezing(BooleanUtils.isTrue(apiFacility.getIsTunnelFreezing()));
 		entity.setIsWashingArea(BooleanUtils.isTrue(apiFacility.getIsWashingArea()));
+		entity.setIsRestArea(BooleanUtils.isTrue(apiFacility.getIsRestArea()));
+		entity.setIsDeheadingProcess(BooleanUtils.isTrue(apiFacility.getIsDeheadingProcess()));
 
 		facilityLocation.setLatitude(apiFacility.getFacilityLocation().getLatitude());
 		facilityLocation.setLongitude(apiFacility.getFacilityLocation().getLongitude());
