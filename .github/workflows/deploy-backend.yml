@@ -21,7 +21,7 @@ on:
         - staging
         - main
       company:
-        description: 'Target company '
+        description: 'Target company'
         required: false
         default: false
         type: boolean
@@ -980,6 +980,8 @@ jobs:
           INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
           INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
           INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
+          INATRACE_AGSTACK_EMAIL=${{ secrets.DEV_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_PASSWORD=${{ secrets.DEV_AGSTACK_PASSWORD }}
           EOF
 
       - name: Verify .env exists (dev-shrimp)
@@ -996,6 +998,16 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           source: ".env"
           target: "/opt/inatrace/backend/dev-shrimp"
+          debug: true
+
+      - name: Upload import files (countries.csv) (dev-shrimp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "import/countries.csv"
+          target: "/opt/inatrace/volumes-shrimp/import"
           debug: true
 
       - name: Download backend image artifact (dev-shrimp)
@@ -1058,6 +1070,13 @@ jobs:
             # Ensure shared network exists (DO NOT remove - other services may be using it)
             echo "🔗 Ensuring shared network exists..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+
+            # Ensure volume directories exist with correct permissions
+            echo "📁 Ensuring volume directories exist with correct permissions..."
+            sudo mkdir -p /opt/inatrace/volumes-shrimp/uploads
+            sudo mkdir -p /opt/inatrace/volumes-shrimp/import
+            sudo chmod -R 777 /opt/inatrace/volumes-shrimp/uploads
+            sudo chmod -R 755 /opt/inatrace/volumes-shrimp/import
 
             # Load new image
             echo "📦 Loading new shrimp backend image..."
