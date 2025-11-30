@@ -317,8 +317,8 @@ public class FieldInspectionService extends BaseService {
         }
         
         // Prefer company name for legal entities
-        if (producer.getType() != null && 
-            "LEGAL".equals(producer.getType().name()) && 
+        if (producer.getPersonType() != null && 
+            "LEGAL".equals(producer.getPersonType().name()) && 
             producer.getCompanyName() != null && 
             !producer.getCompanyName().trim().isEmpty()) {
             return producer.getCompanyName().trim();
