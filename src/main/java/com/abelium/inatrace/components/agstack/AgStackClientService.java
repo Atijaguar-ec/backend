@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -31,6 +32,7 @@ public class AgStackClientService {
 
     private static final Logger log = LoggerFactory.getLogger(AgStackClientService.class);
     private static final String FIELD_ALREADY_REGISTERED_MESSAGE = "Threshold matched for already registered Field Boundary(ies)";
+    private static final String FIELD_ALREADY_REGISTERED_ALT_MESSAGE = "field already registered previously";
     private static final String FIELD_AREA_EXCEEDED_MESSAGE = "Cannot register a field with Area greater than 1000 acres";
 
     @Value("${INATrace.agstack.authUrl:https://api.terrapipe.io}")
@@ -62,9 +64,9 @@ public class AgStackClientService {
         log.info("=== Configuración de AgStack ===");
         log.info("Auth URL: {}", authUrl);
         log.info("Base URL: {}", baseURL);
-        log.info("Email configurado: {}", isBlank(email) ? "❌ NO" : "✅ SÍ (" + email + ")");
+        log.info("Email configurado: {}", isBlank(email) ? "❌ NO" : "✅ SÍ");
         log.info("Password configurado: {}", isBlank(password) ? "❌ NO" : "✅ SÍ");
-        
+
         if (isBlank(email) || isBlank(password)) {
             log.warn("⚠️ ADVERTENCIA: Credenciales de AgStack no configuradas. Configure INATRACE_AGSTACK_EMAIL y INATRACE_AGSTACK_PASSWORD");
         } else {
@@ -77,7 +79,10 @@ public class AgStackClientService {
         log.debug("Iniciando registro de field boundary con {} coordenadas", plotCoordinates.size());
 
         ApiRegisterFieldBoundaryRequest request = new ApiRegisterFieldBoundaryRequest();
-        request.setS2Index("8, 13");
+        request.setS2Index("8,13");
+        request.setResolutionLevel(13);
+        request.setThreshold(90);
+        request.setReturnS2Indices(Boolean.FALSE);
 
         StringBuilder stringBuilder = new StringBuilder();
 
@@ -103,16 +108,36 @@ public class AgStackClientService {
                 .body(Mono.just(request), ApiRegisterFieldBoundaryRequest.class)
                 .header(AUTHORIZATION, "Bearer " + accessToken)
                 .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .onStatus(HttpStatus.INTERNAL_SERVER_ERROR::equals,
-                        clientResponse -> clientResponse
-                                .bodyToMono(ApiRegisterFieldBoundaryErrorResponse.class)
-                                .flatMap(error -> Mono.error(new ApiException(ApiStatus.ERROR, error.getError()))))
-                .onStatus(HttpStatus.BAD_REQUEST::equals,
-                        clientResponse -> clientResponse
-                                .bodyToMono(ApiRegisterFieldBoundaryResponse.class)
-                                .flatMap(resp -> Mono.error(new ApiException(ApiStatus.INVALID_REQUEST, resolveErrorMessage(resp)))) )
-                .bodyToMono(ApiRegisterFieldBoundaryResponse.class)
+                .exchangeToMono(clientResponse -> {
+                    HttpStatusCode status = clientResponse.statusCode();
+
+                    if (status.is2xxSuccessful()) {
+                        return clientResponse.bodyToMono(ApiRegisterFieldBoundaryResponse.class);
+                    }
+
+                    if (status.isSameCodeAs(HttpStatus.BAD_REQUEST)) {
+                        return clientResponse.bodyToMono(ApiRegisterFieldBoundaryResponse.class)
+                                .flatMap(resp -> {
+                                    if (isFieldAlreadyRegistered(resp)) {
+                                        return Mono.just(resp);
+                                    }
+                                    if (resp != null && isAreaExceeded(resp.getFieldAreaAcres())) {
+                                        return Mono.error(new ApiException(ApiStatus.INVALID_REQUEST, FIELD_AREA_EXCEEDED_MESSAGE));
+                                    }
+                                    return Mono.error(new ApiException(ApiStatus.INVALID_REQUEST, resolveErrorMessage(resp)));
+                                });
+                    }
+
+                    if (status.isSameCodeAs(HttpStatus.INTERNAL_SERVER_ERROR)) {
+                        return clientResponse.bodyToMono(ApiRegisterFieldBoundaryErrorResponse.class)
+                                .flatMap(error -> Mono.error(new ApiException(ApiStatus.ERROR,
+                                        error != null ? error.getError() : "Error desconocido devuelto por AgStack")));
+                    }
+
+                    return clientResponse.bodyToMono(String.class)
+                            .defaultIfEmpty("")
+                            .flatMap(body -> Mono.error(new ApiException(ApiStatus.ERROR, abbreviateBody(body))));
+                })
                 .map(this::handleBusinessResponse)
                 .block();
     }
@@ -131,15 +156,28 @@ public class AgStackClientService {
             throw new ApiException(ApiStatus.INVALID_REQUEST, FIELD_AREA_EXCEEDED_MESSAGE);
         }
 
-        if (equalsIgnoreCase(message, FIELD_ALREADY_REGISTERED_MESSAGE)
-                || (response.getMatchedGeoIDs() != null && !response.getMatchedGeoIDs().isEmpty())) {
-            log.warn("Campo ya registrado. IDs coincidentes: {}", response.getMatchedGeoIDs());
-            throw new ApiException(ApiStatus.INVALID_REQUEST, resolveErrorMessage(response));
+        if (isFieldAlreadyRegistered(response)) {
+            log.info("Campo ya registrado. IDs coincidentes: {}", response.getMatchedGeoIDs());
+            return response;
         }
 
         log.info("✅ Field boundary registrado exitosamente. Geo ID: {}", response.getGeoID());
 
         return response;
+    }
+
+    private boolean isFieldAlreadyRegistered(ApiRegisterFieldBoundaryResponse response) {
+        if (response == null) {
+            return false;
+        }
+
+        if (response.getMatchedGeoIDs() != null && !response.getMatchedGeoIDs().isEmpty()) {
+            return true;
+        }
+
+        String message = normalize(response.getMessage());
+        return equalsIgnoreCase(message, FIELD_ALREADY_REGISTERED_MESSAGE)
+                || equalsIgnoreCase(message, FIELD_ALREADY_REGISTERED_ALT_MESSAGE);
     }
 
     private boolean isAreaExceeded(BigDecimal fieldAreaAcres) {
@@ -183,10 +221,20 @@ public class AgStackClientService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Mono.just(new ApiAuthRequest(email, password)), ApiAuthRequest.class)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError(), 
-                        clientResponse -> Mono.error(new ApiException(ApiStatus.UNAUTHORIZED, "Credenciales inválidas para AgStack")))
-                .onStatus(status -> status.is5xxServerError(), 
-                        clientResponse -> Mono.error(new ApiException(ApiStatus.ERROR, "Fallo en autenticación AgStack")))
+                .onStatus(status -> status.is4xxClientError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(body -> {
+                                    log.error("❌ Autenticación AgStack falló ({}): {}", clientResponse.statusCode(), abbreviateBody(body));
+                                    return Mono.error(new ApiException(ApiStatus.UNAUTHORIZED, "Credenciales inválidas para AgStack"));
+                                }))
+                .onStatus(status -> status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(body -> {
+                                    log.error("❌ Error de servidor AgStack ({}): {}", clientResponse.statusCode(), abbreviateBody(body));
+                                    return Mono.error(new ApiException(ApiStatus.ERROR, "Fallo en autenticación AgStack"));
+                                }))
                 .bodyToMono(ApiAuthResponse.class)
                 .block();
 
@@ -217,5 +265,16 @@ public class AgStackClientService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String abbreviateBody(String body) {
+        if (body == null) {
+            return "";
+        }
+        String normalized = body.trim();
+        if (normalized.length() > 500) {
+            return normalized.substring(0, 500) + "... (truncated)";
+        }
+        return normalized;
     }
 }

@@ -44,7 +44,13 @@ public class Facility extends TimestampEntity {
 	private Boolean displayPriceDeductionDamage;
 
 	@Column
+	private Boolean displayFinalPriceDiscount;
+
+	@Column
 	private Boolean displayWeightDeductionDamage;
+
+	@Column
+	private Boolean displayMoisturePercentage;
 
 	@Column
 	private Boolean displayTare;
@@ -57,6 +63,9 @@ public class Facility extends TimestampEntity {
 
 	@Column
 	private Boolean displayPriceDeterminedLater;
+
+	@Column
+	private Integer level;
 
 	@OneToOne(cascade = CascadeType.ALL)
 	private FacilityLocation facilityLocation;
@@ -130,12 +139,28 @@ public class Facility extends TimestampEntity {
 		this.displayPriceDeductionDamage = displayPriceDeductionDamage;
 	}
 
+	public Boolean getDisplayFinalPriceDiscount() {
+		return displayFinalPriceDiscount;
+	}
+
+	public void setDisplayFinalPriceDiscount(Boolean displayFinalPriceDiscount) {
+		this.displayFinalPriceDiscount = displayFinalPriceDiscount;
+	}
+
 	public Boolean getDisplayWeightDeductionDamage() {
 		return displayWeightDeductionDamage;
 	}
 
 	public void setDisplayWeightDeductionDamage(Boolean displayWeightDeductionDamage) {
 		this.displayWeightDeductionDamage = displayWeightDeductionDamage;
+	}
+
+	public Boolean getDisplayMoisturePercentage() {
+		return displayMoisturePercentage;
+	}
+
+	public void setDisplayMoisturePercentage(Boolean displayMoisturePercentage) {
+		this.displayMoisturePercentage = displayMoisturePercentage;
 	}
 
 	public Boolean getDisplayTare() {
@@ -168,6 +193,14 @@ public class Facility extends TimestampEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean priceDeterminedLater) {
 		this.displayPriceDeterminedLater = priceDeterminedLater;
+	}
+
+	public Integer getLevel() {
+		return level;
+	}
+
+	public void setLevel(Integer level) {
+		this.level = level;
 	}
 
 	public FacilityLocation getFacilityLocation() {

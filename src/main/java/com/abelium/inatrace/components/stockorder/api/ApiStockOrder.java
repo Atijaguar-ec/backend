@@ -183,14 +183,35 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Week number for cacao deliveries (1-53)")
     private Integer weekNumber;
 
+    @Schema(description = "Parcel lot for cacao deliveries")
+    private String parcelLot;
+
+    @Schema(description = "Variety for cacao deliveries")
+    private String variety;
+
+    @Schema(description = "Organic certification details")
+    private String organicCertification;
+
     @Schema(description = "Tare")
     private BigDecimal tare;
 
     @Schema(description = "Damaged price deduction")
     private BigDecimal damagedPriceDeduction;
 
+    @Schema(description = "Final price discount per unit")
+    private BigDecimal finalPriceDiscount;
+
     @Schema(description = "Damaged weight deduction")
     private BigDecimal damagedWeightDeduction;
+
+    @Schema(description = "Moisture percentage applied (0-100)")
+    private BigDecimal moisturePercentage;
+
+    @Schema(description = "Calculated weight deduction due to moisture")
+    private BigDecimal moistureWeightDeduction;
+
+    @Schema(description = "Net quantity after all deductions (tare, damaged weight, moisture)")
+    private BigDecimal netQuantity;
 
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
@@ -624,6 +645,30 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.weekNumber = weekNumber;
     }
 
+    public String getParcelLot() {
+        return parcelLot;
+    }
+
+    public void setParcelLot(String parcelLot) {
+        this.parcelLot = parcelLot;
+    }
+
+    public String getVariety() {
+        return variety;
+    }
+
+    public void setVariety(String variety) {
+        this.variety = variety;
+    }
+
+    public String getOrganicCertification() {
+        return organicCertification;
+    }
+
+    public void setOrganicCertification(String organicCertification) {
+        this.organicCertification = organicCertification;
+    }
+
     public BigDecimal getTare() {
         return tare;
     }
@@ -640,12 +685,44 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.damagedPriceDeduction = damagedPriceDeduction;
     }
 
+    public BigDecimal getFinalPriceDiscount() {
+        return finalPriceDiscount;
+    }
+
+    public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+        this.finalPriceDiscount = finalPriceDiscount;
+    }
+
     public BigDecimal getDamagedWeightDeduction() {
         return damagedWeightDeduction;
     }
 
     public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
         this.damagedWeightDeduction = damagedWeightDeduction;
+    }
+
+    public BigDecimal getMoisturePercentage() {
+        return moisturePercentage;
+    }
+
+    public void setMoisturePercentage(BigDecimal moisturePercentage) {
+        this.moisturePercentage = moisturePercentage;
+    }
+
+    public BigDecimal getMoistureWeightDeduction() {
+        return moistureWeightDeduction;
+    }
+
+    public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
+        this.moistureWeightDeduction = moistureWeightDeduction;
+    }
+
+    public BigDecimal getNetQuantity() {
+        return netQuantity;
+    }
+
+    public void setNetQuantity(BigDecimal netQuantity) {
+        this.netQuantity = netQuantity;
     }
 
     public String getQrCodeTag() {

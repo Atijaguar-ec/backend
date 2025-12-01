@@ -11,33 +11,34 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: 'Target environment '
         required: true
         default: 'develop'
         type: choice
         options:
         - develop
+        - develop-shrimp
         - staging
         - main
       company:
-        description: 'Target company (develop, staging, main)'
+        description: 'Target company '
         required: false
         default: false
         type: boolean
       skip_quality:
-        description: 'Skip quality checks (tests, security scan)'
+        description: 'Skip quality checks (tests, security scan) | ⚠️ Not recommended for production'
         required: false
         default: false
         type: boolean
       skip_security:
-        description: 'Skip security scan (OWASP dependency check)'
+        description: 'Skip security scan (OWASP dependency check) | ⚠️ Not recommended for production'
         required: false
         default: false
         type: boolean
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-inatrace
-  JAVA_VERSION: '17'  # Java 11 or higher is required (ver documentación oficial)
+  JAVA_VERSION: '17'
   MAVEN_OPTS: -Xmx1024m
 jobs:
   quality:
@@ -63,6 +64,12 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
+      - name: 📋 Contexto de ejecución
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
 
       - name: Determine backend paths
         id: paths
@@ -252,8 +259,21 @@ jobs:
           echo "📦 Image: ${{ steps.image_ref_push.outputs.image }}:${{ steps.meta.outputs.tag }}"
           echo "🏷️  Tag: ${{ steps.meta.outputs.tag }}"
 
+      - name: 💾 Export image to tar (for deployment)
+        run: |
+          docker pull ${{ steps.image_ref_push.outputs.image }}:${{ steps.meta.outputs.tag }}
+          docker save -o be-image.tar ${{ steps.image_ref_push.outputs.image }}:${{ steps.meta.outputs.tag }}
+          ls -lh be-image.tar
+
+      - name: 📤 Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: be-image
+          path: be-image.tar
+          retention-days: 1
+
   deploy-test-unocace:
-    name: Deploy Backend to UNOCACE Test (staging)
+    name: Deploy Backend to UNOCACE  Test (staging)
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging'
@@ -264,6 +284,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
+
       - name: Preflight - validate required secrets (SSH & App)
         run: |
           missing=0
@@ -273,6 +300,8 @@ jobs:
           [ -z "${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DB_ROOT_PASSWORD" && missing=1
           [ -z "${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_DATASOURCE_PASSWORD" && missing=1
           [ -z "${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_MAIL_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_AGSTACK_EMAIL }}" ] && echo "Missing secret: TEST_UNOCACE_AGSTACK_EMAIL" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_AGSTACK_PASSWORD }}" ] && echo "Missing secret: TEST_UNOCACE_AGSTACK_PASSWORD" && missing=1
           # Optional secrets: warn if missing; defaults will be used later
           [ -z "${{ secrets.TEST_UNOCACE_REQUESTLOG_TOKEN }}" ] && echo "Warning: Missing  secret: TEST_UNOCACE_REQUESTLOG_TOKEN (will use default)"
           [ -z "${{ secrets.TEST_UNOCACE_EXCHANGERATE_APIKEY }}" ] && echo "Warning: Missing secret: TEST_UNOCACE_EXCHANGERATE_APIKEY (will use default)"
@@ -316,6 +345,20 @@ jobs:
           FE_CONFIRM_URL="${{ secrets.TEST_UNOCACE_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
           FE_RESET_URL="${{ secrets.TEST_UNOCACE_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           SERVER_PORT="${{ secrets.TEST_UNOCACE_SERVER_PORT }}"; [ -z "$SERVER_PORT" ] && SERVER_PORT="8080"
+          MAIL_HOST="${{ secrets.TEST_UNOCACE_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.TEST_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.TEST_UNOCACE_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
+          MAIL_PASSWORD="${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.TEST_UNOCACE_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.TEST_UNOCACE_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT="desarrollo@atijaguar.com"
+          MAIL_SENDING_ENABLED="${{ secrets.TEST_UNOCACE_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="true"
+          MAIL_DEBUG="${{ secrets.TEST_UNOCACE_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.TEST_UNOCACE_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.TEST_UNOCACE_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.TEST_UNOCACE_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.TEST_UNOCACE_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -323,6 +366,10 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}
+          CONTAINER_NAME_BE=inatrace-be-test-unocace
+          CONTAINER_NAME_DB=inatrace-mysql
+          HOST_PORT_BE=8080
+          HOST_PORT_DB=3306
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
@@ -336,11 +383,22 @@ jobs:
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
           SERVER_PORT=$SERVER_PORT
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}
-          # Deploy timestamp: 2025-09-25 00:23
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASSWORD
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
+          INATRACE_AGSTACK_EMAIL=${{ secrets.TEST_UNOCACE_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_PASSWORD=${{ secrets.TEST_UNOCACE_AGSTACK_PASSWORD }}
           EOF
 
       - name: 📤 Upload .env
@@ -365,11 +423,19 @@ jobs:
             echo "🔗 Ensuring Docker network exists..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
-            echo "📥 Pulling latest image from GHCR..."
-            docker-compose pull
+            echo "📥 Pulling latest image from GHCR"
+            docker-compose pull backend
+
+            echo "🛑 Stopping old backend container (inatrace-be) if running"
+            docker stop inatrace-be >/dev/null 2>&1 || true
+            docker rm inatrace-be >/dev/null 2>&1 || true
             
-            echo "🚀 Starting services..."
-            docker-compose up -d
+            echo "🛑 Stopping new backend container if exists"
+            docker stop "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+            docker rm "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+
+            echo "🚀 Recreating backend only (no deps)"
+            docker-compose up -d --no-deps --force-recreate backend
             
             echo "⏳ Waiting for backend to be healthy..."
             for i in {1..12}; do
@@ -384,7 +450,7 @@ jobs:
             
             echo "❌ Health check failed after 2 minutes"
             docker ps -a
-            docker logs inatrace-be 2>&1 | tail -50
+            docker logs "$CONTAINER_NAME_BE" 2>&1 | tail -50
             exit 1
 
   deploy-test-dufer:
@@ -398,6 +464,13 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
 
       - name: Preflight - validate required secrets (SSH & App)
         run: |
@@ -443,6 +516,20 @@ jobs:
           FE_CONFIRM_URL="${{ secrets.TEST_DUFER_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
           FE_RESET_URL="${{ secrets.TEST_DUFER_FE_RESET_URL }}"; [ -z "$FE_RESET_URL" ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
           SERVER_PORT="${{ secrets.TEST_DUFER_SERVER_PORT }}"; [ -z "$SERVER_PORT" ] && SERVER_PORT="8080"
+          MAIL_HOST="${{ secrets.TEST_DUFER_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.TEST_DUFER_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.TEST_DUFER_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
+          MAIL_PASSWORD="${{ secrets.TEST_DUFER_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.TEST_DUFER_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.TEST_DUFER_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT="desarrollo@atijaguar.com"
+          MAIL_SENDING_ENABLED="${{ secrets.TEST_DUFER_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="true"
+          MAIL_DEBUG="${{ secrets.TEST_DUFER_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.TEST_DUFER_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.TEST_DUFER_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.TEST_DUFER_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.TEST_DUFER_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -450,23 +537,36 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_DUFER_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_DUFER_DATASOURCE_PASSWORD }}
-           FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          CONTAINER_NAME_BE=inatrace-be-test-dufer
+          CONTAINER_NAME_DB=inatrace-mysql-test-dufer
+          HOST_PORT_BE=8080
+          HOST_PORT_DB=3306
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
           FILE_STORAGE_ROOT_VOL=/opt/inatrace/uploads
           IMPORT_PATH_VOL=/opt/inatrace/imports
           DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
           DB_VOLUME=/opt/inatrace/mysql
-          
           REQUESTLOG_TOKEN=$REQ_TOKEN
           EXCHANGERATE_APIKEY=$EXR_KEY
           FE_URL=$FE_URL
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=${{ secrets.TEST_DUFER_MAIL_PASSWORD }}
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASSWORD
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
           EOF
 
       - name: 📤 Upload .env
@@ -492,12 +592,16 @@ jobs:
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
             echo "📥 Pulling latest image from GHCR..."
-            docker-compose pull
+            docker-compose pull backend
+
+            echo "🛑 Stopping existing backend container if running"
+            docker stop "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+            docker rm "$CONTAINER_NAME_BE" >/dev/null 2>&1 || true
+
+            echo "🚀 Recreating backend only (no deps)"
+            docker-compose up -d --no-deps --force-recreate backend
             
-            echo "🚀 Starting services..."
-            docker-compose up -d --remove-orphans
-            
-            echo "⏳ Waiting for backend to be healthy..."
+            echo "⏳ Waiting for backend to be healthy... "
             for i in {1..12}; do
               sleep 10
               if curl -f "http://localhost:8080/actuator/health" >/dev/null 2>&1; then
@@ -525,12 +629,21 @@ jobs:
       - name: 📥 Checkout deployment configs
         uses: actions/checkout@v4
 
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
+
       - name: Preflight - validate required secrets (DEV - key auth)
         run: |
           missing=0
           [ -z "${{ secrets.DEV_HOST }}" ] && echo "Missing secret: DEV_HOST" && missing=1
           [ -z "${{ secrets.DEV_USER }}" ] && echo "Missing secret: DEV_USER" && missing=1
           [ -z "${{ secrets.DEV_SSH_KEY }}" ] && echo "Missing secret: DEV_SSH_KEY" && missing=1
+          [ -z "${{ secrets.DEV_AGSTACK_EMAIL }}" ] && echo "Missing secret: DEV_AGSTACK_EMAIL" && missing=1
+          [ -z "${{ secrets.DEV_AGSTACK_PASSWORD }}" ] && echo "Missing secret: DEV_AGSTACK_PASSWORD" && missing=1
           if [ "$missing" -ne 0 ]; then exit 1; fi
 
       - name: Ensure remote directory exists (dev)
@@ -549,20 +662,21 @@ jobs:
       - name: Verify local compose path (dev)
         run: |
           set -e
-          ls -lah .ci || true
-          if [ ! -f .ci/docker-compose.yml ]; then
-            echo "Missing .ci/docker-compose.yml (will use remote compose)"
+          ls -lah ci || true
+          if [ ! -f ci/docker-compose.yml ]; then
+            echo "Missing ci/docker-compose.yml (will use remote compose)"
           fi
 
       - name: Upload docker-compose.yml (dev)
-        if: ${{ hashFiles('.ci/docker-compose.yml') != '' }}
+        if: ${{ hashFiles('ci/docker-compose.yml') != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: ".ci/docker-compose.yml"
+          source: "ci/docker-compose.yml"
           target: "/opt/inatrace/backend/dev"
+          strip_components: 1
           debug: true
 
       - name: Prepare .env (dev)
@@ -571,7 +685,20 @@ jobs:
           DB_USER="${{ secrets.DEV_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace"
           DB_PASS="${{ secrets.DEV_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace"
           DB_ROOT="${{ secrets.DEV_DB_ROOT_PASSWORD }}"; [ -z "$DB_ROOT" ] && DB_ROOT="root"
+          MAIL_HOST="${{ secrets.DEV_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.DEV_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.DEV_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
           MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.DEV_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.DEV_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT=""
+          MAIL_SENDING_ENABLED="${{ secrets.DEV_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="false"
+          MAIL_DEBUG="${{ secrets.DEV_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.DEV_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.DEV_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.DEV_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.DEV_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
           REQ_TOKEN="${{ secrets.DEV_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="dev-requestlog-${GITHUB_RUN_ID}"
           EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
           FE_URL="${{ secrets.DEV_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
@@ -584,6 +711,10 @@ jobs:
           DB_ROOT_PASSWORD=$DB_ROOT
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=$DB_PASS
+          CONTAINER_NAME_BE=inatrace-be-dev
+          CONTAINER_NAME_DB=inatrace-mysql-dev
+          HOST_PORT_BE=8080
+          HOST_PORT_DB=3306
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
@@ -597,10 +728,22 @@ jobs:
           FE_URL=$FE_URL
           FE_CONFIRM_URL=$FE_CONFIRM_URL
           FE_RESET_URL=$FE_RESET_URL
-          MAIL_HOST=mail.atijaguar.com
-          MAIL_PORT=465
-          MAIL_USERNAME=desarrollo@atijaguar.com
-          MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
+          INATRACE_AGSTACK_EMAIL=${{ secrets.DEV_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_PASSWORD=${{ secrets.DEV_AGSTACK_PASSWORD }}
           EOF
 
       - name: Verify .env exists (dev)
@@ -683,6 +826,225 @@ jobs:
             done
 
             echo "❌ Health check failed after 10 attempts"
+            docker-compose logs --tail 200
+            exit 1
+
+  deploy-dev-shrimp:
+    name: 🦐 Deploy to Development Shrimp
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'develop-shrimp'
+    environment:
+      name: dev-shrimp
+      url: http://camaron.atijaguar.com/api/health
+    steps:
+      - name: 📥 Checkout deployment configs
+        uses: actions/checkout@v4
+
+      - name: Preflight - validate required secrets (DEV-SHRIMP - key auth)
+        run: |
+          missing=0
+          [ -z "${{ secrets.DEV_HOST }}" ] && echo "Missing secret: DEV_HOST" && missing=1
+          [ -z "${{ secrets.DEV_USER }}" ] && echo "Missing secret: DEV_USER" && missing=1
+          [ -z "${{ secrets.DEV_SSH_KEY }}" ] && echo "Missing secret: DEV_SSH_KEY" && missing=1
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Ensure remote directory exists (dev-shrimp)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            sudo mkdir -p /opt/inatrace/volumes-shrimp
+            sudo mkdir -p /opt/inatrace/volumes-shrimp/{uploads,import,documents,logs}
+            sudo chown -R 1000:1000 /opt/inatrace/volumes-shrimp
+            sudo chmod -R 755 /opt/inatrace/volumes-shrimp
+            mkdir -p /opt/inatrace/backend/dev-shrimp
+            # Remove legacy compose files (now we use backend-only compose)
+            rm -f /opt/inatrace/backend/dev-shrimp/docker-compose.yml /opt/inatrace/backend/dev-shrimp/docker-compose.yaml
+
+      - name: Verify local compose path (dev-shrimp)
+        run: |
+          set -e
+          ls -lah ci || true
+          if [ ! -f ci/docker-compose.backend-only.yml ]; then
+            echo "Missing ci/docker-compose.backend-only.yml (expected custom compose for shared MySQL)"
+          fi
+
+      - name: Upload docker-compose.yml (dev-shrimp)
+        if: ${{ hashFiles('ci/docker-compose.backend-only.yml') != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "ci/docker-compose.backend-only.yml"
+          target: "/opt/inatrace/backend/dev-shrimp"
+          strip_components: 1
+          debug: true
+
+      - name: Prepare .env (dev-shrimp)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"; IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          DB_USER="${{ secrets.DEV_SHRIMP_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_shrimp"
+          DB_PASS="${{ secrets.DEV_SHRIMP_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace_shrimp"
+          DB_ROOT="${{ secrets.DEV_SHRIMP_DB_ROOT_PASSWORD }}"; [ -z "$DB_ROOT" ] && DB_ROOT="root_shrimp"
+          MAIL_HOST="${{ secrets.DEV_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.DEV_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USERNAME="${{ secrets.DEV_MAIL_USERNAME }}"; [ -z "$MAIL_USERNAME" ] && MAIL_USERNAME="desarrollo@atijaguar.com"
+          MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
+          MAIL_TEMPLATE_FROM="${{ secrets.DEV_MAIL_TEMPLATE_FROM }}"; [ -z "$MAIL_TEMPLATE_FROM" ] && MAIL_TEMPLATE_FROM="no-reply@inatrace.com"
+          MAIL_REDIRECT="${{ secrets.DEV_MAIL_REDIRECT }}"; [ -z "$MAIL_REDIRECT" ] && MAIL_REDIRECT=""
+          MAIL_SENDING_ENABLED="${{ secrets.DEV_MAIL_SENDING_ENABLED }}"; [ -z "$MAIL_SENDING_ENABLED" ] && MAIL_SENDING_ENABLED="false"
+          MAIL_DEBUG="${{ secrets.DEV_MAIL_DEBUG }}"; [ -z "$MAIL_DEBUG" ] && MAIL_DEBUG="false"
+          MAIL_SMTP_AUTH="${{ secrets.DEV_MAIL_SMTP_AUTH }}"; [ -z "$MAIL_SMTP_AUTH" ] && MAIL_SMTP_AUTH="true"
+          MAIL_SSL_ENABLE="${{ secrets.DEV_MAIL_SSL_ENABLE }}"; [ -z "$MAIL_SSL_ENABLE" ] && MAIL_SSL_ENABLE="true"
+          MAIL_STARTTLS="${{ secrets.DEV_MAIL_STARTTLS_ENABLE }}"; [ -z "$MAIL_STARTTLS" ] && MAIL_STARTTLS="false"
+          MAIL_CONN_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_CONNECTION_TIMEOUT }}"; [ -z "$MAIL_CONN_TIMEOUT" ] && MAIL_CONN_TIMEOUT="5000"
+          MAIL_TIMEOUT="${{ secrets.DEV_MAIL_SMTP_TIMEOUT }}"; [ -z "$MAIL_TIMEOUT" ] && MAIL_TIMEOUT="3000"
+          MAIL_WRITETIMEOUT="${{ secrets.DEV_MAIL_SMTP_WRITETIMEOUT }}"; [ -z "$MAIL_WRITETIMEOUT" ] && MAIL_WRITETIMEOUT="5000"
+          REQ_TOKEN="${{ secrets.DEV_REQUESTLOG_TOKEN }}"; [ -z "$REQ_TOKEN" ] && REQ_TOKEN="dev-shrimp-requestlog-${GITHUB_RUN_ID}"
+          EXR_KEY="${{ secrets.DEV_EXCHANGERATE_APIKEY }}"; [ -z "$EXR_KEY" ] && EXR_KEY="dummy-dev-key"
+          FE_URL="${{ secrets.DEV_SHRIMP_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="http://camaron.atijaguar.com/"
+          FE_CONFIRM_URL="${{ secrets.DEV_SHRIMP_FE_CONFIRM_URL }}"; [ -z "$FE_CONFIRM_URL" ] && FE_CONFIRM_URL="${FE_URL%/}/confirm-email/"
+          FE_RESET_URL="${{ secrets.DEV_SHRIMP_FE_RESET_URL }}"; [ -z "$FE_RESET_URL " ] && FE_RESET_URL="${FE_URL%/}/reset-password/"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=develop
+          DATABASE_NAME=inatrace_shrimp
+          DB_ROOT_PASSWORD=$DB_ROOT
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=$DB_PASS
+          CONTAINER_NAME_BE=inatrace-be-dev-shrimp
+          HOST_PORT_BE=8083
+          DATABASE_HOSTNAME=inatrace-mysql-dev
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
+          # Host volume paths used by docker-compose
+          FILE_STORAGE_ROOT_VOL=/opt/inatrace/volumes-shrimp/uploads
+          IMPORT_PATH_VOL=/opt/inatrace/volumes-shrimp/import
+          DOCUMENTS_ROOT_VOL=/opt/inatrace/volumes-shrimp/documents
+          REQUESTLOG_TOKEN=$REQ_TOKEN
+          EXCHANGERATE_APIKEY=$EXR_KEY
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=$FE_CONFIRM_URL
+          FE_RESET_URL=$FE_RESET_URL
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USERNAME
+          SPRING_MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_SMTP_AUTH=$MAIL_SMTP_AUTH
+          SPRING_MAIL_SMTP_SSL_ENABLE=$MAIL_SSL_ENABLE
+          SPRING_MAIL_STARTTLS_ENABLE=$MAIL_STARTTLS
+          SPRING_MAIL_SMTP_CONNECTION_TIMEOUT=$MAIL_CONN_TIMEOUT
+          SPRING_MAIL_SMTP_TIMEOUT=$MAIL_TIMEOUT
+          SPRING_MAIL_SMTP_WRITETIMEOUT=$MAIL_WRITETIMEOUT
+          SPRING_MAIL_DEBUG=$MAIL_DEBUG
+          INATRACE_MAIL_TEMPLATE_FROM=$MAIL_TEMPLATE_FROM
+          INATRACE_MAIL_REDIRECT=$MAIL_REDIRECT
+          INATRACE_MAIL_SENDING_ENABLED=$MAIL_SENDING_ENABLED
+          EOF
+
+      - name: Verify .env exists (dev-shrimp)
+        run: |
+          set -e
+          ls -lah .
+          test -s .env || { echo ".env is missing or empty"; exit 1; }
+
+      - name: Upload .env (dev-shrimp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: ".env"
+          target: "/opt/inatrace/backend/dev-shrimp"
+          debug: true
+
+      - name: Download backend image artifact (dev-shrimp)
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: Verify backend image artifact (dev-shrimp)
+        run: |
+          set -e
+          ls -lah .
+          [ -f be-image.tar ] || { echo "❌ be-image.tar not found after download-artifact"; exit 1; }
+          echo "✅ be-image.tar present"
+
+      - name: Upload image tar (dev-shrimp)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/backend/dev-shrimp"
+          debug: true
+
+      - name: Deploy on server (dev-shrimp)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_PORT || 22 }}
+          script: |
+            set -e
+            set -o pipefail
+            cd /opt/inatrace/backend/dev-shrimp
+
+            failure_handler() {
+              exit_code=$?
+              echo "⚠️  Falló el despliegue dev-shrimp (código $exit_code). Capturando información..."
+              docker-compose ps || true
+              echo "📦 Contenedores locales relevantes:"
+              docker ps -a --filter "name=inatrace" || true
+              echo "🦐 Últimos logs del backend shrimp:"
+              docker logs inatrace-be-dev-shrimp --tail 200 || true
+              echo "🗒️  docker-compose logs (últimos 200):"
+              docker-compose logs --tail 200 || true
+              exit $exit_code
+            }
+            trap failure_handler ERR
+
+            # Use backend-only compose file (shared MySQL)
+            export COMPOSE_FILE=docker-compose.backend-only.yml
+
+            # Stop only shrimp backend container (preserve cacao, mysql and frontend)
+            echo "🛑 Stopping existing shrimp backend containers..."
+            docker stop inatrace-be-dev-shrimp 2>/dev/null || true
+            docker rm inatrace-be-dev-shrimp 2>/dev/null || true
+
+            # Ensure shared network exists (DO NOT remove - other services may be using it)
+            echo "🔗 Ensuring shared network exists..."
+            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+
+            # Load new image
+            echo "📦 Loading new shrimp backend image..."
+            docker load -i be-image.tar
+
+            # Start shrimp services
+            echo "🦐 Starting dev-shrimp services..."
+            docker-compose up -d
+
+            echo "⏳ Waiting for shrimp service to be ready..."
+            sleep 30
+
+            for i in {1..10}; do
+              if curl -f http://localhost:8083/actuator/health; then
+                echo "✅ Development Shrimp backend deployment successful!"
+                exit 0
+              fi
+              echo "⏳ Health check attempt $i/10, waiting..."
+              sleep 10
+            done
+
+            echo "❌ Health check failed after 10 attempts"
             docker-compose logs
             exit 1
 
@@ -697,6 +1059,13 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: 📋 Contexto de despliegue
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF"
+          echo "Workflow run: $GITHUB_RUN_ID"
+          echo "Job: $GITHUB_JOB"
 
       - name: Preflight - validate required secrets (DUFER prod)
         run: |

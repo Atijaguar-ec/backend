@@ -1,30 +1,11 @@
-
 services:
-
-  mysql:
-    image: mysql:8.0.35
-    container_name: ${CONTAINER_NAME_DB:-inatrace-mysql-dev}
-    environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${DATABASE_NAME}
-      - MYSQL_USER=${DATASOURCE_USERNAME}
-      - MYSQL_PASSWORD=${DATASOURCE_PASSWORD}
-    volumes:
-      - ${DB_VOLUME}:/var/lib/mysql
-    networks:
-      - backend
-    ports:
-      - "${HOST_PORT_DB:-3306}:3306"
-    restart: always
-
   backend:
     image: ${IMAGE_NAME}:${TAG}
     container_name: ${CONTAINER_NAME_BE:-inatrace-be-dev}
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SERVER_PORT=${SERVER_PORT:-8080}
       - INATRACE_DATABASE_NAME=${DATABASE_NAME}
-      - INATRACE_DATABASE_HOSTNAME=${CONTAINER_NAME_DB:-inatrace-mysql-dev}
+      - INATRACE_DATABASE_HOSTNAME=${DATABASE_HOSTNAME:-inatrace-mysql-dev}
       - SPRING_DATASOURCE_USERNAME=${DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DATASOURCE_PASSWORD}
       - INATRACE_FILESTORAGE_ROOT=${FILE_STORAGE_ROOT}
@@ -57,12 +38,10 @@ services:
       - ${DOCUMENTS_ROOT_VOL}:${DOCUMENTS_ROOT}
     networks:
       - backend
-    depends_on:
-      - mysql
     ports:
-      - "${HOST_PORT_BE:-8080}:${SERVER_PORT:-8080}"
+      - "${HOST_PORT_BE:-8080}:8080"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:${SERVER_PORT:-8080}/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3

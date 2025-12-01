@@ -885,6 +885,7 @@ public class StockOrderService extends BaseService {
             apiStockOrder.setIdentifier(farmer.getIdentifier());
             apiStockOrder.setOrganic(farmer.getOrganic());
             apiStockOrder.setDamagedPriceDeduction(farmer.getDamagedPriceDeduction());
+            apiStockOrder.setFinalPriceDiscount(farmer.getFinalPriceDiscount());
             apiStockOrder.setDamagedWeightDeduction(farmer.getDamagedWeightDeduction());
             apiStockOrder.setSemiProduct(farmer.getSemiProduct());
             apiStockOrder.setTare(farmer.getTare());
@@ -1008,8 +1009,14 @@ public class StockOrderService extends BaseService {
         entity.setTare(apiStockOrder.getTare());
         entity.setWomenShare(apiStockOrder.getWomenShare());
         entity.setWeekNumber(apiStockOrder.getWeekNumber());
+        entity.setParcelLot(apiStockOrder.getParcelLot());
+        entity.setVariety(apiStockOrder.getVariety());
+        entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
         entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
+        entity.setFinalPriceDiscount(apiStockOrder.getFinalPriceDiscount());
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
+        entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
+        entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
         entity.setCurrency(apiStockOrder.getCurrency());
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders
@@ -1048,17 +1055,34 @@ public class StockOrderService extends BaseService {
         switch (apiStockOrder.getOrderType()) {
             case PURCHASE_ORDER:
 
-                // On purchase order, Total quantity is calculated by total gross quantity and tare
+                // Calculate base quantity after tare and damaged weight deductions
+                BigDecimal quantityAfterDeductions = apiStockOrder.getTotalGrossQuantity();
                 if (apiStockOrder.getTare() != null) {
-                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalGrossQuantity().subtract(apiStockOrder.getTare()));
-                } else {
-                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalGrossQuantity());
+                    quantityAfterDeductions = quantityAfterDeductions.subtract(apiStockOrder.getTare());
                 }
                 if (apiStockOrder.getDamagedWeightDeduction() != null) {
-                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalQuantity().subtract(apiStockOrder.getDamagedWeightDeduction()));
+                    quantityAfterDeductions = quantityAfterDeductions.subtract(apiStockOrder.getDamagedWeightDeduction());
                 }
-                entity.setTotalQuantity(apiStockOrder.getTotalQuantity());
+
+                // Calculate net quantity after all deductions including moisture
+                BigDecimal netQuantity = calculateNetQuantity(
+                    apiStockOrder.getTotalGrossQuantity(),
+                    apiStockOrder.getTare(),
+                    apiStockOrder.getDamagedWeightDeduction(),
+                    apiStockOrder.getMoisturePercentage()
+                );
+
+                // Persist gross quantity
                 entity.setTotalGrossQuantity(apiStockOrder.getTotalGrossQuantity());
+
+                // Persist net quantity and ensure total quantity mirrors it (legacy behaviour)
+                BigDecimal quantityToStore = netQuantity != null ? netQuantity : quantityAfterDeductions;
+                if (quantityToStore == null) {
+                    quantityToStore = quantityAfterDeductions;
+                }
+                apiStockOrder.setTotalQuantity(quantityToStore);
+                entity.setNetQuantity(quantityToStore);
+                entity.setTotalQuantity(quantityToStore);
 
                 // Required
                 if (apiStockOrder.getProducerUserCustomer() == null) {
@@ -1080,7 +1104,16 @@ public class StockOrderService extends BaseService {
                     pricePerUnitReduced = entity.getPricePerUnit().subtract(entity.getDamagedPriceDeduction());
                 }
                 if (!Boolean.TRUE.equals(apiStockOrder.getPriceDeterminedLater())) {
-                    entity.setCost(pricePerUnitReduced.multiply(entity.getTotalQuantity()));
+                    // Use net quantity for cost calculation
+                    BigDecimal quantityForCost = entity.getNetQuantity() != null ? entity.getNetQuantity() : entity.getTotalQuantity();
+                    BigDecimal cost = pricePerUnitReduced.multiply(quantityForCost);
+                    if (entity.getFinalPriceDiscount() != null) {
+                        cost = cost.subtract(entity.getFinalPriceDiscount());
+                    }
+                    if (cost.compareTo(BigDecimal.ZERO) < 0) {
+                        cost = BigDecimal.ZERO;
+                    }
+                    entity.setCost(cost);
 
                     if (processingOrder == null) {
                         entity.setBalance(calculateBalanceForPurchaseOrder(entity));
@@ -1718,5 +1751,38 @@ public class StockOrderService extends BaseService {
         }
         // if areaSum is < 0, polygon order is counter-clockwise
         return areaSum < 0;
+    }
+
+    /**
+     * Calculate net quantity after all deductions (tare, damaged weight, moisture)
+     * Formula: Net = (Gross - Tare - DamagedWeight) * (MoisturePercentage / 100)
+     */
+    private BigDecimal calculateNetQuantity(BigDecimal grossQuantity, BigDecimal tare, 
+                                           BigDecimal damagedWeightDeduction, BigDecimal moisturePercentage) {
+        if (grossQuantity == null) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal baseWeight = grossQuantity;
+
+        // Apply tare deduction
+        if (tare != null) {
+            baseWeight = baseWeight.subtract(tare);
+        }
+
+        // Apply damaged weight deduction
+        if (damagedWeightDeduction != null) {
+            baseWeight = baseWeight.subtract(damagedWeightDeduction);
+        }
+
+        // Ensure base weight is not negative
+        baseWeight = baseWeight.max(BigDecimal.ZERO);
+
+        // Apply moisture percentage (percentage represents the net weight that remains)
+        if (moisturePercentage != null && moisturePercentage.compareTo(BigDecimal.ZERO) > 0) {
+            baseWeight = baseWeight.multiply(moisturePercentage.divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP));
+        }
+
+        return baseWeight.max(BigDecimal.ZERO);
     }
 }

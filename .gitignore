@@ -154,5 +154,21 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+<<<<<<< HEAD
 # application.properties file
 docs/DICCIONARIO_DATOS_INATRACE_2025.md
+=======
+### Environment & deployment artifacts
+# Never commit real environment files
+.env
+**/.env
+**/.env.local
+ci/.env
+ci/.env.local
+
+# Keep templates tracked
+!ci/env-templates/*.example
+
+# Local deployment artifacts
+**/be-image.tar
+>>>>>>> 3c52e7df4186f67c891a7d77158cd4f3d6ca640c

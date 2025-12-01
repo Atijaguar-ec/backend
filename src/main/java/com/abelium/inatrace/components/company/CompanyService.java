@@ -1377,6 +1377,12 @@ public class CompanyService extends BaseService {
 		try {
 			fixCoordinatesForApiCall(coordinates);
 
+			double areaInAcres = calculateAreaInAcres(coordinates);
+			if (areaInAcres > 1000d) {
+				logger.warn("Plot area exceeds AgStack limit: {} acres", areaInAcres);
+				throw new ApiException(ApiStatus.INVALID_REQUEST, "Cannot register a field with Area greater than 1000 acres");
+			}
+
 			ApiRegisterFieldBoundaryResponse response = agStackClientService.registerFieldBoundaryResponse(coordinates);
 			if (!CollectionUtils.isEmpty(response.getMatchedGeoIDs())) {
 				return response.getMatchedGeoIDs().stream().findFirst().orElse(null);
@@ -1389,6 +1395,15 @@ public class CompanyService extends BaseService {
 		}
 
 		return null;
+	}
+
+	private double calculateAreaInAcres(List<PlotCoordinate> coordinates) {
+		List<Point> ring = coordinates.stream()
+				.map(coordinate -> Point.fromLngLat(coordinate.getLongitude(), coordinate.getLatitude()))
+				.toList();
+		Polygon polygon = Polygon.fromLngLats(List.of(ring));
+		double areaSquareMeters = TurfMeasurement.area(polygon);
+		return areaSquareMeters / 4046.8564224d;
 	}
 
 	/**

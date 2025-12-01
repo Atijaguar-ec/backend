@@ -11,6 +11,14 @@ public class ApiRegisterFieldBoundaryRequest {
 
 	private String wkt;
 
+	@JsonProperty("resolution_level")
+	private Integer resolutionLevel;
+
+	private Integer threshold;
+
+	@JsonProperty("return_s2_indices")
+	private Boolean returnS2Indices;
+
 	public String getS2Index() {
 		return s2Index;
 	}
@@ -25,6 +33,30 @@ public class ApiRegisterFieldBoundaryRequest {
 
 	public void setWkt(String wkt) {
 		this.wkt = wkt;
+	}
+
+	public Integer getResolutionLevel() {
+		return resolutionLevel;
+	}
+
+	public void setResolutionLevel(Integer resolutionLevel) {
+		this.resolutionLevel = resolutionLevel;
+	}
+
+	public Integer getThreshold() {
+		return threshold;
+	}
+
+	public void setThreshold(Integer threshold) {
+		this.threshold = threshold;
+	}
+
+	public Boolean getReturnS2Indices() {
+		return returnS2Indices;
+	}
+
+	public void setReturnS2Indices(Boolean returnS2Indices) {
+		this.returnS2Indices = returnS2Indices;
 	}
 
 }

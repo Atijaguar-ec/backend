@@ -190,6 +190,18 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private Integer weekNumber;
 
+	// Parcel lot for cacao deliveries
+	@Column(length = 255)
+	private String parcelLot;
+
+	// Variety for cacao deliveries
+	@Column(length = 255)
+	private String variety;
+
+	// Organic certification details
+	@Column(length = 255)
+	private String organicCertification;
+
 	@Column
 	private BigDecimal cost;
 	
@@ -205,8 +217,21 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private BigDecimal damagedPriceDeduction;
 
+	@Column(precision = 38, scale = 2)
+	private BigDecimal finalPriceDiscount;
+
 	@Column
 	private BigDecimal damagedWeightDeduction;
+
+	@Column
+	private BigDecimal moisturePercentage;
+
+	@Column
+	private BigDecimal moistureWeightDeduction;
+
+	// Net quantity after all deductions (tare, damaged weight, moisture)
+	@Column(precision = 38, scale = 2)
+	private BigDecimal netQuantity;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	private ProcessingOrder processingOrder;
@@ -687,6 +712,30 @@ public class StockOrder extends TimestampEntity {
 		this.weekNumber = weekNumber;
 	}
 
+	public String getParcelLot() {
+		return parcelLot;
+	}
+
+	public void setParcelLot(String parcelLot) {
+		this.parcelLot = parcelLot;
+	}
+
+	public String getVariety() {
+		return variety;
+	}
+
+	public void setVariety(String variety) {
+		this.variety = variety;
+	}
+
+	public String getOrganicCertification() {
+		return organicCertification;
+	}
+
+	public void setOrganicCertification(String organicCertification) {
+		this.organicCertification = organicCertification;
+	}
+
 	public BigDecimal getTare() {
 		return tare;
 	}
@@ -703,11 +752,43 @@ public class StockOrder extends TimestampEntity {
 		this.damagedPriceDeduction = damagedPriceDeduction;
 	}
 
+	public BigDecimal getFinalPriceDiscount() {
+		return finalPriceDiscount;
+	}
+
+	public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+		this.finalPriceDiscount = finalPriceDiscount;
+	}
+
 	public BigDecimal getDamagedWeightDeduction() {
 		return damagedWeightDeduction;
 	}
 
 	public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
 		this.damagedWeightDeduction = damagedWeightDeduction;
+	}
+
+	public BigDecimal getMoisturePercentage() {
+		return moisturePercentage;
+	}
+
+	public void setMoisturePercentage(BigDecimal moisturePercentage) {
+		this.moisturePercentage = moisturePercentage;
+	}
+
+	public BigDecimal getMoistureWeightDeduction() {
+		return moistureWeightDeduction;
+	}
+
+	public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
+		this.moistureWeightDeduction = moistureWeightDeduction;
+	}
+
+	public BigDecimal getNetQuantity() {
+		return netQuantity;
+	}
+
+	public void setNetQuantity(BigDecimal netQuantity) {
+		this.netQuantity = netQuantity;
 	}
 }

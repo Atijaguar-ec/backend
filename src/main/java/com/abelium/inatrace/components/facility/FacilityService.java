@@ -125,7 +125,9 @@ public class FacilityService extends BaseService {
 		entity.setDisplayMayInvolveCollectors(apiFacility.getDisplayMayInvolveCollectors() != null ? apiFacility.getDisplayMayInvolveCollectors() : Boolean.FALSE);
 		entity.setDisplayOrganic(apiFacility.getDisplayOrganic() != null ? apiFacility.getDisplayOrganic() : Boolean.FALSE);
 		entity.setDisplayPriceDeductionDamage(apiFacility.getDisplayPriceDeductionDamage() != null ? apiFacility.getDisplayPriceDeductionDamage() : Boolean.FALSE);
+		entity.setDisplayFinalPriceDiscount(apiFacility.getDisplayFinalPriceDiscount() != null ? apiFacility.getDisplayFinalPriceDiscount() : Boolean.FALSE);
 		entity.setDisplayWeightDeductionDamage(apiFacility.getDisplayWeightDeductionDamage() != null ? apiFacility.getDisplayWeightDeductionDamage() : Boolean.FALSE);
+		entity.setDisplayMoisturePercentage(apiFacility.getDisplayMoisturePercentage() != null ? apiFacility.getDisplayMoisturePercentage() : Boolean.FALSE);
 		entity.setDisplayTare(apiFacility.getDisplayTare() != null ? apiFacility.getDisplayTare() : Boolean.FALSE);
 		entity.setDisplayWomenOnly(apiFacility.getDisplayWomenOnly() != null ? apiFacility.getDisplayWomenOnly() : Boolean.FALSE);
 		entity.setIsDeactivated(BooleanUtils.isTrue(apiFacility.getDeactivated()));
@@ -152,6 +154,12 @@ public class FacilityService extends BaseService {
 		FacilityType facilityType = Queries.get(em, FacilityType.class, apiFacility.getFacilityType().getId());
 		entity.setFacilityType(facilityType);
 		
+		if (apiFacility.getLevel() != null) {
+			entity.setLevel(apiFacility.getLevel());
+		} else if (entity.getLevel() == null && facilityType != null) {
+			entity.setLevel(facilityType.getOrder());
+		}
+
 		entity.setFacilityLocation(facilityLocation);
 
 		entity.setCompany(company);

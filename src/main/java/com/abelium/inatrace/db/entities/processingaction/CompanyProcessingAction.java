@@ -8,6 +8,7 @@ import java.util.Objects;
 /**
  * Company-specific configuration for processing actions.
  * Allows companies to enable/disable and override order of global processing actions.
+ *
  */
 @Entity
 @Table(name = "CompanyProcessingAction", 
