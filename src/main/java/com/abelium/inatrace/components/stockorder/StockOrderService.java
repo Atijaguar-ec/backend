@@ -890,7 +890,7 @@ public class StockOrderService extends BaseService {
                 // Get the Stock orders that were created when executing the Processing order
                 List<ApiStockOrder> targetStockOrders = stockOrder.getProcessingOrder().getTargetStockOrders()
                         .stream()
-                        .map(siblingOrder -> StockOrderMapper.toApiStockOrderHistoryItem(siblingOrder, language))
+                        .map(siblingOrder -> StockOrderMapper.toApiStockOrderHistoryItem(siblingOrder, userId, language))
                         .collect(Collectors.toList());
 
                 nextHistory.setProcessingOrder(

@@ -298,24 +298,15 @@ public class StockOrderMapper {
         return toApiStockOrder(entity, userId, language, true);
     }
 
-    public static ApiStockOrder toApiStockOrderHistoryItem(StockOrder entity, Language language) {
+    public static ApiStockOrder toApiStockOrderHistoryItem(StockOrder entity, Long userId, Language language) {
 
         if (entity == null) {
             return null;
         }
 
-        ApiStockOrder apiStockOrder = new ApiStockOrder();
-        apiStockOrder.setId(entity.getId());
-        apiStockOrder.setIdentifier(entity.getIdentifier());
-        apiStockOrder.setCurrency(entity.getCurrency());
-        apiStockOrder.setCost(entity.getCost());
-        apiStockOrder.setPaid(entity.getPaid());
-        apiStockOrder.setBalance(entity.getBalance());
-
-        apiStockOrder.setSemiProduct(SemiProductMapper.toApiSemiProductBase(entity.getSemiProduct(), ApiSemiProduct.class, language));
-        apiStockOrder.setFinalProduct(ProductApiTools.toApiFinalProductBase(entity.getFinalProduct()));
-
-        return apiStockOrder;
+        // Use the full stock order mapping (without nested processing order) so that
+        // history timeline items have access to facility, company and evidence values.
+        return toApiStockOrder(entity, userId, language, false);
     }
 
     private static String setupInternalLotNumberForSacked(String internalLotNumber, Integer sacNumber) {
