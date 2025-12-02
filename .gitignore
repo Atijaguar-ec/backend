@@ -154,6 +154,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+
 ### Environment & deployment artifacts
 # Never commit real environment files
 .env
@@ -165,10 +166,7 @@ ci/.env.local
 # Keep templates tracked
 !ci/env-templates/*.example
 
-# Local deployment artifacts
-**/be-image.tar
 docs/dicionario.docx
-docs/GUIA_VIDEO_TUTORIALES_CACAO_CAMARON.md
-.gitignore
 docs/INFORME_FINAL_BACKEND_INATRACE_ECUADOR.md
+docs/GUIA_VIDEO_TUTORIALES_CACAO_CAMARON.md
 src/main/java/com/abelium/inatrace/db/migrations/README_PRODUCT_TYPE_MIGRATIONS.md
