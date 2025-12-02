@@ -160,7 +160,7 @@ public class GroupStockOrderService extends BaseService {
                 "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
                 "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
                 "SO.isAvailable, " +
-                "GROUP_CONCAT(DISTINCT CONCAT(COALESCE(PC.name, ''), ' ', COALESCE(PC.surname, ''))) " +
+                "GROUP_CONCAT(DISTINCT CASE WHEN PC.id IS NOT NULL THEN CONCAT(PC.name, ' ', PC.surname) ELSE NULL END) " +
                 ") FROM StockOrder SO " +
                         "LEFT JOIN SO.processingOrder PO " +
                         "LEFT JOIN SO.measurementUnitType MUT " +
