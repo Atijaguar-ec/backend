@@ -227,6 +227,14 @@ public class StockOrderMapper {
         return toApiStockOrder(entity, userId, language, true);
     }
 
+    /**
+     * Maps a StockOrder entity to ApiStockOrder for timeline history items.
+     * Includes facility with company info for proper timeline grouping and display.
+     *
+     * @param entity   The StockOrder entity to map
+     * @param language The language for translations
+     * @return ApiStockOrder with essential fields for history timeline display
+     */
     public static ApiStockOrder toApiStockOrderHistoryItem(StockOrder entity, Language language) {
 
         if (entity == null) {
@@ -236,13 +244,35 @@ public class StockOrderMapper {
         ApiStockOrder apiStockOrder = new ApiStockOrder();
         apiStockOrder.setId(entity.getId());
         apiStockOrder.setIdentifier(entity.getIdentifier());
+        apiStockOrder.setInternalLotNumber(setupInternalLotNumberForSacked(entity.getInternalLotNumber(), entity.getSacNumber()));
+        apiStockOrder.setSacNumber(entity.getSacNumber());
+        apiStockOrder.setOrderType(entity.getOrderType());
+        apiStockOrder.setProductionDate(entity.getProductionDate());
+
+        // Quantities for timeline display
+        apiStockOrder.setTotalQuantity(entity.getTotalQuantity());
+        apiStockOrder.setTotalGrossQuantity(entity.getTotalGrossQuantity());
+        apiStockOrder.setMeasureUnitType(MeasureUnitTypeMapper.toApiMeasureUnitType(entity.getMeasurementUnitType()));
+
+        // Financial data
         apiStockOrder.setCurrency(entity.getCurrency());
         apiStockOrder.setCost(entity.getCost());
         apiStockOrder.setPaid(entity.getPaid());
         apiStockOrder.setBalance(entity.getBalance());
 
+        // Facility with company - essential for timeline company grouping
+        apiStockOrder.setFacility(FacilityMapper.toApiFacilityBase(entity.getFacility(), language));
+
+        // Products
         apiStockOrder.setSemiProduct(SemiProductMapper.toApiSemiProductBase(entity.getSemiProduct(), ApiSemiProduct.class, language));
         apiStockOrder.setFinalProduct(ProductApiTools.toApiFinalProductBase(entity.getFinalProduct()));
+
+        // Evidence fields for timeline detail display
+        if (!entity.getProcessingEFValues().isEmpty()) {
+            apiStockOrder.setRequiredEvidenceFieldValues(entity.getProcessingEFValues().stream()
+                    .map(StockOrderEvidenceFieldValueMapper::toApiStockOrderEvidenceFieldValue)
+                    .collect(Collectors.toList()));
+        }
 
         return apiStockOrder;
     }
