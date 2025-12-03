@@ -154,6 +154,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+
 ### Environment & deployment artifacts
 # Never commit real environment files
 .env
