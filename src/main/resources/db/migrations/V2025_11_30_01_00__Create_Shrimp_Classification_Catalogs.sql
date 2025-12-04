@@ -96,23 +96,23 @@ CREATE TABLE IF NOT EXISTS `ShrimpBrandTranslation` (
 -- ═══════════════════════════════════════════════════════════════════════════
 INSERT INTO `ShrimpFreezingType` (`code`, `label`, `description`, `displayOrder`, `status`, `creationTimestamp`, `updateTimestamp`) 
 VALUES 
-  ('IQF', 'IQF', 'Individual Quick Frozen - Congelado individual rápido', 1, 'ACTIVE', NOW(), NOW()),
+  ('IQF', 'IQF', 'Quick Frozen - Congelado individual rápido', 1, 'ACTIVE', NOW(), NOW()),
   ('BLOCK', 'Bloque', 'Block Frozen - Congelado en bloque', 2, 'ACTIVE', NOW(), NOW()),
-  ('SEMI_IQF', 'Semi-IQF', 'Semi Individual Quick Frozen', 3, 'ACTIVE', NOW(), NOW())
+  ('IQF_SALMUERA', 'IQF Salmuera', 'Semi Individual Quick Frozen', 3, 'ACTIVE', NOW(), NOW())
 ON DUPLICATE KEY UPDATE `updateTimestamp` = NOW();
 
 -- Translations for FreezingType
 INSERT INTO `ShrimpFreezingTypeTranslation` (`shrimp_freezing_type_id`, `language`, `label`, `description`, `creationTimestamp`, `updateTimestamp`)
 SELECT ft.id, 'es', 
   CASE ft.code 
-    WHEN 'IQF' THEN 'IQF (Individual)'
+    WHEN 'IQF' THEN 'IQF'
     WHEN 'BLOCK' THEN 'Bloque'
-    WHEN 'SEMI_IQF' THEN 'Semi-IQF'
+    WHEN 'IQF_SALMUERA' THEN 'IQF Salmuera'
   END,
   CASE ft.code 
     WHEN 'IQF' THEN 'Congelado individual rápido'
     WHEN 'BLOCK' THEN 'Congelado en bloque compacto'
-    WHEN 'SEMI_IQF' THEN 'Congelado semi-individual'
+    WHEN 'IQF_SALMUERA' THEN 'Congelado IQF Salmuera'
   END,
   NOW(), NOW()
 FROM `ShrimpFreezingType` ft
@@ -124,14 +124,14 @@ WHERE NOT EXISTS (
 INSERT INTO `ShrimpFreezingTypeTranslation` (`shrimp_freezing_type_id`, `language`, `label`, `description`, `creationTimestamp`, `updateTimestamp`)
 SELECT ft.id, 'en', 
   CASE ft.code 
-    WHEN 'IQF' THEN 'IQF (Individual)'
+    WHEN 'IQF' THEN 'IQF'
     WHEN 'BLOCK' THEN 'Block'
-    WHEN 'SEMI_IQF' THEN 'Semi-IQF'
+    WHEN 'IQF_SALMUERA' THEN 'IQF Salmuera'
   END,
   CASE ft.code 
     WHEN 'IQF' THEN 'Individual Quick Frozen'
     WHEN 'BLOCK' THEN 'Block frozen compact'
-    WHEN 'SEMI_IQF' THEN 'Semi-individual frozen'
+    WHEN 'IQF_SALMUERA' THEN 'IQF Salmuera'
   END,
   NOW(), NOW()
 FROM `ShrimpFreezingType` ft
@@ -148,9 +148,7 @@ VALUES
   ('MACH_01', 'Máquina 1', 'Clasificadora principal', 'CLASSIFIER', 1, 'ACTIVE', NOW(), NOW()),
   ('MACH_02', 'Máquina 2', 'Clasificadora secundaria', 'CLASSIFIER', 2, 'ACTIVE', NOW(), NOW()),
   ('MACH_03', 'Máquina 3', 'Clasificadora de respaldo', 'CLASSIFIER', 3, 'ACTIVE', NOW(), NOW()),
-  ('GLAZER_01', 'Glaseadora 1', 'Glaseadora principal', 'GLAZER', 4, 'ACTIVE', NOW(), NOW()),
-  ('FREEZER_01', 'Túnel 1', 'Túnel de congelación 1', 'FREEZER', 5, 'ACTIVE', NOW(), NOW()),
-  ('FREEZER_02', 'Túnel 2', 'Túnel de congelación 2', 'FREEZER', 6, 'ACTIVE', NOW(), NOW())
+   ('MACH_04', 'Máquina 4', 'Clasificadora de respaldo', 'CLASSIFIER', 4, 'ACTIVE', NOW(), NOW()),
 ON DUPLICATE KEY UPDATE `updateTimestamp` = NOW();
 
 -- Translations for Machine (Spanish)
@@ -169,17 +167,13 @@ SELECT m.id, 'en',
     WHEN 'MACH_01' THEN 'Machine 1'
     WHEN 'MACH_02' THEN 'Machine 2'
     WHEN 'MACH_03' THEN 'Machine 3'
-    WHEN 'GLAZER_01' THEN 'Glazer 1'
-    WHEN 'FREEZER_01' THEN 'Tunnel 1'
-    WHEN 'FREEZER_02' THEN 'Tunnel 2'
+    WHEN 'MACH_04' THEN 'Machine 4'
   END,
   CASE m.code 
     WHEN 'MACH_01' THEN 'Main classifier'
     WHEN 'MACH_02' THEN 'Secondary classifier'
     WHEN 'MACH_03' THEN 'Backup classifier'
-    WHEN 'GLAZER_01' THEN 'Main glazer'
-    WHEN 'FREEZER_01' THEN 'Freezing tunnel 1'
-    WHEN 'FREEZER_02' THEN 'Freezing tunnel 2'
+    WHEN 'MACH_04' THEN 'Backup classifier'
   END,
   NOW(), NOW()
 FROM `ShrimpMachine` m
