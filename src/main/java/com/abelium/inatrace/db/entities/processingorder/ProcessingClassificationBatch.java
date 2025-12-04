@@ -133,6 +133,32 @@ public class ProcessingClassificationBatch extends TimestampEntity {
     @Column(name = "settlementStatus", length = 20)
     private String settlementStatus;
 
+    // =====================================================
+    // 🦐 Rejected Output Support - Multi-output classification
+    // =====================================================
+
+    /**
+     * Output type: PROCESSED (primary output to freezing) or REJECTED (secondary output to deheading).
+     * Default is PROCESSED for backwards compatibility.
+     */
+    @Column(name = "output_type", length = 20)
+    private String outputType = "PROCESSED";
+
+    /**
+     * Pounds rejected (sent to deheading facility).
+     * Only relevant for PROCESSED type batches.
+     */
+    @Column(name = "pounds_rejected", precision = 12, scale = 2)
+    private java.math.BigDecimal poundsRejected;
+
+    /**
+     * Reference to the secondary output stock order for rejected product.
+     * This links the PROCESSED batch to its corresponding REJECTED output.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rejected_stock_order_id")
+    private StockOrder rejectedStockOrder;
+
     /**
      * Details of the classification batch (by size).
      */
@@ -298,5 +324,31 @@ public class ProcessingClassificationBatch extends TimestampEntity {
 
     public void setDetails(Set<ProcessingClassificationBatchDetail> details) {
         this.details = details;
+    }
+
+    // 🦐 Rejected Output Support - Getters and Setters
+
+    public String getOutputType() {
+        return outputType;
+    }
+
+    public void setOutputType(String outputType) {
+        this.outputType = outputType;
+    }
+
+    public java.math.BigDecimal getPoundsRejected() {
+        return poundsRejected;
+    }
+
+    public void setPoundsRejected(java.math.BigDecimal poundsRejected) {
+        this.poundsRejected = poundsRejected;
+    }
+
+    public StockOrder getRejectedStockOrder() {
+        return rejectedStockOrder;
+    }
+
+    public void setRejectedStockOrder(StockOrder rejectedStockOrder) {
+        this.rejectedStockOrder = rejectedStockOrder;
     }
 }

@@ -388,6 +388,16 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(hidden = true, description = "Classification details by size (stored in ProcessingClassificationBatchDetail)")
     private List<ApiClassificationDetail> classificationDetails;
 
+    // 🦐 Multi-output classification support
+    @Schema(hidden = true, description = "Output type: PROCESSED (primary) or REJECTED (secondary for deheading). Stored in ProcessingClassificationBatch")
+    private String outputType;
+
+    @Schema(hidden = true, description = "Pounds rejected during classification (sent to deheading). Stored in ProcessingClassificationBatch")
+    private java.math.BigDecimal poundsRejected;
+
+    @Schema(hidden = true, description = "ID of the rejected output stock order linked to this batch")
+    private Long rejectedStockOrderId;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -1334,6 +1344,32 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setClassificationDetails(List<ApiClassificationDetail> classificationDetails) {
         this.classificationDetails = classificationDetails;
+    }
+
+    // 🦐 Multi-output classification support - Getters and Setters
+
+    public String getOutputType() {
+        return outputType;
+    }
+
+    public void setOutputType(String outputType) {
+        this.outputType = outputType;
+    }
+
+    public java.math.BigDecimal getPoundsRejected() {
+        return poundsRejected;
+    }
+
+    public void setPoundsRejected(java.math.BigDecimal poundsRejected) {
+        this.poundsRejected = poundsRejected;
+    }
+
+    public Long getRejectedStockOrderId() {
+        return rejectedStockOrderId;
+    }
+
+    public void setRejectedStockOrderId(Long rejectedStockOrderId) {
+        this.rejectedStockOrderId = rejectedStockOrderId;
     }
 
     public String getQrCodeTag() {

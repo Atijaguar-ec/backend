@@ -763,6 +763,13 @@ public class ProcessingOrderService extends BaseService {
         batch.setMachine(apiTargetStockOrder.getMachine());
         batch.setBrandHeader(apiTargetStockOrder.getBrandHeader());
 
+        // 🦐 Multi-output classification support
+        batch.setOutputType(apiTargetStockOrder.getOutputType() != null 
+                ? apiTargetStockOrder.getOutputType() 
+                : "PROCESSED");
+        batch.setPoundsRejected(apiTargetStockOrder.getPoundsRejected());
+        // Note: rejectedStockOrder linkage is handled separately after both outputs are saved
+
         // Map classification details
         if (apiTargetStockOrder.getClassificationDetails() != null) {
             for (ApiClassificationDetail apiDetail : apiTargetStockOrder.getClassificationDetails()) {

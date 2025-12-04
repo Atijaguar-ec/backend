@@ -203,6 +203,13 @@ public class StockOrderService extends BaseService {
                     apiTso.setMachine(batch.getMachine());
                     apiTso.setBrandHeader(batch.getBrandHeader());
 
+                    // 🦐 Multi-output classification support
+                    apiTso.setOutputType(batch.getOutputType());
+                    apiTso.setPoundsRejected(batch.getPoundsRejected());
+                    if (batch.getRejectedStockOrder() != null) {
+                        apiTso.setRejectedStockOrderId(batch.getRejectedStockOrder().getId());
+                    }
+
                     // Detail rows
                     java.util.List<ApiClassificationDetail> apiDetails = batch.getDetails().stream()
                             .map(detail -> {
