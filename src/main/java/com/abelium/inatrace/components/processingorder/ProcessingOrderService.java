@@ -915,10 +915,11 @@ public class ProcessingOrderService extends BaseService {
         
         // Create the rejected output StockOrder
         StockOrder rejectedStockOrder = new StockOrder();
+        User creator = fetchEntity(user.getUserId(), User.class);
         
         // Copy basic properties from primary output
         rejectedStockOrder.setCreatorId(primaryStockOrder.getCreatorId());
-        rejectedStockOrder.setCreatedBy(user.getUserId()); // 🦐 CRITICAL: Set createdBy to avoid DB constraint error
+        rejectedStockOrder.setCreatedBy(creator); // 🦐 CRITICAL: Set createdBy to avoid DB constraint error
         rejectedStockOrder.setOrderType(OrderType.PROCESSING_ORDER);
         rejectedStockOrder.setProductionDate(primaryStockOrder.getProductionDate());
         rejectedStockOrder.setSemiProduct(primaryStockOrder.getSemiProduct());
