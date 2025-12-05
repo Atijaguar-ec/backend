@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment.|⚠️ Not recommended for production'
+        description: 'Target environment.|⚠️Not recommended for production'
         required: true
         default: 'develop'
         type: choice
