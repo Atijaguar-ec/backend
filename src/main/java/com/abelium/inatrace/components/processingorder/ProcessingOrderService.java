@@ -20,6 +20,8 @@ import com.abelium.inatrace.db.entities.product.FinalProduct;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.db.entities.stockorder.Transaction;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
+import com.abelium.inatrace.db.entities.facility.Facility;
+import com.abelium.inatrace.components.facility.api.ApiFacility;
 import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis;
 import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis.AnalysisType;
 import com.abelium.inatrace.db.entities.common.User;
@@ -385,6 +387,12 @@ public class ProcessingOrderService extends BaseService {
                 createOrUpdateClassificationBatch(apiTargetStockOrder, targetStockOrder);
 
                 entity.getTargetStockOrders().add(targetStockOrder);
+
+                // 🦐 Auto-create rejected output StockOrder if rejectedWeight > 0 and deheadingFacility is set
+                StockOrder rejectedStockOrder = createRejectedOutputIfNeeded(apiTargetStockOrder, targetStockOrder, user, entity);
+                if (rejectedStockOrder != null) {
+                    entity.getTargetStockOrders().add(rejectedStockOrder);
+                }
             }
         }
 
@@ -808,6 +816,108 @@ public class ProcessingOrderService extends BaseService {
             return trimmed.substring(0, 10);
         }
         return trimmed;
+    }
+
+    /**
+     * 🦐 Auto-create a rejected output StockOrder if rejectedWeight > 0 and deheadingFacility is set.
+     * This implements the "Option B" approach where the backend automatically creates the second output
+     * for rejected product that goes to the deheading facility.
+     * 
+     * @param apiPrimaryOutput The primary (PROCESSED) output from the API request
+     * @param primaryStockOrder The persisted primary StockOrder entity
+     * @param user The current user
+     * @param processingOrder The parent ProcessingOrder entity
+     * @return The created rejected StockOrder, or null if no rejected output is needed
+     */
+    private StockOrder createRejectedOutputIfNeeded(ApiStockOrder apiPrimaryOutput, 
+                                                     StockOrder primaryStockOrder,
+                                                     CustomUserDetails user,
+                                                     ProcessingOrder processingOrder) throws ApiException {
+        
+        // Check if we need to create a rejected output
+        BigDecimal rejectedWeight = apiPrimaryOutput.getRejectedWeight();
+        ApiFacility deheadingFacility = apiPrimaryOutput.getDeheadingFacility();
+        
+        if (rejectedWeight == null || rejectedWeight.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        
+        if (deheadingFacility == null || deheadingFacility.getId() == null) {
+            return null;
+        }
+        
+        // Check if a rejected output already exists for this primary output
+        // (to avoid creating duplicates on update)
+        TypedQuery<ProcessingClassificationBatch> existingQuery = em.createQuery(
+                "SELECT b FROM ProcessingClassificationBatch b " +
+                "WHERE b.targetStockOrder.id = :stockOrderId AND b.outputType = 'PROCESSED'",
+                ProcessingClassificationBatch.class);
+        existingQuery.setParameter("stockOrderId", primaryStockOrder.getId());
+        
+        List<ProcessingClassificationBatch> existingBatches = existingQuery.getResultList();
+        if (!existingBatches.isEmpty()) {
+            ProcessingClassificationBatch primaryBatch = existingBatches.get(0);
+            if (primaryBatch.getRejectedStockOrder() != null) {
+                // Update existing rejected stock order instead of creating new one
+                StockOrder existingRejected = primaryBatch.getRejectedStockOrder();
+                existingRejected.setTotalQuantity(rejectedWeight);
+                existingRejected.setAvailableQuantity(rejectedWeight);
+                existingRejected.setFulfilledQuantity(rejectedWeight);
+                
+                // Update facility if changed
+                Facility newFacility = fetchEntity(deheadingFacility.getId(), Facility.class);
+                existingRejected.setFacility(newFacility);
+                
+                return null; // Already exists, no need to add to collection again
+            }
+        }
+        
+        // Create the rejected output StockOrder
+        StockOrder rejectedStockOrder = new StockOrder();
+        
+        // Copy basic properties from primary output
+        rejectedStockOrder.setCreatorId(primaryStockOrder.getCreatorId());
+        rejectedStockOrder.setOrderType(OrderType.PROCESSING_ORDER);
+        rejectedStockOrder.setProductionDate(primaryStockOrder.getProductionDate());
+        rejectedStockOrder.setSemiProduct(primaryStockOrder.getSemiProduct());
+        rejectedStockOrder.setMeasureUnitType(primaryStockOrder.getMeasureUnitType());
+        rejectedStockOrder.setCompany(primaryStockOrder.getCompany());
+        rejectedStockOrder.setProcessingOrder(processingOrder);
+        
+        // Set the deheading facility
+        Facility facility = fetchEntity(deheadingFacility.getId(), Facility.class);
+        rejectedStockOrder.setFacility(facility);
+        
+        // Set quantities
+        rejectedStockOrder.setTotalQuantity(rejectedWeight);
+        rejectedStockOrder.setAvailableQuantity(rejectedWeight);
+        rejectedStockOrder.setFulfilledQuantity(rejectedWeight);
+        
+        // Generate internal lot number based on primary output
+        String primaryLotNumber = primaryStockOrder.getInternalLotNumber();
+        if (primaryLotNumber != null && !primaryLotNumber.isEmpty()) {
+            rejectedStockOrder.setInternalLotNumber(primaryLotNumber + "-REJ");
+        }
+        
+        // Persist the rejected stock order
+        em.persist(rejectedStockOrder);
+        
+        // Create classification batch for rejected output
+        ProcessingClassificationBatch rejectedBatch = new ProcessingClassificationBatch();
+        rejectedBatch.setTargetStockOrder(rejectedStockOrder);
+        rejectedBatch.setOutputType("REJECTED");
+        rejectedBatch.setStartTime(normalizeDateOrTime(apiPrimaryOutput.getClassificationStartTime()));
+        rejectedBatch.setEndTime(normalizeDateOrTime(apiPrimaryOutput.getClassificationEndTime()));
+        em.persist(rejectedBatch);
+        
+        // Link the primary batch to the rejected stock order
+        if (!existingBatches.isEmpty()) {
+            ProcessingClassificationBatch primaryBatch = existingBatches.get(0);
+            primaryBatch.setRejectedStockOrder(rejectedStockOrder);
+            primaryBatch.setPoundsRejected(rejectedWeight);
+        }
+        
+        return rejectedStockOrder;
     }
 
 }

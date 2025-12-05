@@ -398,6 +398,12 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(hidden = true, description = "ID of the rejected output stock order linked to this batch")
     private Long rejectedStockOrderId;
 
+    @Schema(hidden = true, description = "Deheading facility where rejected product will be sent. Used to auto-create rejected output StockOrder")
+    private ApiFacility deheadingFacility;
+
+    @Schema(hidden = true, description = "Weight of rejected product in pounds. Used together with deheadingFacility to auto-create rejected output")
+    private java.math.BigDecimal rejectedWeight;
+
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
 
@@ -1370,6 +1376,22 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setRejectedStockOrderId(Long rejectedStockOrderId) {
         this.rejectedStockOrderId = rejectedStockOrderId;
+    }
+
+    public ApiFacility getDeheadingFacility() {
+        return deheadingFacility;
+    }
+
+    public void setDeheadingFacility(ApiFacility deheadingFacility) {
+        this.deheadingFacility = deheadingFacility;
+    }
+
+    public java.math.BigDecimal getRejectedWeight() {
+        return rejectedWeight;
+    }
+
+    public void setRejectedWeight(java.math.BigDecimal rejectedWeight) {
+        this.rejectedWeight = rejectedWeight;
     }
 
     public String getQrCodeTag() {
