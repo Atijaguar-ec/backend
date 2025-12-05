@@ -838,11 +838,19 @@ public class ProcessingOrderService extends BaseService {
         BigDecimal rejectedWeight = apiPrimaryOutput.getRejectedWeight();
         ApiFacility deheadingFacility = apiPrimaryOutput.getDeheadingFacility();
         
+        // 🦐 Debug log
+        System.out.println("🦐 createRejectedOutputIfNeeded called:");
+        System.out.println("  - rejectedWeight: " + rejectedWeight);
+        System.out.println("  - deheadingFacility: " + (deheadingFacility != null ? deheadingFacility.getId() + " - " + deheadingFacility.getName() : "null"));
+        System.out.println("  - primaryStockOrder.totalQuantity: " + primaryStockOrder.getTotalQuantity());
+        
         if (rejectedWeight == null || rejectedWeight.compareTo(BigDecimal.ZERO) <= 0) {
+            System.out.println("  - Skipping: rejectedWeight is null or <= 0");
             return null;
         }
         
         if (deheadingFacility == null || deheadingFacility.getId() == null) {
+            System.out.println("  - Skipping: deheadingFacility is null or has no ID");
             return null;
         }
         
