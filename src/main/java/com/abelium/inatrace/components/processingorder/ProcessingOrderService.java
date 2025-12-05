@@ -918,6 +918,7 @@ public class ProcessingOrderService extends BaseService {
         
         // Copy basic properties from primary output
         rejectedStockOrder.setCreatorId(primaryStockOrder.getCreatorId());
+        rejectedStockOrder.setCreatedBy(user.getUserId()); // 🦐 CRITICAL: Set createdBy to avoid DB constraint error
         rejectedStockOrder.setOrderType(OrderType.PROCESSING_ORDER);
         rejectedStockOrder.setProductionDate(primaryStockOrder.getProductionDate());
         rejectedStockOrder.setSemiProduct(primaryStockOrder.getSemiProduct());
