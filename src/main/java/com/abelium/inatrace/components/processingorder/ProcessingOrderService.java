@@ -880,7 +880,7 @@ public class ProcessingOrderService extends BaseService {
         rejectedStockOrder.setOrderType(OrderType.PROCESSING_ORDER);
         rejectedStockOrder.setProductionDate(primaryStockOrder.getProductionDate());
         rejectedStockOrder.setSemiProduct(primaryStockOrder.getSemiProduct());
-        rejectedStockOrder.setMeasureUnitType(primaryStockOrder.getMeasureUnitType());
+        rejectedStockOrder.setMeasurementUnitType(primaryStockOrder.getMeasurementUnitType());
         rejectedStockOrder.setCompany(primaryStockOrder.getCompany());
         rejectedStockOrder.setProcessingOrder(processingOrder);
         
