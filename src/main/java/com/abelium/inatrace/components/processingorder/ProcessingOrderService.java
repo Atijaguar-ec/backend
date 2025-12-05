@@ -366,9 +366,15 @@ public class ProcessingOrderService extends BaseService {
         }
 
         // Create new or update existing target stock order for PROCESSING
+        System.out.println("🦐 DEBUG: ProcessingAction type = " + processingAction.getType());
+        System.out.println("🦐 DEBUG: Number of targetStockOrders = " + apiProcessingOrder.getTargetStockOrders().size());
+        
         if (processingAction.getType() != ProcessingActionType.TRANSFER) {
 
             for (ApiStockOrder apiTargetStockOrder: apiProcessingOrder.getTargetStockOrders()) {
+                
+                System.out.println("🦐 DEBUG: Processing targetStockOrder - facility: " + 
+                    (apiTargetStockOrder.getFacility() != null ? apiTargetStockOrder.getFacility().getName() : "null"));
 
                 Long insertedTargetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiTargetStockOrder, user, entity).getId();
                 StockOrder targetStockOrder = fetchEntity(insertedTargetStockOrderId, StockOrder.class);
@@ -389,11 +395,17 @@ public class ProcessingOrderService extends BaseService {
                 entity.getTargetStockOrders().add(targetStockOrder);
 
                 // 🦐 Auto-create rejected output StockOrder if rejectedWeight > 0 and deheadingFacility is set
+                System.out.println("🦐 DEBUG: About to call createRejectedOutputIfNeeded");
                 StockOrder rejectedStockOrder = createRejectedOutputIfNeeded(apiTargetStockOrder, targetStockOrder, user, entity);
                 if (rejectedStockOrder != null) {
+                    System.out.println("🦐 DEBUG: Rejected StockOrder created, adding to entity");
                     entity.getTargetStockOrders().add(rejectedStockOrder);
+                } else {
+                    System.out.println("🦐 DEBUG: No rejected StockOrder created");
                 }
             }
+        } else {
+            System.out.println("🦐 DEBUG: Skipping - ProcessingAction type is TRANSFER");
         }
 
         return new ApiBaseEntity(entity);
