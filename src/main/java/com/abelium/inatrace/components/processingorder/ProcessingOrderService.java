@@ -369,6 +369,7 @@ public class ProcessingOrderService extends BaseService {
         System.out.println("🦐 DEBUG: ProcessingAction type = " + processingAction.getType());
         System.out.println("🦐 DEBUG: Number of targetStockOrders = " + apiProcessingOrder.getTargetStockOrders().size());
         
+        // 🦐 Process target stock orders for PROCESSING, SHIPMENT, and TRANSFER (for classification)
         if (processingAction.getType() != ProcessingActionType.TRANSFER) {
 
             for (ApiStockOrder apiTargetStockOrder: apiProcessingOrder.getTargetStockOrders()) {
@@ -404,8 +405,28 @@ public class ProcessingOrderService extends BaseService {
                     System.out.println("🦐 DEBUG: No rejected StockOrder created");
                 }
             }
-        } else {
-            System.out.println("🦐 DEBUG: Skipping - ProcessingAction type is TRANSFER");
+        }
+        
+        // 🦐 ALSO process rejected outputs for TRANSFER type (classification process)
+        if (processingAction.getType() == ProcessingActionType.TRANSFER) {
+            System.out.println("🦐 DEBUG: Processing TRANSFER type - checking for rejected outputs");
+            
+            for (ApiStockOrder apiTargetStockOrder: apiProcessingOrder.getTargetStockOrders()) {
+                // Find the already created target stock order
+                StockOrder targetStockOrder = entity.getTargetStockOrders().stream()
+                    .filter(so -> so.getFacility().getId().equals(apiTargetStockOrder.getFacility().getId()))
+                    .findFirst()
+                    .orElse(null);
+                
+                if (targetStockOrder != null) {
+                    System.out.println("🦐 DEBUG: Found target StockOrder, calling createRejectedOutputIfNeeded");
+                    StockOrder rejectedStockOrder = createRejectedOutputIfNeeded(apiTargetStockOrder, targetStockOrder, user, entity);
+                    if (rejectedStockOrder != null) {
+                        System.out.println("🦐 DEBUG: Rejected StockOrder created for TRANSFER, adding to entity");
+                        entity.getTargetStockOrders().add(rejectedStockOrder);
+                    }
+                }
+            }
         }
 
         return new ApiBaseEntity(entity);
