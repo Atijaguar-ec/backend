@@ -169,8 +169,8 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           script: |
-            sudo mkdir -p /opt/inatrace/backend/test/unocace
-            sudo chown -R $USER:$USER /opt/inatrace/backend/test/unocace
+            sudo mkdir -p /opt/inatrace/backend
+            sudo chown -R $USER:$USER /opt/inatrace/backend
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -179,7 +179,7 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: "ci/docker-compose.yml"
-          target: "/opt/inatrace/backend/test/unocace/"
+          target: "/opt/inatrace/backend/"
           strip_components: 1
 
       - name: 📝 Prepare .env
@@ -230,7 +230,7 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: ".env"
-          target: "/opt/inatrace/backend/test/unocace/"
+          target: "/opt/inatrace/backend/"
 
       - name: 🚀 Deploy Staging
         uses: appleboy/ssh-action@v1.0.0
@@ -240,7 +240,7 @@ jobs:
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           script: |
             set -e
-            cd /opt/inatrace/backend/test/unocace
+            cd /opt/inatrace/backend
             
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
@@ -302,7 +302,7 @@ jobs:
           key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
           port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
           script: |
-            mkdir -p /opt/inatrace/backend/prod/unocace
+            mkdir -p /opt/inatrace/backend
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -312,7 +312,7 @@ jobs:
           key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
           port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
           source: "ci/docker-compose.yml"
-          target: "/opt/inatrace/backend/prod/unocace/"
+          target: "/opt/inatrace/backend/"
           strip_components: 1
 
       - name: 📝 Prepare .env
@@ -364,7 +364,7 @@ jobs:
           key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
           port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
           source: ".env"
-          target: "/opt/inatrace/backend/prod/unocace/"
+          target: "/opt/inatrace/backend/"
 
       - name: 💾 Pre-deploy DB Backup
         uses: appleboy/ssh-action@v1.0.0
@@ -392,7 +392,7 @@ jobs:
           port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
           script: |
             set -e
-            cd /opt/inatrace/backend/prod/unocace
+            cd /opt/inatrace/backend
             
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-unocace-network >/dev/null 2>&1 || docker network create inatrace-backend-unocace-network
