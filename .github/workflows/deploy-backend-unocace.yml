@@ -390,7 +390,7 @@ jobs:
             cd /opt/inatrace/backend
             
             echo "🔗 Ensuring network..."
-            docker network inspect inatrace-backend-unocace-network >/dev/null 2>&1 || docker network create inatrace-backend-unocace-network
+            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
             echo "📥 Pulling image..."
             docker compose pull backend || true
