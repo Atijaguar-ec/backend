@@ -1,0 +1,430 @@
+# ============================================================================
+# 🚀 Backend CI/CD - Development (Cacao + Shrimp)
+# ============================================================================
+# Este workflow despliega el backend en ambiente de DESARROLLO
+# - Cacao: inatrace.atijaguar.com/api
+# - Shrimp: camaron.atijaguar.com/api
+#
+# Trigger: push a develop
+# ============================================================================
+
+name: 🚀 Backend Development
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend-develop.yml'
+  workflow_dispatch:
+    inputs:
+      skip_quality:
+        description: 'Skip quality checks'
+        required: false
+        default: false
+        type: boolean
+      deploy_shrimp:
+        description: 'Also deploy Shrimp stack'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-inatrace
+  JAVA_VERSION: '17'
+  MAVEN_OPTS: -Xmx1024m
+
+jobs:
+  # ============================================================================
+  # Quality & Security
+  # ============================================================================
+  quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_quality }}
+    permissions:
+      contents: read
+      checks: write
+    services:
+      mysql:
+        image: mysql:8.0.35
+        env:
+          MYSQL_ROOT_PASSWORD: inatrace
+          MYSQL_DATABASE: inatrace
+          MYSQL_USER: inatrace
+          MYSQL_PASSWORD: inatrace
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot" --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🔍 Run tests
+        continue-on-error: true
+        working-directory: backend
+        run: mvn clean test -B -Dspring.profiles.active=test
+
+      - name: Generate test report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Maven Tests
+          path: '**/target/surefire-reports/*.xml'
+          reporter: java-junit
+          fail-on-error: false
+
+  # ============================================================================
+  # Build Docker Image
+  # ============================================================================
+  build:
+    name: 🏗️ Build & Push
+    runs-on: ubuntu-latest
+    needs: [quality]
+    if: always() && !cancelled()
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+      image-ref: ${{ steps.image_ref.outputs.image }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Generate metadata
+        id: meta
+        run: |
+          echo "tag=develop" >> "$GITHUB_OUTPUT"
+          echo "🏷️ Generated tag: develop"
+
+      - name: Build with Maven
+        working-directory: backend
+        run: mvn clean package -DskipTests
+
+      - name: 🔐 Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image ref
+        id: image_ref
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: 🏗️ Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image_ref.outputs.image }}:develop
+            ${{ steps.image_ref.outputs.image }}:develop-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 💾 Export image to tar
+        run: |
+          docker pull ${{ steps.image_ref.outputs.image }}:develop
+          docker save -o be-image.tar ${{ steps.image_ref.outputs.image }}:develop
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: be-image
+          path: be-image.tar
+          retention-days: 1
+
+  # ============================================================================
+  # Deploy Development Cacao
+  # ============================================================================
+  deploy-dev:
+    name: 🍫 Deploy Dev Cacao
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: dev
+      url: http://inatrace.atijaguar.com/api/health
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔐 Preflight
+        run: |
+          [ -z "${{ secrets.DEV_HOST }}" ] && echo "❌ Missing DEV_HOST" && exit 1
+          [ -z "${{ secrets.DEV_USER }}" ] && echo "❌ Missing DEV_USER" && exit 1
+          [ -z "${{ secrets.DEV_SSH_KEY }}" ] && echo "❌ Missing DEV_SSH_KEY" && exit 1
+          echo "✅ All secrets present"
+
+      - name: 📁 Prepare remote directory
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            sudo mkdir -p /opt/inatrace/volumes/{uploads,import,documents,logs}
+            sudo chown -R 1000:1000 /opt/inatrace/volumes
+            mkdir -p /opt/inatrace/backend/dev
+
+      - name: 📤 Upload docker-compose.yml
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "ci/docker-compose.yml"
+          target: "/opt/inatrace/backend/dev"
+          strip_components: 1
+
+      - name: 📝 Prepare .env
+        run: |
+          IMAGE="${{ needs.build.outputs.image-ref }}"
+          DB_USER="${{ secrets.DEV_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace"
+          DB_PASS="${{ secrets.DEV_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace"
+          DB_ROOT="${{ secrets.DEV_DB_ROOT_PASSWORD }}"; [ -z "$DB_ROOT" ] && DB_ROOT="root"
+          MAIL_HOST="${{ secrets.DEV_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
+          MAIL_PORT="${{ secrets.DEV_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_USER="${{ secrets.DEV_MAIL_USERNAME }}"; [ -z "$MAIL_USER" ] && MAIL_USER="desarrollo@atijaguar.com"
+          MAIL_PASS="${{ secrets.DEV_MAIL_PASSWORD }}"
+          FE_URL="${{ secrets.DEV_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.atijaguar.com/"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=develop
+          DATABASE_NAME=inatrace
+          DB_ROOT_PASSWORD=$DB_ROOT
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=$DB_PASS
+          CONTAINER_NAME_BE=inatrace-be-dev
+          CONTAINER_NAME_DB=inatrace-mysql-dev
+          HOST_PORT_BE=8080
+          HOST_PORT_DB=3306
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
+          DB_VOLUME=/opt/inatrace/mysql
+          FILE_STORAGE_ROOT_VOL=/opt/inatrace/volumes/uploads
+          IMPORT_PATH_VOL=/opt/inatrace/volumes/import
+          DOCUMENTS_ROOT_VOL=/opt/inatrace/volumes/documents
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=${FE_URL}confirm-email/
+          FE_RESET_URL=${FE_URL}reset-password/
+          SPRING_MAIL_HOST=$MAIL_HOST
+          SPRING_MAIL_PORT=$MAIL_PORT
+          SPRING_MAIL_USERNAME=$MAIL_USER
+          SPRING_MAIL_PASSWORD=$MAIL_PASS
+          SPRING_MAIL_SMTP_AUTH=true
+          SPRING_MAIL_SMTP_SSL_ENABLE=true
+          INATRACE_MAIL_SENDING_ENABLED=false
+          INATRACE_AGSTACK_EMAIL=${{ secrets.DEV_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_PASSWORD=${{ secrets.DEV_AGSTACK_PASSWORD }}
+          EOF
+
+      - name: 📤 Upload .env
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: ".env"
+          target: "/opt/inatrace/backend/dev"
+
+      - name: 📥 Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: 📤 Upload image tar
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/backend/dev"
+
+      - name: 🚀 Deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/inatrace/backend/dev
+            
+            echo "🛑 Stopping existing containers..."
+            docker stop inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
+            docker rm inatrace-be-dev inatrace-mysql-dev 2>/dev/null || true
+            
+            echo "🔗 Ensuring network..."
+            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+            
+            echo "📦 Loading image..."
+            docker load -i be-image.tar
+            
+            echo "🚀 Starting services..."
+            docker-compose up -d
+            
+            echo "⏳ Health check..."
+            for i in {1..12}; do
+              sleep 10
+              if curl -sf http://localhost:8080/actuator/health; then
+                echo "✅ Dev Cacao deployed!"
+                exit 0
+              fi
+              echo "  Attempt $i/12..."
+            done
+            
+            echo "❌ Health check failed"
+            docker-compose logs --tail 100
+            exit 1
+
+  # ============================================================================
+  # Deploy Development Shrimp
+  # ============================================================================
+  deploy-dev-shrimp:
+    name: 🦐 Deploy Dev Shrimp
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event.inputs.deploy_shrimp != 'false'
+    environment:
+      name: dev-shrimp
+      url: http://camaron.atijaguar.com/api/health
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔐 Preflight
+        run: |
+          [ -z "${{ secrets.DEV_HOST }}" ] && echo "❌ Missing DEV_HOST" && exit 1
+          [ -z "${{ secrets.DEV_USER }}" ] && echo "❌ Missing DEV_USER" && exit 1
+          [ -z "${{ secrets.DEV_SSH_KEY }}" ] && echo "❌ Missing DEV_SSH_KEY" && exit 1
+          echo "✅ All secrets present"
+
+      - name: 📁 Prepare remote directory
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            sudo mkdir -p /opt/inatrace/volumes-shrimp/{uploads,import,documents,logs}
+            sudo chown -R 1000:1000 /opt/inatrace/volumes-shrimp
+            mkdir -p /opt/inatrace/backend/dev-shrimp
+
+      - name: 📤 Upload docker-compose.yml
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "ci/docker-compose.backend-only.yml"
+          target: "/opt/inatrace/backend/dev-shrimp"
+          strip_components: 1
+
+      - name: 📝 Prepare .env
+        run: |
+          IMAGE="${{ needs.build.outputs.image-ref }}"
+          DB_USER="${{ secrets.DEV_SHRIMP_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_shrimp"
+          DB_PASS="${{ secrets.DEV_SHRIMP_DATASOURCE_PASSWORD }}"; [ -z "$DB_PASS" ] && DB_PASS="inatrace_shrimp"
+          FE_URL="${{ secrets.DEV_SHRIMP_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="http://camaron.atijaguar.com/"
+          cat > .env <<EOF
+          IMAGE_NAME=$IMAGE
+          TAG=develop
+          DATABASE_NAME=inatrace_shrimp
+          DATASOURCE_USERNAME=$DB_USER
+          DATASOURCE_PASSWORD=$DB_PASS
+          CONTAINER_NAME_BE=inatrace-be-dev-shrimp
+          HOST_PORT_BE=8083
+          DATABASE_HOSTNAME=inatrace-mysql-dev
+          FILE_STORAGE_ROOT=/opt/inatrace/uploads
+          IMPORT_PATH=/opt/inatrace/import
+          DOCUMENTS_ROOT=/opt/inatrace/documents
+          FILE_STORAGE_ROOT_VOL=/opt/inatrace/volumes-shrimp/uploads
+          IMPORT_PATH_VOL=/opt/inatrace/volumes-shrimp/import
+          DOCUMENTS_ROOT_VOL=/opt/inatrace/volumes-shrimp/documents
+          FE_URL=$FE_URL
+          FE_CONFIRM_URL=${FE_URL}confirm-email/
+          FE_RESET_URL=${FE_URL}reset-password/
+          INATRACE_MAIL_SENDING_ENABLED=false
+          EOF
+
+      - name: 📤 Upload .env
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: ".env"
+          target: "/opt/inatrace/backend/dev-shrimp"
+
+      - name: 📥 Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: be-image
+          path: .
+
+      - name: 📤 Upload image tar
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "be-image.tar"
+          target: "/opt/inatrace/backend/dev-shrimp"
+
+      - name: 🚀 Deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/inatrace/backend/dev-shrimp
+            export COMPOSE_FILE=docker-compose.backend-only.yml
+            
+            echo "🛑 Stopping existing container..."
+            docker stop inatrace-be-dev-shrimp 2>/dev/null || true
+            docker rm inatrace-be-dev-shrimp 2>/dev/null || true
+            
+            echo "🔗 Ensuring network..."
+            docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+            
+            echo "📦 Loading image..."
+            docker load -i be-image.tar
+            
+            echo "🦐 Starting shrimp backend..."
+            docker-compose up -d
+            
+            echo "⏳ Health check..."
+            for i in {1..12}; do
+              sleep 10
+              if curl -sf http://localhost:8083/actuator/health; then
+                echo "✅ Dev Shrimp deployed!"
+                exit 0
+              fi
+              echo "  Attempt $i/12..."
+            done
+            
+            echo "❌ Health check failed"
+            docker-compose logs --tail 100
+            exit 1
