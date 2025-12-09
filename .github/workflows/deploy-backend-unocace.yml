@@ -246,14 +246,14 @@ jobs:
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
             echo "📥 Pulling image..."
-            docker-compose pull backend
+            docker compose pull backend
             
             echo "🛑 Stopping old containers..."
             docker stop inatrace-be-test-unocace 2>/dev/null || true
             docker rm inatrace-be-test-unocace 2>/dev/null || true
             
             echo "🚀 Starting..."
-            docker-compose up -d --no-deps --force-recreate backend
+            docker compose up -d --no-deps --force-recreate backend
             
             echo "⏳ Health check..."
             for i in {1..12}; do
@@ -393,10 +393,10 @@ jobs:
             docker network inspect inatrace-backend-unocace-network >/dev/null 2>&1 || docker network create inatrace-backend-unocace-network
             
             echo "📥 Pulling image..."
-            docker-compose pull backend || true
+            docker compose pull backend || true
             
             echo "🚀 Deploying..."
-            docker-compose up -d --remove-orphans
+            docker compose up -d --remove-orphans
             
             echo "⏳ Health check..."
             for i in {1..12}; do
