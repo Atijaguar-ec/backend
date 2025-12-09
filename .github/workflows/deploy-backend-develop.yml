@@ -70,7 +70,6 @@ jobs:
 
       - name: 🔍 Run tests
         continue-on-error: true
-        working-directory: backend
         run: mvn clean test -B -Dspring.profiles.active=test
 
       - name: Generate test report
@@ -107,7 +106,6 @@ jobs:
           echo "🏷️ Generated tag: develop"
 
       - name: Build with Maven
-        working-directory: backend
         run: mvn clean package -DskipTests
 
       - name: 🔐 Login to GHCR
@@ -130,8 +128,8 @@ jobs:
       - name: 🏗️ Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: |
             ${{ steps.image_ref.outputs.image }}:develop
