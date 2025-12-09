@@ -288,7 +288,7 @@ jobs:
           missing=0
           [ -z "${{ secrets.PROD_UNOCACE_HOST }}" ] && echo "❌ PROD_UNOCACE_HOST" && missing=1
           [ -z "${{ secrets.PROD_UNOCACE_USER }}" ] && echo "❌ PROD_UNOCACE_USER" && missing=1
-          [ -z "${{ secrets.PROD_UNOCACE_SSH_KEY }}" ] && echo "❌ PROD_UNOCACE_SSH_KEY" && missing=1
+          [ -z "${{ secrets.PROD_UNOCACE_PASSWORD }}" ] && echo "❌ PROD_UNOCACE_PASSWORD" && missing=1
           [ -z "${{ secrets.PROD_UNOCACE_DB_ROOT_PASSWORD }}" ] && echo "❌ PROD_UNOCACE_DB_ROOT_PASSWORD" && missing=1
           [ -z "${{ secrets.PROD_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "❌ PROD_UNOCACE_DATASOURCE_PASSWORD" && missing=1
           [ "$missing" -ne 0 ] && exit 1
@@ -299,8 +299,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
-          key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
-          port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
             mkdir -p /opt/inatrace/backend
 
@@ -309,8 +308,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
-          key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
-          port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           source: "ci/docker-compose.yml"
           target: "/opt/inatrace/backend/"
           strip_components: 1
@@ -361,8 +359,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
-          key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
-          port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           source: ".env"
           target: "/opt/inatrace/backend/"
 
@@ -371,8 +368,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
-          key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
-          port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
             CN=inatrace-mysql-prod-unocace
             if docker ps --format '{{.Names}}' | grep -q "^$CN$"; then
@@ -388,8 +384,7 @@ jobs:
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
-          key: ${{ secrets.PROD_UNOCACE_SSH_KEY }}
-          port: ${{ secrets.PROD_UNOCACE_PORT || 22 }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
             set -e
             cd /opt/inatrace/backend
