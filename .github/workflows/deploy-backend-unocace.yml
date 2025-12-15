@@ -29,7 +29,7 @@ on:
           - staging
           - production
       skip_quality:
-        description: 'Skip quality checks'
+        description: 'Skip quality checks '
         required: false
         default: false
         type: boolean
