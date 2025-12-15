@@ -14,7 +14,7 @@ import java.util.List;
 @Validated
 public class ApiCompany extends ApiCompanyBase {
 
-	@Schema(description = "high-resolution logo of the company (jpeg, jpg, png)")
+	@Schema(description = "Logo de la compañia" (jpeg, jpg, png)")
 	public ApiDocument logo;
 	
 	@Size(max = 2000)
