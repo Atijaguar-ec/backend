@@ -169,8 +169,8 @@ jobs:
           username: ${{ secrets.TEST_DUFER_USER }}
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
           script: |
-            sudo mkdir -p /opt/inatrace/backend/test/dufer
-            sudo chown -R $USER:$USER /opt/inatrace/backend/test/dufer
+            sudo mkdir -p /opt/inatrace/backend
+            sudo chown -R $USER:$USER /opt/inatrace/backend
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -179,7 +179,7 @@ jobs:
           username: ${{ secrets.TEST_DUFER_USER }}
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
           source: "ci/docker-compose.yml"
-          target: "/opt/inatrace/backend/test/dufer/"
+          target: "/opt/inatrace/backend/"
           strip_components: 1
 
       - name: 📝 Prepare .env
@@ -228,7 +228,7 @@ jobs:
           username: ${{ secrets.TEST_DUFER_USER }}
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
           source: ".env"
-          target: "/opt/inatrace/backend/test/dufer/"
+          target: "/opt/inatrace/backend/"
 
       - name: 🚀 Deploy Staging
         uses: appleboy/ssh-action@v1.0.0
@@ -238,7 +238,7 @@ jobs:
           password: ${{ secrets.TEST_DUFER_PASSWORD }}
           script: |
             set -e
-            cd /opt/inatrace/backend/test/dufer
+            cd /opt/inatrace/backend
             
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
@@ -299,7 +299,7 @@ jobs:
           username: ${{ secrets.PROD_DUFER_USER }}
           password: ${{ secrets.PROD_DUFER_PASSWORD }}
           script: |
-            mkdir -p /opt/inatrace/deploy/backend/prod/dufer
+            mkdir -p /opt/inatrace/backend
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -307,8 +307,9 @@ jobs:
           host: ${{ secrets.PROD_DUFER_HOST }}
           username: ${{ secrets.PROD_DUFER_USER }}
           password: ${{ secrets.PROD_DUFER_PASSWORD }}
-          source: "deploy/backend/prod/dufer/docker-compose.yml"
-          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          source: "ci/docker-compose.yml"
+          target: "/opt/inatrace/backend/"
+          strip_components: 1
 
       - name: 📝 Prepare .env
         run: |
@@ -348,7 +349,7 @@ jobs:
           username: ${{ secrets.PROD_DUFER_USER }}
           password: ${{ secrets.PROD_DUFER_PASSWORD }}
           source: ".env"
-          target: "/opt/inatrace/deploy/backend/prod/dufer"
+          target: "/opt/inatrace/backend/"
 
       - name: 💾 Pre-deploy DB Backup
         uses: appleboy/ssh-action@v1.0.0
@@ -374,7 +375,7 @@ jobs:
           password: ${{ secrets.PROD_DUFER_PASSWORD }}
           script: |
             set -e
-            cd /opt/inatrace/deploy/backend/prod/dufer
+            cd /opt/inatrace/backend
             
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-dufer-network >/dev/null 2>&1 || docker network create inatrace-backend-dufer-network
