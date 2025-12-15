@@ -373,8 +373,11 @@ jobs:
             CN=inatrace-mysql-prod-unocace
             if docker ps --format '{{.Names}}' | grep -q "^$CN$"; then
               echo "📦 Running DB backup..."
-              docker exec "$CN" sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | gzip > /backups/backup-$(date +%Y%m%d-%H%M%S).sql.gz'
-              docker exec "$CN" sh -c 'find /backups -name "backup-*.sql.gz" -mtime +14 -delete'
+              BACKUP_DIR=/opt/inatrace/backups/mysql
+              TS=$(date +%Y%m%d-%H%M%S)
+              mkdir -p "$BACKUP_DIR"
+              docker exec "$CN" sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' | gzip > "$BACKUP_DIR/backup-$TS.sql.gz"
+              find "$BACKUP_DIR" -name "backup-*.sql.gz" -mtime +14 -delete || true
             else
               echo "⚠️ MySQL container not found, skipping backup"
             fi
