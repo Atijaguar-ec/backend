@@ -48,13 +48,13 @@ public class SpringSecurityConfig {
 				.exceptionHandling(ehc -> ehc.authenticationEntryPoint(new RestAuthenticationEntryPoint()))
 				.authorizeHttpRequests(matcherRegistry -> {
 					matcherRegistry.requestMatchers(
-						"/api/public/**",
-						"/api/user/login",
-						"/api/user/refresh_authentication",
-						"/api/user/register",
-						"/api/user/request_reset_password",
-						"/api/user/reset_password",
-						"/api/user/confirm_email",
+						"/public/**",
+						"/user/login",
+						"/user/refresh_authentication",
+						"/user/register",
+						"/user/request_reset_password",
+						"/user/reset_password",
+						"/user/confirm_email",
 						"/actuator/**"
 					).permitAll();
 					matcherRegistry.requestMatchers(SWAGGER_EXCEPTIONS).permitAll();
