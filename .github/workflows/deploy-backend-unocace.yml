@@ -289,7 +289,7 @@ jobs:
             set -e
             cd /opt/inatrace/backend
             
-            echo "🔗 Ensuring network... "
+            echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
             echo "📥 Pulling image..."
