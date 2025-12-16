@@ -243,6 +243,7 @@ jobs:
           FE_URL=$FE_URL
           FE_CONFIRM_URL=${FE_URL}/confirm-email/
           FE_RESET_URL=${FE_URL}/reset-password/
+          INATRACE_FLYWAY_IGNORE_MIGRATION_PATTERNS=*:missing
           SPRING_MAIL_HOST=$MAIL_HOST
           SPRING_MAIL_PORT=$MAIL_PORT
           SPRING_MAIL_USERNAME=$MAIL_USER
@@ -417,6 +418,7 @@ jobs:
           FE_URL=$FE_URL
           FE_CONFIRM_URL=${FE_URL}/confirm-email/
           FE_RESET_URL=${FE_URL}/reset-password/
+          INATRACE_FLYWAY_IGNORE_MIGRATION_PATTERNS=*:missing
           SPRING_MAIL_HOST=$MAIL_HOST
           SPRING_MAIL_PORT=$MAIL_PORT
           SPRING_MAIL_USERNAME=$MAIL_USER
