@@ -4,6 +4,7 @@ import com.abelium.inatrace.components.flyway.DelayedFlywayMigrationInitializer;
 import com.abelium.inatrace.components.flyway.JpaMigrationStrategy;
 import jakarta.persistence.EntityManagerFactory;
 import org.flywaydb.core.Flyway;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +37,7 @@ public class MigrationsConfiguration {
      * Esto permite que Hibernate valide el schema correctamente (ddl-auto=validate).
      */
     @Bean
+    @ConditionalOnBean(Flyway.class)
     FlywayMigrationInitializer flywayInitializer(Flyway flyway) {
         return new FlywayMigrationInitializer(flyway);
     }
@@ -46,6 +48,7 @@ public class MigrationsConfiguration {
      * y pueden usar EntityManager para operaciones de base de datos complejas.
      */
     @Bean
+    @ConditionalOnBean(Flyway.class)
     DelayedFlywayMigrationInitializer delayedFlywayInitializer(Flyway flyway, EntityManagerFactory entityManagerFactory, Environment environment) {
         return new DelayedFlywayMigrationInitializer(flyway, new JpaMigrationStrategy(entityManagerFactory, environment));
     }
