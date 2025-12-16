@@ -49,12 +49,19 @@ public class SpringSecurityConfig {
 				.authorizeHttpRequests(matcherRegistry -> {
 					matcherRegistry.requestMatchers(
 						"/api/public/**",
+						"/public/**",
 						"/api/user/login",
+						"/user/login",
 						"/api/user/refresh_authentication",
+						"/user/refresh_authentication",
 						"/api/user/register",
+						"/user/register",
 						"/api/user/request_reset_password",
+						"/user/request_reset_password",
 						"/api/user/reset_password",
+						"/user/reset_password",
 						"/api/user/confirm_email",
+						"/user/confirm_email",
 						"/actuator/**"
 					).permitAll();
 					matcherRegistry.requestMatchers(SWAGGER_EXCEPTIONS).permitAll();
