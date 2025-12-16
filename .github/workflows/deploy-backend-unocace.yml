@@ -159,6 +159,7 @@ jobs:
           [ -z "${{ secrets.TEST_UNOCACE_PASSWORD }}" ] && echo "❌ TEST_UNOCACE_PASSWORD" && missing=1
           [ -z "${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}" ] && echo "❌ TEST_UNOCACE_DB_ROOT_PASSWORD" && missing=1
           [ -z "${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "❌ TEST_UNOCACE_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.TEST_UNOCACE_ADMIN_PASSWORD }}" ] && echo "❌ TEST_UNOCACE_ADMIN_PASSWORD" && missing=1
           [ "$missing" -ne 0 ] && exit 1
           echo "✅ All secrets present"
 
@@ -191,6 +192,8 @@ jobs:
           MAIL_HOST="${{ secrets.TEST_UNOCACE_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
           MAIL_PORT="${{ secrets.TEST_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
           MAIL_USER="${{ secrets.TEST_UNOCACE_MAIL_USERNAME }}"; [ -z "$MAIL_USER" ] && MAIL_USER="desarrollo@atijaguar.com"
+
+          : "${ADMIN_PASSWORD:?Missing TEST_UNOCACE_ADMIN_PASSWORD}"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -222,7 +225,7 @@ jobs:
           INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-inatrace@unocace.com}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.TEST_UNOCACE_AGSTACK_PASSWORD }}
           INATRACE_ADMIN_EMAIL=${ADMIN_EMAIL:-inatrace@unocace.com}
-          INATRACE_ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin123!}
+          INATRACE_ADMIN_PASSWORD=${ADMIN_PASSWORD}
           INATRACE_ADMIN_NAME=${ADMIN_NAME:-Administrador}
           INATRACE_ADMIN_SURNAME=${ADMIN_SURNAME:-Unocace}
           INATRACE_ADMIN_COMPANY_NAME=${ADMIN_COMPANY_NAME:-UNOCACE}
@@ -303,6 +306,7 @@ jobs:
           [ -z "${{ secrets.PROD_UNOCACE_PASSWORD }}" ] && echo "❌ PROD_UNOCACE_PASSWORD" && missing=1
           [ -z "${{ secrets.PROD_UNOCACE_DB_ROOT_PASSWORD }}" ] && echo "❌ PROD_UNOCACE_DB_ROOT_PASSWORD" && missing=1
           [ -z "${{ secrets.PROD_UNOCACE_DATASOURCE_PASSWORD }}" ] && echo "❌ PROD_UNOCACE_DATASOURCE_PASSWORD" && missing=1
+          [ -z "${{ secrets.PROD_UNOCACE_ADMIN_PASSWORD }}" ] && echo "❌ PROD_UNOCACE_ADMIN_PASSWORD" && missing=1
           [ "$missing" -ne 0 ] && exit 1
           echo "✅ All secrets present"
 
@@ -334,6 +338,8 @@ jobs:
           MAIL_HOST="${{ secrets.PROD_UNOCACE_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.atijaguar.com"
           MAIL_PORT="${{ secrets.PROD_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
           MAIL_USER="${{ secrets.PROD_UNOCACE_MAIL_USERNAME }}"; [ -z "$MAIL_USER" ] && MAIL_USER="desarrollo@atijaguar.com"
+
+          : "${ADMIN_PASSWORD:?Missing PROD_UNOCACE_ADMIN_PASSWORD}"
           cat > .env <<EOF
           IMAGE_NAME=$IMAGE
           TAG=$TAG
@@ -365,7 +371,7 @@ jobs:
           INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-inatrace@unocace.com}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.PROD_UNOCACE_AGSTACK_PASSWORD }}
           INATRACE_ADMIN_EMAIL=${ADMIN_EMAIL:-inatrace@unocace.com}
-          INATRACE_ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin123!}
+          INATRACE_ADMIN_PASSWORD=${ADMIN_PASSWORD}
           INATRACE_ADMIN_NAME=${ADMIN_NAME:-Administrador}
           INATRACE_ADMIN_SURNAME=${ADMIN_SURNAME:-Unocace}
           INATRACE_ADMIN_COMPANY_NAME=${ADMIN_COMPANY_NAME:-UNOCACE}
