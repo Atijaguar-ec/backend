@@ -16,7 +16,9 @@ on:
   push:
     branches: [staging, main]
     paths:
-      - 'backend/**'
+      - 'src/**'
+      - 'pom.xml'
+      - 'Dockerfile'
       - '.github/workflows/deploy-backend-unocace.yml'
   workflow_dispatch:
     inputs:
