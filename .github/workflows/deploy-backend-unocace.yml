@@ -170,12 +170,12 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           script: |
-            sudo mkdir -p /opt/inatrace/backend
-            sudo mkdir -p /opt/inatrace/import
-            sudo chown -R $USER:$USER /opt/inatrace/backend
-            sudo chown -R $USER:$USER /opt/inatrace/import
-            sudo chmod -R u+rwX /opt/inatrace/import
-            sudo rm -f /opt/inatrace/import/countries.csv || true
+            mkdir -p /opt/inatrace/backend
+            mkdir -p /opt/inatrace/import
+            chown -R $USER:$USER /opt/inatrace/backend
+            chown -R $USER:$USER /opt/inatrace/import
+            chmod -R u+rwX /opt/inatrace/import
+            rm -f /opt/inatrace/import/countries.csv || true
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -206,10 +206,10 @@ jobs:
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           script: |
             set -e
-            sudo mkdir -p /opt/inatrace/import
-            sudo cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv
-            sudo chown $USER:$USER /opt/inatrace/import/countries.csv
-            sudo chmod 0644 /opt/inatrace/import/countries.csv
+            mkdir -p /opt/inatrace/import
+            cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv
+            chown $USER:$USER /opt/inatrace/import/countries.csv
+            chmod 0644 /opt/inatrace/import/countries.csv
             echo "✅ countries.csv installed:" 
             ls -l /opt/inatrace/import/countries.csv
             test -s /opt/inatrace/import/countries.csv
@@ -349,11 +349,10 @@ jobs:
           username: ${{ secrets.PROD_UNOCACE_USER }}
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
-            mkdir -p /opt/inatrace/backend /opt/inatrace/import || true
-            sudo mkdir -p /opt/inatrace/backend /opt/inatrace/import || true
-            sudo chown -R $USER:$USER /opt/inatrace/backend /opt/inatrace/import || true
-            sudo chmod -R u+rwX /opt/inatrace/import || true
-            sudo rm -f /opt/inatrace/import/countries.csv || true
+            mkdir -p /opt/inatrace/backend /opt/inatrace/import
+            chown -R $USER:$USER /opt/inatrace/backend /opt/inatrace/import
+            chmod -R u+rwX /opt/inatrace/import
+            rm -f /opt/inatrace/import/countries.csv || true
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -384,10 +383,10 @@ jobs:
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
             set -e
-            sudo mkdir -p /opt/inatrace/import
-            sudo cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv
-            sudo chown $USER:$USER /opt/inatrace/import/countries.csv
-            sudo chmod 0644 /opt/inatrace/import/countries.csv
+            mkdir -p /opt/inatrace/import
+            cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv
+            chown $USER:$USER /opt/inatrace/import/countries.csv
+            chmod 0644 /opt/inatrace/import/countries.csv
             echo "✅ countries.csv installed:" 
             ls -l /opt/inatrace/import/countries.csv
             test -s /opt/inatrace/import/countries.csv
