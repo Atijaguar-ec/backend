@@ -163,8 +163,6 @@ $RECYCLE.BIN/
 ci/.env
 ci/.env.local
 
-# Application properties (use templates instead)
-src/main/resources/application.properties
 
 # Keep templates tracked
 !ci/env-templates/*.example
