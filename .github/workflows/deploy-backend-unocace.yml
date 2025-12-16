@@ -210,6 +210,9 @@ jobs:
             sudo cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv
             sudo chown $USER:$USER /opt/inatrace/import/countries.csv
             sudo chmod 0644 /opt/inatrace/import/countries.csv
+            echo "✅ countries.csv installed:" 
+            ls -l /opt/inatrace/import/countries.csv
+            test -s /opt/inatrace/import/countries.csv
 
       - name: 📝 Prepare .env
         run: |
@@ -381,10 +384,13 @@ jobs:
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
             set -e
-            sudo mkdir -p /opt/inatrace/import || true
-            sudo cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv || true
-            sudo chown $USER:$USER /opt/inatrace/import/countries.csv || true
-            sudo chmod 0644 /opt/inatrace/import/countries.csv || true
+            sudo mkdir -p /opt/inatrace/import
+            sudo cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv
+            sudo chown $USER:$USER /opt/inatrace/import/countries.csv
+            sudo chmod 0644 /opt/inatrace/import/countries.csv
+            echo "✅ countries.csv installed:" 
+            ls -l /opt/inatrace/import/countries.csv
+            test -s /opt/inatrace/import/countries.csv
 
       - name: 📝 Prepare .env
         run: |
