@@ -5,7 +5,6 @@ import com.abelium.inatrace.db.entities.common.UserCustomer;
 import com.abelium.inatrace.db.entities.common.UserCustomerProductType;
 import com.abelium.inatrace.db.entities.codebook.ProductType;
 import com.abelium.inatrace.db.entities.value_chain.ValueChain;
-import com.abelium.inatrace.tools.Queries;
 import org.springframework.core.env.Environment;
 
 import jakarta.persistence.EntityManager;
@@ -15,36 +14,63 @@ public class V2023_03_09_14_33__Update_Value_Chains_Add_Coffee_Product_Type impl
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        // Create coffee product type
-        ProductType productTypeCoffee = new ProductType();
-        productTypeCoffee.setName("Coffee");
-        productTypeCoffee.setDescription("Coffee product type");
+        String productTypeConfig = environment.getProperty("INATrace.product.type", "COFFEE");
+        String primaryName;
+        String primaryDescription;
 
-        em.persist(productTypeCoffee);
+        switch (productTypeConfig.toUpperCase()) {
+            case "COCOA":
+                primaryName = "Cacao";
+                primaryDescription = "Cacao product type";
+                break;
+            case "COFFEE":
+            default:
+                primaryName = "Coffee";
+                primaryDescription = "Coffee product type";
+                break;
+        }
 
-        // Set coffee product type to all value chains
+        ProductType primaryProductType = findOrCreateProductTypeByName(em, primaryName, primaryDescription);
+
         for (ValueChain valueChain : em.createQuery("SELECT vc FROM ValueChain vc", ValueChain.class).getResultList()) {
-            valueChain.setProductType(productTypeCoffee);
+            valueChain.setProductType(primaryProductType);
         }
 
-        // Create macadamia product type
-        ProductType productTypeMacadamia = new ProductType();
-        productTypeMacadamia.setName("Macadamia");
-        productTypeMacadamia.setDescription("Macadamia product type");
-
-        em.persist(productTypeMacadamia);
-
-        // Set coffee product type to all farmers (userCustomers)
-        List<UserCustomer> userCustomerList = Queries.getAll(em, UserCustomer.class);
-
-        if (userCustomerList != null) {
-            userCustomerList.forEach(userCustomer -> {
-                UserCustomerProductType userCustomerProductType = new UserCustomerProductType();
-                userCustomerProductType.setUserCustomer(userCustomer);
-                userCustomerProductType.setProductType(productTypeCoffee);
-
-                em.persist(userCustomerProductType);
-            });
+        if ("COFFEE".equalsIgnoreCase(productTypeConfig)) {
+            findOrCreateProductTypeByName(em, "Macadamia", "Macadamia product type");
         }
+
+        List<Long> userCustomerIdsWithoutLink = em.createQuery(
+                        "SELECT u.id FROM UserCustomer u WHERE u.id NOT IN "
+                                + "(SELECT ucpt.userCustomer.id FROM UserCustomerProductType ucpt WHERE ucpt.productType = :productType)",
+                        Long.class)
+                .setParameter("productType", primaryProductType)
+                .getResultList();
+
+        for (Long userCustomerId : userCustomerIdsWithoutLink) {
+            UserCustomer userCustomerRef = em.getReference(UserCustomer.class, userCustomerId);
+            UserCustomerProductType userCustomerProductType = new UserCustomerProductType();
+            userCustomerProductType.setUserCustomer(userCustomerRef);
+            userCustomerProductType.setProductType(primaryProductType);
+            em.persist(userCustomerProductType);
+        }
+    }
+
+    private ProductType findOrCreateProductTypeByName(EntityManager em, String name, String description) {
+        List<ProductType> existing = em.createQuery(
+                        "SELECT pt FROM ProductType pt WHERE pt.name = :name", ProductType.class)
+                .setParameter("name", name)
+                .setMaxResults(1)
+                .getResultList();
+
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+
+        ProductType productType = new ProductType();
+        productType.setName(name);
+        productType.setDescription(description);
+        em.persist(productType);
+        return productType;
     }
 }

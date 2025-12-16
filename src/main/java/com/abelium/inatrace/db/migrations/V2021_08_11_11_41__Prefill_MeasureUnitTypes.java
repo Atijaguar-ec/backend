@@ -24,12 +24,7 @@ public class V2021_08_11_11_41__Prefill_MeasureUnitTypes implements JpaMigration
 		String productType = environment.getProperty("INATrace.product.type", "COFFEE");
 		List<MeasureUnitType> measureUnitTypes;
 
-		if ("SHRIMP".equalsIgnoreCase(productType) || "CAMARON".equalsIgnoreCase(productType)) {
-			measureUnitTypes = List.of(
-					new MeasureUnitType("BINES", "Bines", null),
-					new MeasureUnitType("GAVETAS", "Gavetas", null),
-					new MeasureUnitType("LIBRAS", "Libras", null));
-		} else if ("COCOA".equalsIgnoreCase(productType)) {
+		if ("COCOA".equalsIgnoreCase(productType)) {
 			measureUnitTypes = List.of(
 					new MeasureUnitType("PESOKG", "kg", new BigDecimal("1")),
 					new MeasureUnitType("PESOLIBRA", "Libra", new BigDecimal("2.2")),

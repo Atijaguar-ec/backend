@@ -206,7 +206,7 @@ jobs:
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
           FILE_STORAGE_ROOT_VOL=/opt/inatrace/uploads
-          IMPORT_PATH_VOL=/opt/inatrace/imports
+          IMPORT_PATH_VOL=/opt/inatrace/import
           DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
           DB_VOLUME=/opt/inatrace/mysql
           FE_URL=$FE_URL
@@ -219,9 +219,21 @@ jobs:
           SPRING_MAIL_SMTP_AUTH=true
           SPRING_MAIL_SMTP_SSL_ENABLE=true
           INATRACE_MAIL_SENDING_ENABLED=true
-          INATRACE_AGSTACK_EMAIL=${{ secrets.TEST_UNOCACE_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-inatrace@unocace.com}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.TEST_UNOCACE_AGSTACK_PASSWORD }}
+          INATRACE_ADMIN_EMAIL=${ADMIN_EMAIL:-inatrace@unocace.com}
+          INATRACE_ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin123!}
+          INATRACE_ADMIN_NAME=${ADMIN_NAME:-Administrador}
+          INATRACE_ADMIN_SURNAME=${ADMIN_SURNAME:-Unocace}
+          INATRACE_ADMIN_COMPANY_NAME=${ADMIN_COMPANY_NAME:-UNOCACE}
           EOF
+        env:
+          AGSTACK_EMAIL: ${{ secrets.TEST_UNOCACE_AGSTACK_EMAIL }}
+          ADMIN_EMAIL: ${{ secrets.TEST_UNOCACE_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.TEST_UNOCACE_ADMIN_PASSWORD }}
+          ADMIN_NAME: ${{ secrets.TEST_UNOCACE_ADMIN_NAME }}
+          ADMIN_SURNAME: ${{ secrets.TEST_UNOCACE_ADMIN_SURNAME }}
+          ADMIN_COMPANY_NAME: ${{ secrets.TEST_UNOCACE_ADMIN_COMPANY_NAME }}
 
       - name: 📤 Upload .env
         uses: appleboy/scp-action@v0.1.7
@@ -337,7 +349,7 @@ jobs:
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents
           FILE_STORAGE_ROOT_VOL=/opt/inatrace/uploads
-          IMPORT_PATH_VOL=/opt/inatrace/imports
+          IMPORT_PATH_VOL=/opt/inatrace/import
           DOCUMENTS_ROOT_VOL=/opt/inatrace/documents
           DB_VOLUME=/opt/inatrace/mysql
           FE_URL=$FE_URL
@@ -350,9 +362,21 @@ jobs:
           SPRING_MAIL_SMTP_AUTH=true
           SPRING_MAIL_SMTP_SSL_ENABLE=true
           INATRACE_MAIL_SENDING_ENABLED=true
-          INATRACE_AGSTACK_EMAIL=${{ secrets.PROD_UNOCACE_AGSTACK_EMAIL }}
+          INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-inatrace@unocace.com}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.PROD_UNOCACE_AGSTACK_PASSWORD }}
+          INATRACE_ADMIN_EMAIL=${ADMIN_EMAIL:-inatrace@unocace.com}
+          INATRACE_ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin123!}
+          INATRACE_ADMIN_NAME=${ADMIN_NAME:-Administrador}
+          INATRACE_ADMIN_SURNAME=${ADMIN_SURNAME:-Unocace}
+          INATRACE_ADMIN_COMPANY_NAME=${ADMIN_COMPANY_NAME:-UNOCACE}
           EOF
+        env:
+          AGSTACK_EMAIL: ${{ secrets.PROD_UNOCACE_AGSTACK_EMAIL }}
+          ADMIN_EMAIL: ${{ secrets.PROD_UNOCACE_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PROD_UNOCACE_ADMIN_PASSWORD }}
+          ADMIN_NAME: ${{ secrets.PROD_UNOCACE_ADMIN_NAME }}
+          ADMIN_SURNAME: ${{ secrets.PROD_UNOCACE_ADMIN_SURNAME }}
+          ADMIN_COMPANY_NAME: ${{ secrets.PROD_UNOCACE_ADMIN_COMPANY_NAME }}
 
       - name: 📤 Upload .env
         uses: appleboy/scp-action@v0.1.7

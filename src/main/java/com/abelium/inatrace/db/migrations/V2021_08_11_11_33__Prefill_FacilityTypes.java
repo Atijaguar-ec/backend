@@ -23,19 +23,7 @@ public class V2021_08_11_11_33__Prefill_FacilityTypes implements JpaMigration {
 		String productType = environment.getProperty("INATrace.product.type", "COFFEE");
 		List<FacilityType> facilityTypes;
 
-		if ("SHRIMP".equalsIgnoreCase(productType) || "CAMARON".equalsIgnoreCase(productType)) {
-			facilityTypes = List.of(
-					new FacilityType("AREADERECIBO", "Área de Recibo", 1),
-					new FacilityType("LABORATORIODECALIDAD", "Laboratorio de Calidad", 2),
-					new FacilityType("TOLVADERECIBO", "Tolva de Recibo Camarón", 3),
-					new FacilityType("AREADECLASIFICADO", "Área de Clasificado Camarón Entero", 3),
-					new FacilityType("AREADECONGELACION", "Área de Congelación Camarón Entero", 3),
-					new FacilityType("TUNELDECONGELACION", "Túnel de Congelación Camarón Entero", 4),
-					new FacilityType("LOTEPARAEXPORTAR", "Lote para exportar Camarón Entero", 4),
-					new FacilityType("AREADEPESADO", "Área de Pesado Camarón Con Cola", 5),
-					new FacilityType("AREADEREPOSO", "Área de Reposo Camarón Con Cola", 5),
-					new FacilityType("AREADEDESCABEZADO", "Área de Descabezado", 5));
-		} else if ("COCOA".equalsIgnoreCase(productType)) {
+		if ("COCOA".equalsIgnoreCase(productType)) {
 			facilityTypes = List.of(
 					new FacilityType("ACOPIO", "Collection Center", 1),
 					new FacilityType("ESCURRIDO", "Draining", 2),

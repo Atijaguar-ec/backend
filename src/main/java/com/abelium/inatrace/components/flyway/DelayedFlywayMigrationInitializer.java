@@ -18,6 +18,8 @@ package com.abelium.inatrace.components.flyway;
 
 import jakarta.persistence.EntityManagerFactory;
 import org.flywaydb.core.Flyway;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
@@ -36,47 +38,52 @@ import org.springframework.util.Assert;
  */
 public class DelayedFlywayMigrationInitializer implements InitializingBean, Ordered {
 
-	private final Flyway flyway;
+    private static final Logger log = LoggerFactory.getLogger(DelayedFlywayMigrationInitializer.class);
 
-	private final FlywayMigrationStrategy migrationStrategy;
+    private final Flyway flyway;
 
-	private int order = 0;
+    private final FlywayMigrationStrategy migrationStrategy;
 
-	/**
-	 * Create a new {@link DelayedFlywayMigrationInitializer} instance.
-	 * @param flyway the flyway instance
-	 */
-	public DelayedFlywayMigrationInitializer(Flyway flyway) {
-		this(flyway, null);
-	}
+    private int order = 0;
 
-	/**
-	 * Create a new {@link DelayedFlywayMigrationInitializer} instance.
-	 * @param flyway the flyway instance
-	 * @param migrationStrategy the migration strategy or {@code null}
-	 */
-	@Autowired
-	public DelayedFlywayMigrationInitializer(Flyway flyway, FlywayMigrationStrategy migrationStrategy) {
-		Assert.notNull(flyway, "Flyway must not be null");
-		this.flyway = flyway;
-		this.migrationStrategy = migrationStrategy;
-	}
+    /**
+     * Create a new {@link DelayedFlywayMigrationInitializer} instance.
+     * @param flyway the flyway instance
+     */
+    public DelayedFlywayMigrationInitializer(Flyway flyway) {
+        this(flyway, null);
+    }
 
-	@Override
-	public void afterPropertiesSet() throws Exception {
-		if (this.migrationStrategy != null) {
-			this.migrationStrategy.migrate(this.flyway);
-		}
-		else {
-			this.flyway.migrate();
-		}
-	}
+    /**
+     * Create a new {@link DelayedFlywayMigrationInitializer} instance.
+     * @param flyway the flyway instance
+     * @param migrationStrategy the migration strategy or {@code null}
+     */
+    @Autowired
+    public DelayedFlywayMigrationInitializer(Flyway flyway, FlywayMigrationStrategy migrationStrategy) {
+        Assert.notNull(flyway, "Flyway must not be null");
+        this.flyway = flyway;
+        this.migrationStrategy = migrationStrategy;
+    }
 
-	@Override
-	public int getOrder() {
-		return this.order;
-	}
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        log.info("[Flyway] DelayedFlywayMigrationInitializer.afterPropertiesSet - starting migrations (strategy present: {})", this.migrationStrategy != null);
+        if (this.migrationStrategy != null) {
+            log.info("[Flyway] Using JpaMigrationStrategy to run JPA migrations");
+            this.migrationStrategy.migrate(this.flyway);
+        }
+        else {
+            log.info("[Flyway] No custom migration strategy configured, calling flyway.migrate() directly");
+            this.flyway.migrate();
+        }
+        log.info("[Flyway] DelayedFlywayMigrationInitializer.afterPropertiesSet - finished migrations");
+    }
 
+    @Override
+    public int getOrder() {
+        return this.order;
+    }
 	public void setOrder(int order) {
 		this.order = order;
 	}
