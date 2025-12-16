@@ -2,6 +2,7 @@ package com.abelium.inatrace.configuration;
 
 import com.abelium.inatrace.components.flyway.DelayedFlywayMigrationInitializer;
 import com.abelium.inatrace.components.flyway.JpaMigrationStrategy;
+import com.abelium.inatrace.components.flyway.JpaMigrationValidationResolver;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.Arrays;
 import org.flywaydb.core.Flyway;
@@ -39,9 +40,15 @@ public class MigrationsConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(MigrationsConfiguration.class);
     
+    /**
+     * Configura Flyway para:
+     * 1. Ignorar migraciones faltantes (para compatibilidad con historial)
+     * 2. Registrar el resolver de migraciones JPA para que sean visibles durante validate
+     */
     @Bean
-    FlywayConfigurationCustomizer flywayIgnoreMissingMigrationsCustomizer(Environment environment) {
+    FlywayConfigurationCustomizer flywayConfigurationCustomizer(Environment environment) {
         return configuration -> {
+            // Configurar ignore patterns
             String patterns = environment.getProperty("spring.flyway.ignore-migration-patterns");
             if (patterns == null || patterns.isBlank()) {
                 patterns = environment.getProperty("INATRACE_FLYWAY_IGNORE_MIGRATION_PATTERNS");
@@ -56,6 +63,12 @@ public class MigrationsConfiguration {
 
             log.info("[Flyway] Applying ignoreMigrationPatterns={}", Arrays.toString(split));
             configuration.ignoreMigrationPatterns(split);
+            
+            // Registrar resolver de migraciones JPA para que sean visibles durante validate
+            // Esto evita el error "applied migration not resolved locally" para migraciones Java
+            JpaMigrationValidationResolver validationResolver = new JpaMigrationValidationResolver(configuration);
+            configuration.resolvers(validationResolver);
+            log.info("[Flyway] Registered JpaMigrationValidationResolver for JPA migration visibility");
         };
     }
     
