@@ -171,7 +171,9 @@ jobs:
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           script: |
             sudo mkdir -p /opt/inatrace/backend
+            sudo mkdir -p /opt/inatrace/import
             sudo chown -R $USER:$USER /opt/inatrace/backend
+            sudo chown -R $USER:$USER /opt/inatrace/import
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -181,6 +183,16 @@ jobs:
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: "ci/docker-compose.yml"
           target: "/opt/inatrace/backend/"
+          strip_components: 1
+
+      - name: 📤 Upload countries.csv
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: "import/countries.csv"
+          target: "/opt/inatrace/import/"
           strip_components: 1
 
       - name: 📝 Prepare .env
@@ -317,7 +329,9 @@ jobs:
           username: ${{ secrets.PROD_UNOCACE_USER }}
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
-            mkdir -p /opt/inatrace/backend
+            mkdir -p /opt/inatrace/backend /opt/inatrace/import || true
+            sudo mkdir -p /opt/inatrace/backend /opt/inatrace/import || true
+            sudo chown -R $USER:$USER /opt/inatrace/backend /opt/inatrace/import || true
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -329,7 +343,17 @@ jobs:
           target: "/opt/inatrace/backend/"
           strip_components: 1
 
-      - name: 📝 Prepare .env
+      - name: � Upload countries.csv
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          source: "import/countries.csv"
+          target: "/opt/inatrace/import/"
+          strip_components: 1
+
+      - name: �� Prepare .env
         run: |
           IMAGE="${{ needs.build.outputs.image-ref }}"
           TAG="${{ needs.build.outputs.image-tag }}"
