@@ -295,7 +295,7 @@ jobs:
             echo "📥 Pulling image..."
             docker compose pull backend
             
-            echo "🛑 Stopping old containers..."
+            echo "🛑 Stopping old containers... "
             docker stop inatrace-be-test-unocace 2>/dev/null || true
             docker rm inatrace-be-test-unocace 2>/dev/null || true
             
