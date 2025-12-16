@@ -5,7 +5,10 @@ import com.abelium.inatrace.components.flyway.JpaMigrationStrategy;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.Arrays;
 import org.flywaydb.core.Flyway;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationInitializer;
 import org.springframework.context.annotation.Bean;
@@ -33,6 +36,8 @@ import org.springframework.core.env.Environment;
  */
 @Configuration
 public class MigrationsConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(MigrationsConfiguration.class);
     
     @Bean
     FlywayConfigurationCustomizer flywayIgnoreMissingMigrationsCustomizer(Environment environment) {
@@ -49,6 +54,7 @@ public class MigrationsConfiguration {
                     .filter(p -> p != null && !p.isBlank())
                     .toArray(String[]::new);
 
+            log.info("[Flyway] Applying ignoreMigrationPatterns={}", Arrays.toString(split));
             configuration.ignoreMigrationPatterns(split);
         };
     }
@@ -58,7 +64,8 @@ public class MigrationsConfiguration {
      * Esto permite que Hibernate valide el schema correctamente (ddl-auto=validate).
      */
     @Bean
-    @ConditionalOnBean(Flyway.class)
+    @ConditionalOnClass(Flyway.class)
+    @ConditionalOnProperty(value = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
     FlywayMigrationInitializer flywayInitializer(Flyway flyway) {
         return new FlywayMigrationInitializer(flyway);
     }
@@ -69,8 +76,10 @@ public class MigrationsConfiguration {
      * y pueden usar EntityManager para operaciones de base de datos complejas.
      */
     @Bean
-    @ConditionalOnBean(Flyway.class)
+    @ConditionalOnClass(Flyway.class)
+    @ConditionalOnProperty(value = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
     DelayedFlywayMigrationInitializer delayedFlywayInitializer(Flyway flyway, EntityManagerFactory entityManagerFactory, Environment environment) {
+        log.info("[Flyway] Creating DelayedFlywayMigrationInitializer bean (JPA migrations phase)");
         return new DelayedFlywayMigrationInitializer(flyway, new JpaMigrationStrategy(entityManagerFactory, environment));
     }
 }
