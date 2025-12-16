@@ -174,6 +174,8 @@ jobs:
             sudo mkdir -p /opt/inatrace/import
             sudo chown -R $USER:$USER /opt/inatrace/backend
             sudo chown -R $USER:$USER /opt/inatrace/import
+            sudo chmod -R u+rwX /opt/inatrace/import
+            sudo rm -f /opt/inatrace/import/countries.csv || true
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -192,8 +194,22 @@ jobs:
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: "import/countries.csv"
-          target: "/opt/inatrace/import/"
+          target: "/opt/inatrace/backend/"
           strip_components: 1
+          overwrite: true
+
+      - name: 📁 Install countries.csv
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          script: |
+            set -e
+            sudo mkdir -p /opt/inatrace/import
+            sudo cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv
+            sudo chown $USER:$USER /opt/inatrace/import/countries.csv
+            sudo chmod 0644 /opt/inatrace/import/countries.csv
 
       - name: 📝 Prepare .env
         run: |
@@ -332,6 +348,8 @@ jobs:
             mkdir -p /opt/inatrace/backend /opt/inatrace/import || true
             sudo mkdir -p /opt/inatrace/backend /opt/inatrace/import || true
             sudo chown -R $USER:$USER /opt/inatrace/backend /opt/inatrace/import || true
+            sudo chmod -R u+rwX /opt/inatrace/import || true
+            sudo rm -f /opt/inatrace/import/countries.csv || true
 
       - name: 📤 Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
@@ -343,17 +361,31 @@ jobs:
           target: "/opt/inatrace/backend/"
           strip_components: 1
 
-      - name: � Upload countries.csv
+      - name: 📤 Upload countries.csv
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_UNOCACE_HOST }}
           username: ${{ secrets.PROD_UNOCACE_USER }}
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           source: "import/countries.csv"
-          target: "/opt/inatrace/import/"
+          target: "/opt/inatrace/backend/"
           strip_components: 1
+          overwrite: true
 
-      - name: �� Prepare .env
+      - name: 📁 Install countries.csv
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          script: |
+            set -e
+            sudo mkdir -p /opt/inatrace/import || true
+            sudo cp -f /opt/inatrace/backend/countries.csv /opt/inatrace/import/countries.csv || true
+            sudo chown $USER:$USER /opt/inatrace/import/countries.csv || true
+            sudo chmod 0644 /opt/inatrace/import/countries.csv || true
+
+      - name: 📝 Prepare .env
         run: |
           IMAGE="${{ needs.build.outputs.image-ref }}"
           TAG="${{ needs.build.outputs.image-tag }}"
