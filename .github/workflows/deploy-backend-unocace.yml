@@ -247,7 +247,7 @@ jobs:
           source: ".env"
           target: "/opt/inatrace/backend/"
 
-      - name: 🚀 Deploy Staging
+      - name: 🚀 Deploy Staging 
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
