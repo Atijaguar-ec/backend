@@ -147,7 +147,7 @@ jobs:
     if: github.ref == 'refs/heads/staging' || github.event.inputs.environment == 'staging'
     environment:
       name: unocace-staging
-      url: https://inatrace-test.unocace.com
+      url: https://inatrace.test.unocace.com
     steps:
       - uses: actions/checkout@v4
 
