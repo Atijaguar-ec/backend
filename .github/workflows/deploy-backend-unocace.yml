@@ -297,7 +297,12 @@ jobs:
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
 
             echo "🗄️ Ensuring MySQL is running..."
-            docker compose up -d mysql
+            if docker inspect "$CONTAINER_NAME_DB" >/dev/null 2>&1; then
+              docker start "$CONTAINER_NAME_DB" >/dev/null 2>&1 || true
+              docker network connect inatrace-backend-network "$CONTAINER_NAME_DB" >/dev/null 2>&1 || true
+            else
+              docker compose up -d mysql
+            fi
 
             echo "⏳ Waiting for MySQL..."
             for i in {1..30}; do
