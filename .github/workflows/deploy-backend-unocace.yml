@@ -17,6 +17,7 @@ on:
     branches: [staging, main]
     paths:
       - 'src/**'
+      - 'ci/**'
       - 'pom.xml'
       - 'Dockerfile'
       - '.github/workflows/deploy-backend-unocace.yml'

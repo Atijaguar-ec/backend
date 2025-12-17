@@ -16,7 +16,10 @@ on:
   push:
     branches: [staging, main]
     paths:
-      - 'backend/**'
+      - 'src/**'
+      - 'ci/**'
+      - 'pom.xml'
+      - 'Dockerfile'
       - '.github/workflows/deploy-backend-dufer.yml'
   workflow_dispatch:
     inputs:
