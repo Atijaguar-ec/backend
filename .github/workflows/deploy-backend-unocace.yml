@@ -288,107 +288,14 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/backend
-
-            set -a
-            . ./.env
-            set +a
             
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
-
-            echo "🗄️ Ensuring MySQL is running..."
-            if docker inspect "$CONTAINER_NAME_DB" >/dev/null 2>&1; then
-              docker start "$CONTAINER_NAME_DB" >/dev/null 2>&1 || true
-              docker network connect inatrace-backend-network "$CONTAINER_NAME_DB" >/dev/null 2>&1 || true
-            else
-              docker compose up -d mysql
-            fi
-
-            echo "⏳ Waiting for MySQL..."
-            for i in {1..30}; do
-              if docker exec "$CONTAINER_NAME_DB" mysqladmin ping -uroot -p"$DB_ROOT_PASSWORD" --silent; then
-                echo "✅ MySQL is ready"
-                break
-              fi
-              sleep 2
-              if [ "$i" -eq 30 ]; then
-                echo "❌ MySQL did not become ready in time"
-                docker logs "$CONTAINER_NAME_DB" --tail 80 || true
-                exit 1
-              fi
-            done
-
-            echo "🔎 Checking Flyway schema history presence..."
-            HISTORY_TABLE=""
-            if docker exec "$CONTAINER_NAME_DB" mysql -uroot -p"$DB_ROOT_PASSWORD" -D "$DATABASE_NAME" -e "SELECT 1 FROM flyway_schema_history LIMIT 1;" >/dev/null 2>&1; then
-              HISTORY_TABLE="flyway_schema_history"
-            elif docker exec "$CONTAINER_NAME_DB" mysql -uroot -p"$DB_ROOT_PASSWORD" -D "$DATABASE_NAME" -e "SELECT 1 FROM schema_version LIMIT 1;" >/dev/null 2>&1; then
-              HISTORY_TABLE="schema_version"
-            fi
-
-            if [ -z "$HISTORY_TABLE" ]; then
-              echo "⚠️ Flyway history table not found in DATABASE_NAME=$DATABASE_NAME (expected flyway_schema_history or schema_version)"
-              CANDIDATES=$(docker exec "$CONTAINER_NAME_DB" mysql -N -uroot -p"$DB_ROOT_PASSWORD" -e "SELECT DISTINCT table_schema FROM information_schema.tables WHERE table_name IN ('flyway_schema_history','schema_version');")
-              if [ -z "$CANDIDATES" ]; then
-                echo "❌ No schema contains Flyway history table. Cannot repair automatically."
-                docker exec "$CONTAINER_NAME_DB" mysql -uroot -p"$DB_ROOT_PASSWORD" -e "SHOW DATABASES;" || true
-                exit 1
-              fi
-
-              MATCHES=""
-              for DB in $CANDIDATES; do
-                if docker exec "$CONTAINER_NAME_DB" mysql -N -uroot -p"$DB_ROOT_PASSWORD" -D "$DB" -e "SELECT 1 FROM flyway_schema_history WHERE version='1' LIMIT 1;" >/dev/null 2>&1 || \
-                   docker exec "$CONTAINER_NAME_DB" mysql -N -uroot -p"$DB_ROOT_PASSWORD" -D "$DB" -e "SELECT 1 FROM schema_version WHERE version='1' LIMIT 1;" >/dev/null 2>&1; then
-                  MATCHES="$MATCHES $DB"
-                fi
-              done
-
-              MATCHES=$(echo "$MATCHES" | xargs)
-              COUNT=$(echo "$MATCHES" | wc -w | xargs)
-
-              if [ "$COUNT" -eq 1 ]; then
-                DATABASE_NAME="$MATCHES"
-                export DATABASE_NAME
-                sed -i "s/^DATABASE_NAME=.*/DATABASE_NAME=${DATABASE_NAME}/" .env
-                echo "✅ Using detected DATABASE_NAME=$DATABASE_NAME (updated .env)"
-
-                if docker exec "$CONTAINER_NAME_DB" mysql -uroot -p"$DB_ROOT_PASSWORD" -D "$DATABASE_NAME" -e "SELECT 1 FROM flyway_schema_history LIMIT 1;" >/dev/null 2>&1; then
-                  HISTORY_TABLE="flyway_schema_history"
-                elif docker exec "$CONTAINER_NAME_DB" mysql -uroot -p"$DB_ROOT_PASSWORD" -D "$DATABASE_NAME" -e "SELECT 1 FROM schema_version LIMIT 1;" >/dev/null 2>&1; then
-                  HISTORY_TABLE="schema_version"
-                fi
-              else
-                echo "❌ Ambiguous Flyway schemas (count=$COUNT): $MATCHES"
-                echo "   Please set correct DATABASE_NAME in the workflow/.env"
-                exit 1
-              fi
-            else
-              echo "✅ Flyway history table '$HISTORY_TABLE' found in DATABASE_NAME=$DATABASE_NAME"
-            fi
-
-            if [ -z "$HISTORY_TABLE" ]; then
-              echo "❌ Could not determine Flyway history table name after detection."
-              exit 1
-            fi
-
-            echo "🧾 Backing up ${HISTORY_TABLE}..."
-            mkdir -p /opt/inatrace/backend/db-backups
-            TS=$(date +%Y%m%d_%H%M%S)
-            docker exec "$CONTAINER_NAME_DB" sh -c 'mysqldump -uroot -p"'$DB_ROOT_PASSWORD'" --single-transaction --skip-lock-tables "'$DATABASE_NAME'" "'$HISTORY_TABLE'"' \
-              > "/opt/inatrace/backend/db-backups/${DATABASE_NAME}_${HISTORY_TABLE}_${TS}.sql"
-            echo "✅ Backup written to /opt/inatrace/backend/db-backups/${DATABASE_NAME}_${HISTORY_TABLE}_${TS}.sql"
-
-            echo "🛠️ Repairing Flyway checksums (safe: updates only ${HISTORY_TABLE})..."
-            docker exec "$CONTAINER_NAME_DB" mysql -uroot -p"$DB_ROOT_PASSWORD" -D "$DATABASE_NAME" -e "\
-              UPDATE ${HISTORY_TABLE} SET checksum=1980195895 WHERE version='1';\
-              UPDATE ${HISTORY_TABLE} SET checksum=969379441 WHERE version IN ('2025.10.31.00.00','2025_10_31_00_00');\
-              SELECT version, checksum, installed_on, success FROM ${HISTORY_TABLE} WHERE version IN ('1','2025.10.31.00.00','2025_10_31_00_00');\
-            "
             
-            echo "📥 Pulling image... "
+            echo "📥 Pulling image..."
             docker compose pull backend
             
-            echo "🛑 Stopping old containers... "
+            echo "🛑 Stopping old containers..."
             docker stop inatrace-be-test-unocace 2>/dev/null || true
             docker rm inatrace-be-test-unocace 2>/dev/null || true
             
