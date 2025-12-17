@@ -8,6 +8,23 @@
 -- Flyway se encarga de aplicarlo automáticamente en instalaciones limpias.
 -- ═══════════════════════════════════════════════════════════════
 
+SET @existing_tables = (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.TABLES
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME <> 'schema_version'
+);
+
+SET @sql = IF(
+  @existing_tables = 0,
+  'SELECT 1',
+  'SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT = ''Refusing to run V1__Initial_schema.sql on a non-empty schema. Do not delete schema_version in test/prod.'''
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 

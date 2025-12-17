@@ -18,12 +18,21 @@ public class V2023_04_12_14_00__Update_Product_Type_Translations implements JpaM
 
         for (ProductType productType : productTypeList) {
             for (Language language : List.of(Language.EN, Language.DE, Language.RW, Language.ES)) {
-                ProductTypeTranslation productTypeTranslation = new ProductTypeTranslation();
-                productTypeTranslation.setName(productType.getName());
-                productTypeTranslation.setDescription(productType.getDescription());
-                productTypeTranslation.setLanguage(language);
-                productTypeTranslation.setProductType(productType);
-                em.persist(productTypeTranslation);
+                // Check if translation already exists (idempotent)
+                Long existingCount = em.createQuery(
+                    "SELECT COUNT(t) FROM ProductTypeTranslation t WHERE t.productType = :pt AND t.language = :lang", Long.class)
+                    .setParameter("pt", productType)
+                    .setParameter("lang", language)
+                    .getSingleResult();
+                
+                if (existingCount == null || existingCount == 0) {
+                    ProductTypeTranslation productTypeTranslation = new ProductTypeTranslation();
+                    productTypeTranslation.setName(productType.getName());
+                    productTypeTranslation.setDescription(productType.getDescription());
+                    productTypeTranslation.setLanguage(language);
+                    productTypeTranslation.setProductType(productType);
+                    em.persist(productTypeTranslation);
+                }
             }
         }
     }

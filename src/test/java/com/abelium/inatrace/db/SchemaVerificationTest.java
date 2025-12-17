@@ -30,11 +30,11 @@ class SchemaVerificationTest {
         assertEquals(1, singleInt(tableExists), "Tabla CompanyProcessingAction debe existir");
 
         String creationCol = "SELECT COUNT(*) FROM information_schema.columns " +
-                "WHERE table_schema = (" + schema + ") AND table_name = 'CompanyProcessingAction' AND column_name = 'createdAt'";
+                "WHERE table_schema = (" + schema + ") AND table_name = 'CompanyProcessingAction' AND column_name = 'creationTimestamp'";
         String updateCol = "SELECT COUNT(*) FROM information_schema.columns " +
-                "WHERE table_schema = (" + schema + ") AND table_name = 'CompanyProcessingAction' AND column_name = 'updatedAt'";
-        assertEquals(1, singleInt(creationCol), "Columna createdAt faltante");
-        assertEquals(1, singleInt(updateCol), "Columna updatedAt faltante");
+                "WHERE table_schema = (" + schema + ") AND table_name = 'CompanyProcessingAction' AND column_name = 'updateTimestamp'";
+        assertEquals(1, singleInt(creationCol), "Columna creationTimestamp faltante");
+        assertEquals(1, singleInt(updateCol), "Columna updateTimestamp faltante");
 
         String idxCompanyEnabled = "SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics " +
                 "WHERE table_schema = (" + schema + ") AND table_name = 'CompanyProcessingAction' " +

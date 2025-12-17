@@ -96,7 +96,6 @@ public class V2025_11_19_05_00__Prefill_SemiProducts implements JpaMigration {
                 false
         );
     }
-
     private void prefillCocoaSemiProducts(EntityManager em) {
         MeasureUnitType kg = findMeasureUnitTypeByCode(em, "PESOKG");
 

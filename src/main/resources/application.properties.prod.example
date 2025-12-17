@@ -3,10 +3,10 @@
 # for full list of options
 
 # Deployment environment (DEV, TEST, PROD)
-INATrace.env = PROD
+INATrace.env = DEV
 
-# Product type for data initialization (COFFEE, COCOA)
-INATrace.product.type = ${INATRACE_PRODUCT_TYPE:SHRIMP}
+# Product type for data initialization (COFFEE, COCOA, SHRIMP)
+INATrace.product.type = ${INATRACE_PRODUCT_TYPE:COCOA}
 
 spring.main.banner-mode = off
 
@@ -23,15 +23,11 @@ spring.servlet.multipart.max-file-size = 10MB
 # increase async request timeout (in milliseconds) to avoid AsyncRequestTimeoutException
 spring.mvc.async.request-timeout = 120000
 
-# Disable default static resource handling (this is a pure API backend)
-# Prevents NoResourceFoundException for non-existent API paths
-spring.web.resources.add-mappings = false
-
 # Springdoc
 springdoc.default-produces-media-type = application/json
 
 # DataSource settings
-INATrace.database.name = ${INATRACE_DATABASE_NAME:inatrace}
+INATrace.database.name = ${INATRACE_DATABASE_NAME:inatrace_prod_unocace}
 INATrace.database.hostname = ${INATRACE_DATABASE_HOSTNAME:localhost}
 INATrace.database.port = ${INATRACE_DATABASE_PORT:3306}
 
@@ -77,7 +73,7 @@ spring.flyway.out-of-order = ${INATRACE_FLYWAY_OUT_OF_ORDER:true}
 spring.flyway.validate-on-migrate = ${INATRACE_FLYWAY_VALIDATE_ON_MIGRATE:true}
 spring.flyway.check-location = false
 spring.flyway.table = schema_version
-spring.flyway.ignore-migration-patterns = ${INATRACE_FLYWAY_IGNORE_MIGRATION_PATTERNS:*:missing}
+spring.flyway.ignore-missing-migrations = ${INATRACE_FLYWAY_IGNORE_MISSING_MIGRATIONS:true}
 spring.flyway.locations = com.abelium.inatrace.db.migrations,classpath:/db/migrations
 
 spring.jackson.serialization.write-dates-as-timestamps = false
@@ -129,7 +125,7 @@ INATrace.auth.refreshTokenExpirationSec = 300
 INATrace.auth.jwtSigningKey = efdsfsd2342343sdffew
 
 # path to import resources (e.g. in migrations to fill tables)
-INATrace.import.path = ${INATRACE_IMPORT_PATH:import/}
+INATrace.import.path = ${INATRACE_IMPORT_PATH:/opt/inatrace/import}
 
 # path to other documents
 INATrace.documents.root = ${INATRACE_DOCUMENTS_ROOT:/opt/inatrace/documents}
@@ -142,12 +138,6 @@ INATrace.emailConfirmation.url = ${INATRACE_EMAILCONFIRMATION_URL:https://localh
 
 # url (prefix) for password reset
 INATrace.passwordReset.url = ${INATRACE_PASSWORDRESET_URL:https://localhost:4200/reset-password?token=}
-
-INATrace.admin.email = ${INATRACE_ADMIN_EMAIL:admin@local.com}
-INATrace.admin.password = ${INATRACE_ADMIN_PASSWORD:Admin123!}
-INATrace.admin.name = ${INATRACE_ADMIN_NAME:Admin}
-INATrace.admin.surname = ${INATRACE_ADMIN_SURNAME:Local Admin}
-INATrace.admin.company.name = ${INATRACE_ADMIN_COMPANY_NAME:Local Company}
 
 # prefix for FE
 INATrace.fe.url = ${INATRACE_FE_URL:}

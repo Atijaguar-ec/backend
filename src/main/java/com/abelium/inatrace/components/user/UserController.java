@@ -19,6 +19,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
+/**
+ * REST controller for user-related operations.
+ */
 @RestController
 @RequestMapping("/user")
 public class UserController {

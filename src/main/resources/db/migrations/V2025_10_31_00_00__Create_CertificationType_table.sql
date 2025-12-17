@@ -29,7 +29,11 @@ INSERT INTO CertificationType (code, name, category, status) VALUES
 ('FAIRTRADE', 'Fair Trade', 'SEAL', 'ACTIVE'),
 ('FAIRTRADE_SPP', 'Fairtrade / SPP', 'CERTIFICATE', 'ACTIVE'),
 ('BIOSUISSE_FT_SPP', 'Biosuisse / Fairtrade / SPP', 'CERTIFICATE', 'ACTIVE'),
-('TRANSICION_FT_SPP', 'Transition / Fairtrade / SPP', 'CERTIFICATE', 'ACTIVE');
+('TRANSICION_FT_SPP', 'Transition / Fairtrade / SPP', 'CERTIFICATE', 'ACTIVE')
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    category = VALUES(category),
+    status = VALUES(status);
 
 -- Insert Spanish translations
 INSERT INTO CertificationTypeTranslation (certification_type_id, language, name)
@@ -40,4 +44,7 @@ SELECT id, 'ES',
         WHEN 'BIOSUISSE_FT_SPP' THEN 'Biosuisse / Fairtrade / SPP'
         WHEN 'TRANSICION_FT_SPP' THEN 'Transición / Fairtrade / SPP'
     END
-FROM CertificationType;
+FROM CertificationType
+WHERE code IN ('FAIRTRADE', 'FAIRTRADE_SPP', 'BIOSUISSE_FT_SPP', 'TRANSICION_FT_SPP')
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name);

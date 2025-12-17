@@ -11,6 +11,7 @@ import org.springframework.core.env.Environment;
 import jakarta.persistence.EntityManager;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
@@ -35,7 +36,29 @@ public class V2020_03_27_15_00__Prefill_Countries implements JpaMigration
         }
         
         String fullPath = path + "countries.csv";
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(fullPath), StandardCharsets.UTF_8)) {
+        InputStream countriesStream = null;
+        try {
+            countriesStream = new FileInputStream(fullPath);
+        } catch (FileNotFoundException ignored) {
+        }
+
+        if (countriesStream == null) {
+            try {
+                countriesStream = new FileInputStream("import/countries.csv");
+            } catch (FileNotFoundException ignored) {
+            }
+        }
+
+        if (countriesStream == null) {
+            countriesStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("import/countries.csv");
+        }
+
+        if (countriesStream == null) {
+            System.out.println("[Flyway] Prefill_Countries: countries.csv not found at " + fullPath + " (nor ./import/countries.csv), skipping country prefill.");
+            return;
+        }
+
+        try (InputStreamReader reader = new InputStreamReader(countriesStream, StandardCharsets.UTF_8)) {
             CSVParser parser = CSVFormat.DEFAULT.
                     withDelimiter(',').
                     withIgnoreSurroundingSpaces(true).
@@ -50,9 +73,6 @@ public class V2020_03_27_15_00__Prefill_Countries implements JpaMigration
                 c.setName(name);
                 em.persist(c);
             }
-        } catch (FileNotFoundException e) {
-            // countries.csv not present in this environment; skip prefill instead of failing migrations
-            System.out.println("[Flyway] Prefill_Countries: countries.csv not found at " + fullPath + ", skipping country prefill.");
         }
     }
 }
