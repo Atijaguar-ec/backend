@@ -23,7 +23,7 @@ import jakarta.validation.Valid;
  * REST controller for user-related operations.
  */
 @RestController
-@RequestMapping({"/user", "/api/user"})
+@RequestMapping("/user")
 public class UserController {
 	
 	@Autowired

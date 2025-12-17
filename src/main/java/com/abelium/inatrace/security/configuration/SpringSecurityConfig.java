@@ -54,7 +54,8 @@ public class SpringSecurityConfig {
 							"/api/user/register",
 							"/api/user/request_reset_password",
 							"/api/user/reset_password",
-							"/api/user/confirm_email"
+							"/api/user/confirm_email",
+							"/actuator/**"
 					).permitAll();
 					matcherRegistry.requestMatchers(SWAGGER_EXCEPTIONS).permitAll();
 					matcherRegistry.anyRequest().authenticated();
