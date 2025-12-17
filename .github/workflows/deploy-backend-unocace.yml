@@ -292,7 +292,7 @@ jobs:
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
             
-            echo "📥 Pulling image..."
+            echo "📥 Pulling image... "
             docker compose pull backend
             
             echo "🛑 Stopping old containers... "
