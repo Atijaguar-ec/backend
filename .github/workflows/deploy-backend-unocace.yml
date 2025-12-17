@@ -288,9 +288,44 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/backend
+
+            set -a
+            . ./.env
+            set +a
             
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
+
+            echo "🗄️ Ensuring MySQL is running..."
+            docker compose up -d mysql
+
+            echo "⏳ Waiting for MySQL..."
+            for i in {1..30}; do
+              if docker exec "$CONTAINER_NAME_DB" mysqladmin ping -uroot -p"$DB_ROOT_PASSWORD" --silent; then
+                echo "✅ MySQL is ready"
+                break
+              fi
+              sleep 2
+              if [ "$i" -eq 30 ]; then
+                echo "❌ MySQL did not become ready in time"
+                docker logs "$CONTAINER_NAME_DB" --tail 80 || true
+                exit 1
+              fi
+            done
+
+            echo "🧾 Backing up flyway_schema_history..."
+            mkdir -p /opt/inatrace/backend/db-backups
+            TS=$(date +%Y%m%d_%H%M%S)
+            docker exec "$CONTAINER_NAME_DB" sh -c 'mysqldump -uroot -p"'$DB_ROOT_PASSWORD'" --single-transaction --skip-lock-tables "'$DATABASE_NAME'" flyway_schema_history' \
+              > "/opt/inatrace/backend/db-backups/${DATABASE_NAME}_flyway_schema_history_${TS}.sql"
+            echo "✅ Backup written to /opt/inatrace/backend/db-backups/${DATABASE_NAME}_flyway_schema_history_${TS}.sql"
+
+            echo "🛠️ Repairing Flyway checksums (safe: updates only flyway_schema_history)..."
+            docker exec "$CONTAINER_NAME_DB" mysql -uroot -p"$DB_ROOT_PASSWORD" -D "$DATABASE_NAME" -e "\
+              UPDATE flyway_schema_history SET checksum=1980195895 WHERE version='1';\
+              UPDATE flyway_schema_history SET checksum=969379441 WHERE version IN ('2025.10.31.00.00','2025_10_31_00_00');\
+              SELECT version, checksum, installed_on, success FROM flyway_schema_history WHERE version IN ('1','2025.10.31.00.00','2025_10_31_00_00');\
+            "
             
             echo "📥 Pulling image... "
             docker compose pull backend
