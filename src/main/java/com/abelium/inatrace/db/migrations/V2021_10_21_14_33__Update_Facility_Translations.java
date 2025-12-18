@@ -25,7 +25,7 @@ public class V2021_10_21_14_33__Update_Facility_Translations implements JpaMigra
             String facilityName = (String) row[1];
             Facility facilityRef = em.getReference(Facility.class, facilityId);
 
-            for (Language language : List.of(Language.EN, Language.DE, Language.RW, Language.ES)) {
+            for (Language language : List.of(Language.EN, Language.ES)) {
                 FacilityTranslation facilityTranslation = new FacilityTranslation();
                 facilityTranslation.setFacility(facilityRef);
                 facilityTranslation.setLanguage(language);

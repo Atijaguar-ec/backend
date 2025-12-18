@@ -75,7 +75,7 @@ public class V2025_12_16_12_00__Fix_ProductType_Initialization_For_Cocoa impleme
     }
 
     private void ensureTranslations(EntityManager em, ProductType productType) {
-        for (Language language : List.of(Language.EN, Language.DE, Language.RW, Language.ES)) {
+        for (Language language : List.of(Language.EN, Language.ES)) {
             Long existingCount = em.createQuery(
                             "SELECT COUNT(t) FROM ProductTypeTranslation t WHERE t.productType = :pt AND t.language = :lang", Long.class)
                     .setParameter("pt", productType)
