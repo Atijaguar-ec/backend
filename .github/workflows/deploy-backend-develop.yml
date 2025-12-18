@@ -235,6 +235,7 @@ jobs:
           INATRACE_MAIL_SENDING_ENABLED=false
           INATRACE_AGSTACK_EMAIL=${{ secrets.DEV_AGSTACK_EMAIL }}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.DEV_AGSTACK_PASSWORD }}
+          INATRACE_FLYWAY_REPAIR_ON_STARTUP=true
           EOF
 
       - name: 📤 Upload .env
@@ -366,6 +367,7 @@ jobs:
           FE_CONFIRM_URL=${FE_URL}confirm-email/
           FE_RESET_URL=${FE_URL}reset-password/
           INATRACE_MAIL_SENDING_ENABLED=false
+          INATRACE_FLYWAY_REPAIR_ON_STARTUP=true
           EOF
 
       - name: 📤 Upload .env

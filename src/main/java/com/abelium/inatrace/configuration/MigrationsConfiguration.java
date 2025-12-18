@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationInitializer;
+import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -79,8 +80,19 @@ public class MigrationsConfiguration {
     @Bean
     @ConditionalOnClass(Flyway.class)
     @ConditionalOnProperty(value = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
-    FlywayMigrationInitializer flywayInitializer(Flyway flyway) {
-        return new FlywayMigrationInitializer(flyway);
+    FlywayMigrationInitializer flywayInitializer(Flyway flyway, Environment environment) {
+        boolean repairOnStartup = Boolean.parseBoolean(
+                environment.getProperty("INATRACE_FLYWAY_REPAIR_ON_STARTUP", "false"));
+
+        FlywayMigrationStrategy strategy = flywayInstance -> {
+            if (repairOnStartup) {
+                log.warn("[Flyway] INATRACE_FLYWAY_REPAIR_ON_STARTUP=true - running flyway.repair() before migrate()");
+                flywayInstance.repair();
+            }
+            flywayInstance.migrate();
+        };
+
+        return new FlywayMigrationInitializer(flyway, strategy);
     }
     
     /**
