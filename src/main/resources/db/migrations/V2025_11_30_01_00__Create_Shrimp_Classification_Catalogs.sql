@@ -148,7 +148,7 @@ VALUES
   ('MACH_01', 'Máquina 1', 'Clasificadora principal', 'CLASSIFIER', 1, 'ACTIVE', NOW(), NOW()),
   ('MACH_02', 'Máquina 2', 'Clasificadora secundaria', 'CLASSIFIER', 2, 'ACTIVE', NOW(), NOW()),
   ('MACH_03', 'Máquina 3', 'Clasificadora de respaldo', 'CLASSIFIER', 3, 'ACTIVE', NOW(), NOW()),
-   ('MACH_04', 'Máquina 4', 'Clasificadora de respaldo', 'CLASSIFIER', 4, 'ACTIVE', NOW(), NOW()),
+  ('MACH_04', 'Máquina 4', 'Clasificadora de respaldo', 'CLASSIFIER', 4, 'ACTIVE', NOW(), NOW())
 ON DUPLICATE KEY UPDATE `updateTimestamp` = NOW();
 
 -- Translations for Machine (Spanish)
