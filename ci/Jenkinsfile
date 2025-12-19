@@ -489,10 +489,8 @@ EOSSH
 
                 if [ -f .env ]; then
                   echo "🧹 Limpiando contenedor backend definido en .env (si existe)..."
-                  set -a
-                  . ./.env
-                  set +a
-                  if [ -n "${CONTAINER_NAME_BE:-}" ]; then
+                  CONTAINER_NAME_BE=$(grep '^CONTAINER_NAME_BE=' .env | head -1 | cut -d= -f2-)
+                  if [ -n "${CONTAINER_NAME_BE}" ]; then
                     docker rm -f "${CONTAINER_NAME_BE}" >/dev/null 2>&1 || true
                   fi
                 fi
