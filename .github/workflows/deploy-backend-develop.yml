@@ -282,7 +282,7 @@ jobs:
             echo "📦 Loading image..."
             docker load -i be-image.tar
             
-            echo "🚀 Starting services..."
+            echo "🚀 Starting services... "
             docker-compose up -d
             
             echo "⏳ Health check..."
