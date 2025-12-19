@@ -167,7 +167,7 @@ jobs:
             echo "🔗 Ensuring Docker network exists..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
 
-            echo "📦 Loading backend image..."
+            echo "📦 Loading backend image... "
             docker load -i be-image.tar
 
             echo "🛑 Stopping existing backend container if running"
