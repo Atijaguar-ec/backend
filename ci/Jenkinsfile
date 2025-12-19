@@ -389,9 +389,36 @@ pipeline {
                     printf '\n%s=%s' "$key" "$value" >> .env
                   fi
                 }
+                require_var() {
+                  local key="$1"
+                  local current
+                  current=$(grep "^${key}=" .env | head -1 | cut -d= -f2-)
+                  if [ -z "${current}" ]; then
+                    echo "❌ Variable requerida faltante o vacía en .env: ${key}" >&2
+                    exit 1
+                  fi
+                }
 
                 ensure_var TAG "${DEPLOY_TAG}"
                 ensure_var IMAGE_NAME "${IMAGE_REPOSITORY}"
+
+                # Validar que el .env aportado por credencial tenga los valores mínimos
+                REQUIRED_VARS=(
+                  DB_ROOT_PASSWORD
+                  DATABASE_NAME
+                  DATASOURCE_USERNAME
+                  DATASOURCE_PASSWORD
+                  DB_VOLUME
+                  FILE_STORAGE_ROOT
+                  IMPORT_PATH
+                  DOCUMENTS_ROOT
+                  FILE_STORAGE_ROOT_VOL
+                  IMPORT_PATH_VOL
+                  DOCUMENTS_ROOT_VOL
+                )
+                for var in "${REQUIRED_VARS[@]}"; do
+                  require_var "${var}"
+                done
                 echo "✅ Archivo .env actualizado"
               '''
             }
