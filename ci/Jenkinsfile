@@ -35,6 +35,12 @@ pipeline {
       description: '⚠️ Omitir backup de BD en producción (no recomendado para producción)' 
     )
     string(
+      name: 'STAGING_HEALTH_URL',
+      defaultValue: 'https://testinatrace.espam.edu.ec/api/actuator/health',
+      description: 'URL de healthcheck del backend en staging'
+    )
+    // Parámetros producción
+    string(
       name: 'PROD_HOST_PRIMARY',
       defaultValue: 'https://inatrace.espam.edu.ec',
       description: 'Hostname o IP del servidor de producción principal (ej. prod-fortaleza.atijaguar.com)'
@@ -58,6 +64,11 @@ pipeline {
       name: 'PROD_HEALTH_URL_PRIMARY',
       defaultValue: 'http://localhost:8082/actuator/health',
       description: 'URL externa para validar healthcheck del servidor principal'
+    )
+    string(
+      name: 'PROD_DB_CONTAINER_NAME',
+      defaultValue: 'inatrace-mysql-prod-fortaleza',
+      description: 'Nombre del contenedor MySQL en producción para backups'
     )
     
   }
@@ -135,8 +146,8 @@ pipeline {
           env.DEPLOY_TAG = params.BRANCH == 'main' ? 'latest' : "test-${env.GIT_SHORT_SHA}"
           env.FORTALEZA_ENV = params.BRANCH == 'main' ? 'prod' : 'test'
           env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 
-            'https://inatrace.espam.edu.ec/api/actuator/health' : 
-            'https://testinatrace.espam.edu.ec/api/actuator/health'
+            params.PROD_HEALTH_URL_PRIMARY : 
+            params.STAGING_HEALTH_URL
           env.PROJECT_DIR = fileExists('backend/pom.xml') ? 'backend' : '.'
           env.COMPOSE_DIR = fileExists('backend/ci/docker-compose.yml') ? 'backend/ci' : 'ci'
           
@@ -252,7 +263,7 @@ pipeline {
             echo \$GHCR_TOKEN | docker login ghcr.io -u \$GHCR_USER --password-stdin
 
             echo "📦 Compilando artefactos con Maven..."
-            mvn -B clean package -DskipTests -Dmaven.javadoc.skip=true
+            mvn -B package -DskipTests -Dmaven.javadoc.skip=true
 
             echo "🐳 Construyendo imagen Docker..."
             docker build \
@@ -269,9 +280,13 @@ pipeline {
             echo "📤 Publicando imagen con tag: ${DEPLOY_TAG}"
             docker push ${IMAGE_REPOSITORY}:${DEPLOY_TAG}
 
-            echo "🏷️ Etiquetando como latest..."
-            docker tag ${IMAGE_REPOSITORY}:${DEPLOY_TAG} ${IMAGE_REPOSITORY}:latest
-            docker push ${IMAGE_REPOSITORY}:latest
+            if [ "${params.BRANCH}" = "main" ]; then
+              echo "🏷️ Etiquetando como latest..."
+              docker tag ${IMAGE_REPOSITORY}:${DEPLOY_TAG} ${IMAGE_REPOSITORY}:latest
+              docker push ${IMAGE_REPOSITORY}:latest
+            else
+              echo "ℹ️ Tag latest omitido para ramas no main"
+            fi
 
             echo "✅ Imagen publicada exitosamente"
             docker images | grep ${IMAGE_REPOSITORY} | head -5
@@ -301,6 +316,9 @@ pipeline {
           sh '''
             set -e
             CONTAINER_NAME="inatrace-mysql-prod-fortaleza"
+            if [ -n "${PROD_DB_CONTAINER_NAME:-}" ]; then
+              CONTAINER_NAME="${PROD_DB_CONTAINER_NAME}"
+            fi
             BACKUP_DIR="/opt/inatrace/backups"
             BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S)-pre-deploy.sql.gz"
             
@@ -337,9 +355,7 @@ pipeline {
           echo "\n🚀 Iniciando despliegue en entorno: ${env.FORTALEZA_ENV}"
 
           def envCredential = env.FORTALEZA_ENV == 'prod' ? 'fortaleza-env-prod' : 'fortaleza-env-staging'
-          def healthUrl = env.FORTALEZA_ENV == 'prod'
-            ? "${params.PROD_HEALTH_PROTOCOL ?: 'https'}://${params.PROD_HEALTH_HOST ?: params.PROD_HOST}/api/actuator/health"
-            : "http://localhost:${params.PROD_HEALTH_PORT_PRIMARY ?: '8082'}/actuator/health"
+          def healthUrl = env.HEALTHCHECK_URL
 
           dir(env.COMPOSE_DIR) {
             withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
@@ -422,15 +438,11 @@ echo "⏳ Esperando healthcheck nativo (remoto)..."
 RETRY_COUNT=0
 MAX_RETRIES=12
 SLEEP_TIME=10
-SERVICE_NAME="inatrace-backend"
-CONTAINER_NAME="inatrace-be"
+SERVICE_NAME="backend"
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT + 1))
   CONTAINER_ID=$(docker-compose ps -q "${SERVICE_NAME}")
-  if [ -z "$CONTAINER_ID" ] && [ -n "$CONTAINER_NAME" ]; then
-    CONTAINER_ID=$(docker ps --filter "name=^/${CONTAINER_NAME}$" -q)
-  fi
   if [ -n "$CONTAINER_ID" ]; then
     HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
   else
@@ -458,7 +470,7 @@ EOSSH
                 '''
               }
             } else if (params.BRANCH == 'staging') {
-              // Despliegue local para rama staging (pruebas)
+              // Despliegue local (mismo nodo que Jenkins)
               sh '''
                 set -e
 
