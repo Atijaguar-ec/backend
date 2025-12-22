@@ -299,7 +299,7 @@ jobs:
             docker compose pull backend
             
             echo "🔧 Running Flyway repair (if needed)..."
-            source .env
+            set -a; . .env; set +a
             docker exec inatrace-mysql mysql -u"${DATASOURCE_USERNAME}" -p"${DATASOURCE_PASSWORD}" "${DATABASE_NAME}" -e "
               UPDATE schema_version 
               SET checksum = -608495929 
