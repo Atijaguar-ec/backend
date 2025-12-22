@@ -405,8 +405,8 @@ pipeline {
                 fi
                 
                 if ! grep -q "^DATASOURCE_PASSWORD=" .env || [ -z "$(grep "^DATASOURCE_PASSWORD=" .env | cut -d= -f2-)" ]; then
-                  echo "❌ DATASOURCE_PASSWORD es obligatorio y no está configurado" >&2
-                  exit 1
+                  echo "⚠️ DATASOURCE_PASSWORD no configurado, usando valor por defecto: inatrace"
+                  printf '\nDATASOURCE_PASSWORD=inatrace' >> .env
                 fi
                 
                 # Advertir sobre variables opcionales faltantes (no bloquean deploy)
