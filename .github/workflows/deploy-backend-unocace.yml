@@ -303,6 +303,7 @@ jobs:
             DB_PASS=$(grep "^DATASOURCE_PASSWORD=" .env | cut -d= -f2)
             DB_NAME=$(grep "^DATABASE_NAME=" .env | cut -d= -f2)
             docker exec inatrace-mysql mysql -u"${DB_USER}" -p"${DB_PASS}" "${DB_NAME}" -e "
+              -- Fix checksum mismatches
               UPDATE schema_version 
               SET checksum = -608495929 
               WHERE version = '1' AND checksum = 1980195895;
@@ -310,6 +311,10 @@ jobs:
               UPDATE schema_version 
               SET checksum = 1385525487 
               WHERE version = '2025.12.15.04.15' AND checksum != 1385525487;
+              
+              -- Remove failed migration V2025_12_22_12_30
+              DELETE FROM schema_version 
+              WHERE version = '2025.12.22.12.30' AND success = 0;
             " 2>/dev/null || echo "⚠️ Flyway repair SQL skipped (DB not ready or already fixed)"
             
             echo "🛑 Stopping old containers..."
