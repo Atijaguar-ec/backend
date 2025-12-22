@@ -360,8 +360,7 @@ pipeline {
           dir(env.COMPOSE_DIR) {
             withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
               sh '''
-                #!/usr/bin/env bash
-                set -euo pipefail
+                set -eu
 
                 echo "📋 Preparando archivo .env..."
                 cp $ENVFILE .env
