@@ -380,44 +380,26 @@ pipeline {
                 fi
 
                 echo "🛠️ Actualizando variables dinámicas en .env..."
-                ensure_var() {
-                  local key="$1"
-                  local value="$2"
-                  if grep -q "^${key}=" .env; then
-                    sed -i "s|^${key}=.*|${key}=${value}|" .env
-                  else
-                    printf '\n%s=%s' "$key" "$value" >> .env
-                  fi
-                }
-                require_var() {
-                  local key="$1"
-                  local current
-                  current=$(grep "^${key}=" .env | head -1 | cut -d= -f2- || true)
+                # Actualizar TAG e IMAGE_NAME
+                if grep -q "^TAG=" .env; then
+                  sed -i "s|^TAG=.*|TAG=${DEPLOY_TAG}|" .env
+                else
+                  printf '\nTAG=%s' "${DEPLOY_TAG}" >> .env
+                fi
+                
+                if grep -q "^IMAGE_NAME=" .env; then
+                  sed -i "s|^IMAGE_NAME=.*|IMAGE_NAME=${IMAGE_REPOSITORY}|" .env
+                else
+                  printf '\nIMAGE_NAME=%s' "${IMAGE_REPOSITORY}" >> .env
+                fi
+
+                # Validar variables requeridas
+                for var in DB_ROOT_PASSWORD DATABASE_NAME DATASOURCE_USERNAME DATASOURCE_PASSWORD DB_VOLUME FILE_STORAGE_ROOT IMPORT_PATH DOCUMENTS_ROOT FILE_STORAGE_ROOT_VOL IMPORT_PATH_VOL DOCUMENTS_ROOT_VOL; do
+                  current=$(grep "^${var}=" .env | head -1 | cut -d= -f2- || true)
                   if [ -z "${current}" ]; then
-                    echo "❌ Variable requerida faltante o vacía en .env: ${key}" >&2
+                    echo "❌ Variable requerida faltante o vacía en .env: ${var}" >&2
                     exit 1
                   fi
-                }
-
-                ensure_var TAG "${DEPLOY_TAG}"
-                ensure_var IMAGE_NAME "${IMAGE_REPOSITORY}"
-
-                # Validar que el .env aportado por credencial tenga los valores mínimos
-                REQUIRED_VARS=(
-                  DB_ROOT_PASSWORD
-                  DATABASE_NAME
-                  DATASOURCE_USERNAME
-                  DATASOURCE_PASSWORD
-                  DB_VOLUME
-                  FILE_STORAGE_ROOT
-                  IMPORT_PATH
-                  DOCUMENTS_ROOT
-                  FILE_STORAGE_ROOT_VOL
-                  IMPORT_PATH_VOL
-                  DOCUMENTS_ROOT_VOL
-                )
-                for var in "${REQUIRED_VARS[@]}"; do
-                  require_var "${var}"
                 done
                 echo "✅ Archivo .env actualizado"
               '''
