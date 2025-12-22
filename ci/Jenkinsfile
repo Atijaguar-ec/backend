@@ -360,7 +360,8 @@ pipeline {
           dir(env.COMPOSE_DIR) {
             withCredentials([file(credentialsId: envCredential, variable: 'ENVFILE')]) {
               sh '''
-                set -e
+                #!/usr/bin/env bash
+                set -euo pipefail
 
                 echo "📋 Preparando archivo .env..."
                 cp $ENVFILE .env
@@ -392,7 +393,7 @@ pipeline {
                 require_var() {
                   local key="$1"
                   local current
-                  current=$(grep "^${key}=" .env | head -1 | cut -d= -f2-)
+                  current=$(grep "^${key}=" .env | head -1 | cut -d= -f2- || true)
                   if [ -z "${current}" ]; then
                     echo "❌ Variable requerida faltante o vacía en .env: ${key}" >&2
                     exit 1

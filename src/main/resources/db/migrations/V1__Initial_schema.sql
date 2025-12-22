@@ -8,23 +8,6 @@
 -- Flyway se encarga de aplicarlo automáticamente en instalaciones limpias.
 -- ═══════════════════════════════════════════════════════════════
 
-SET @existing_tables = (
-  SELECT COUNT(1)
-  FROM INFORMATION_SCHEMA.TABLES
-  WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME <> 'schema_version'
-);
-
-SET @sql = IF(
-  @existing_tables = 0,
-  'SELECT 1',
-  'SIGNAL SQLSTATE ''45000'' SET MESSAGE_TEXT = ''Refusing to run V1__Initial_schema.sql on a non-empty schema. Do not delete schema_version in test/prod.'''
-);
-
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -336,7 +319,7 @@ CREATE TABLE `CompanyProcessingAction` (
 DROP TABLE IF EXISTS `CompanyTranslation`;
 CREATE TABLE `CompanyTranslation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `abbreviation` varchar(255) DEFAULT NULL,
   `about` longtext,
   `interview` longtext,
@@ -527,7 +510,7 @@ CREATE TABLE `FacilitySemiProduct` (
 DROP TABLE IF EXISTS `FacilityTranslation`;
 CREATE TABLE `FacilityTranslation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `entityVersion` bigint DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
   `facility_id` bigint NOT NULL,
@@ -820,7 +803,7 @@ CREATE TABLE `ProcessingActionPET` (
 DROP TABLE IF EXISTS `ProcessingActionTranslation`;
 CREATE TABLE `ProcessingActionTranslation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   `entityVersion` bigint DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
@@ -855,7 +838,7 @@ CREATE TABLE `ProcessingEvidenceField` (
 DROP TABLE IF EXISTS `ProcessingEvidenceFieldTranslation`;
 CREATE TABLE `ProcessingEvidenceFieldTranslation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `entityVersion` bigint DEFAULT NULL,
   `label` varchar(255) DEFAULT NULL,
   `processingEvidenceField_id` bigint NOT NULL,
@@ -879,7 +862,7 @@ CREATE TABLE `ProcessingEvidenceType` (
 DROP TABLE IF EXISTS `ProcessingEvidenceTypeTranslation`;
 CREATE TABLE `ProcessingEvidenceTypeTranslation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `entityVersion` bigint DEFAULT NULL,
   `label` varchar(255) DEFAULT NULL,
   `processingEvidenceType_id` bigint NOT NULL,
@@ -972,7 +955,7 @@ DROP TABLE IF EXISTS `ProductLabel`;
 CREATE TABLE `ProductLabel` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `entityVersion` bigint NOT NULL,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `status` enum('PUBLISHED','UNPUBLISHED') NOT NULL,
   `title` varchar(255) DEFAULT NULL,
   `uuid` varchar(64) DEFAULT NULL,
@@ -1133,7 +1116,7 @@ CREATE TABLE `ProductSettings` (
   `costBreakdown` bit(1) DEFAULT NULL,
   `gdprText` longtext,
   `incomeIncreaseDescription` longtext,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `privacyPolicyText` longtext,
   `termsOfUseText` longtext,
   `incomeIncreaseDocument_id` bigint DEFAULT NULL,
@@ -1163,7 +1146,7 @@ CREATE TABLE `ProductType` (
 DROP TABLE IF EXISTS `ProductTypeTranslation`;
 CREATE TABLE `ProductTypeTranslation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   `entityVersion` bigint DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
@@ -1218,7 +1201,7 @@ CREATE TABLE `SemiProduct` (
 DROP TABLE IF EXISTS `SemiProductTranslation`;
 CREATE TABLE `SemiProductTranslation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   `entityVersion` bigint DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
@@ -1447,7 +1430,7 @@ CREATE TABLE `User` (
   `updateTimestamp` datetime(6) DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
   `entityVersion` bigint NOT NULL,
-  `language` enum('EN','ES') NOT NULL,
+  `language` enum('DE','EN','ES','RW') NOT NULL,
   `name` varchar(255) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
   `role` enum('REGIONAL_ADMIN','SYSTEM_ADMIN','USER') DEFAULT NULL,
@@ -1570,7 +1553,7 @@ CREATE TABLE `User_AUD` (
   `REV` int NOT NULL,
   `REVTYPE` tinyint DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
-  `language` enum('EN','ES') DEFAULT NULL,
+  `language` enum('DE','EN','ES','RW') DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
   `role` enum('REGIONAL_ADMIN','SYSTEM_ADMIN','USER') DEFAULT NULL,
   `status` enum('ACTIVE','CONFIRMED_EMAIL','DEACTIVATED','UNCONFIRMED') DEFAULT NULL,
