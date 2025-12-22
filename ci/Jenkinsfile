@@ -347,7 +347,37 @@ pipeline {
     }
     
     // ========================================================================
-    // STAGE 5: Despliegue en Fortaleza
+    // STAGE 5: Aprobación manual para producción
+    // ========================================================================
+    stage('🔐 Aprobar Deploy a Producción') {
+      when {
+        expression { params.BRANCH == 'main' }
+      }
+      steps {
+        script {
+          echo "\n⚠️ PRODUCCIÓN: Aprobación manual requerida"
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "  Sistema: Trazabilidad de Cacao - ESPAM"
+          echo "  Entorno: PRODUCCIÓN (CEDIA)"
+          echo "  Commit: ${env.GIT_SHORT_SHA}"
+          echo "  Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
+          echo "  Backup: Completado ✅"
+          echo "═══════════════════════════════════════════════════════════════"
+          
+          timeout(time: 24, unit: 'HOURS') {
+            input(
+              message: '¿Confirmar despliegue a PRODUCCIÓN ESPAM?',
+              ok: 'Desplegar Ahora',
+              submitter: 'admin,devops-espam,alvaro-sanchez'
+            )
+          }
+          echo "✅ Despliegue aprobado. Continuando..."
+        }
+      }
+    }
+    
+    // ========================================================================
+    // STAGE 6: Despliegue en Fortaleza
     // ========================================================================
     stage('🚀 Deploy Fortaleza') {
       steps {

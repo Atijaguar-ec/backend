@@ -1,4 +1,11 @@
-# Despliegue Backend - Fortaleza del Valle
+# Despliegue Backend - Trazabilidad de Cacao ESPAM
+
+## Arquitectura de Despliegue
+
+**Sistema:** Trazabilidad de Cacao  
+**Institución:** Universidad ESPAM  
+**Infraestructura:** CEDIA  
+**Entornos:** Staging (test) + Producción
 
 ## Credenciales requeridas en Jenkins
 
@@ -45,23 +52,31 @@ MAIL_USERNAME=desarrollo@atijaguar.com
 MAIL_PASSWORD=<mail_password_real>
 ```
 
-## Cómo configurar la credencial en Jenkins
+## Cómo configurar credenciales en Jenkins
 
+### Para Staging (Test)
 1. **Ir a Jenkins UI**
    - Navigate to: `Manage Jenkins` → `Credentials` → `System` → `Global credentials`
 
-2. **Agregar nueva credencial** (o editar existente)
+2. **Agregar credencial de staging**
    - Kind: **Secret file**
-   - File: Subir `ci/.env.example` (modificado con passwords reales)
+   - File: Subir tu `.env` de staging (basado en `ci/.env.example`)
    - ID: `fortaleza-env-staging`
-   - Description: `Fortaleza del Valle - Environment Variables (Staging)`
+   - Description: `ESPAM Staging - Environment Variables`
 
-3. **Validar**
-   - El pipeline validará automáticamente que existan las 3 variables críticas:
+### Para Producción
+1. **Crear credencial de producción** (SEPARADA de staging)
+   - Kind: **Secret file**
+   - File: Subir tu `.env` de **producción** (passwords diferentes)
+   - ID: `fortaleza-env-prod`
+   - Description: `ESPAM Producción - Environment Variables (CEDIA)`
+
+2. **Validación automática**
+   - El pipeline validará que existan las 3 variables críticas:
      - `DATABASE_NAME`
      - `DATASOURCE_USERNAME`
      - `DATASOURCE_PASSWORD`
-   - Si falta alguna, el build fallará con mensaje claro
+   - Si falta alguna, usará valores por defecto (staging) o fallará (prod)
 
 ## Variables Críticas vs Opcionales
 
@@ -76,11 +91,91 @@ MAIL_PASSWORD=<mail_password_real>
 - `FILE_STORAGE_ROOT`: Rutas de almacenamiento
 - Etc.
 
+## Proceso de Despliegue a Producción
+
+### Pre-requisitos
+1. ✅ Código testeado en staging
+2. ✅ Credencial `fortaleza-env-prod` configurada en Jenkins
+3. ✅ Credencial SSH `usuario-prod-ssh` configurada
+4. ✅ Merge de `staging` → `main` aprobado
+
+### Pasos para Deploy a Producción
+
+1. **Preparar el código**
+   ```bash
+   git checkout staging
+   git pull origin staging
+   # Verificar que todo esté OK en staging
+   
+   git checkout main
+   git merge staging
+   git push origin main
+   ```
+
+2. **Ejecutar Pipeline en Jenkins**
+   - Ir a job `Deploy-Backend`
+   - Click en **"Build with Parameters"**
+   - Seleccionar:
+     - `BRANCH = main`
+     - `SKIP_TESTS = false` (SIEMPRE correr tests en prod)
+     - `SKIP_DB_BACKUP = false` (SIEMPRE hacer backup)
+
+3. **Aprobación Manual** ⏸️
+   - Jenkins pausará en stage **"🔐 Aprobar Deploy a Producción"**
+   - Mostrará resumen del deploy:
+     - Commit a desplegar
+     - Imagen Docker
+     - Estado del backup
+   - Solo usuarios autorizados pueden aprobar:
+     - `admin`
+     - `devops-espam`
+     - `alvaro-sanchez`
+   - Click en **"Desplegar Ahora"** para continuar
+
+4. **Monitoreo durante Deploy**
+   - Seguir logs en Jenkins en tiempo real
+   - Verificar que backup se completó ✅
+   - Observar healthcheck automático
+   - Esperar mensaje de éxito
+
+5. **Validación Post-Deploy**
+   ```bash
+   # Verificar contenedor corriendo
+   docker ps | grep backend
+   
+   # Verificar logs
+   docker logs <container-name> --tail 50
+   
+   # Verificar health endpoint
+   curl https://inatrace.espam.edu.ec/actuator/health
+   ```
+
+6. **Rollback (si es necesario)**
+   - Jenkins automáticamente hará rollback si falla healthcheck
+   - Manual: desplegar el tag anterior desde Jenkins
+   - Restaurar backup: `docker exec mysql mysql ... < backup-YYYYMMDD.sql.gz`
+
+### Checklist de Seguridad
+
+Antes del primer deploy a producción, verificar:
+
+- [ ] Passwords de producción diferentes a staging
+- [ ] Certificados SSL configurados
+- [ ] Backup automático funcionando
+- [ ] Logs rotando correctamente
+- [ ] Firewall configurado
+- [ ] Acceso SSH solo por llave
+- [ ] Variables sensibles en Jenkins Credentials (NO en código)
+- [ ] Documentación actualizada
+- [ ] Contactos de emergencia documentados
+- [ ] Plan de rollback probado
+
 ## Referencia rápida
 
 - **Template completo**: `ci/.env.example`
 - **Docker Compose**: `ci/docker-compose.yml`
 - **Post-deploy script**: `ci/post-deploy-init.sh`
+- **Jenkinsfile**: `ci/Jenkinsfile`
 
 ## Troubleshooting
 
