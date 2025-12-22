@@ -393,18 +393,42 @@ pipeline {
                   printf '\nIMAGE_NAME=%s' "${IMAGE_REPOSITORY}" >> .env
                 fi
 
+                # Normalizar archivo .env (line endings, BOM, espacios)
+                echo "🧹 Normalizando formato del .env..."
+                if command -v python3 >/dev/null 2>&1; then
+                  python3 - <<'PY'
+from pathlib import Path
+env_path = Path(".env")
+data = env_path.read_bytes()
+if data.startswith(b'\xef\xbb\xbf'):
+    data = data[3:]
+data = data.replace(b'\r', b'')
+env_path.write_bytes(data)
+PY
+                else
+                  tmp_env_file=$(mktemp)
+                  tr -d '\r' < .env > "${tmp_env_file}"
+                  mv "${tmp_env_file}" .env
+                  if [ "$(hexdump -n 3 -v -e '/1 "%02X"' .env 2>/dev/null)" = "EFBBBF" ]; then
+                    tmp_env_file=$(mktemp)
+                    tail -c +4 .env > "${tmp_env_file}"
+                    mv "${tmp_env_file}" .env
+                  fi
+                fi
+                
                 # Validar variables críticas (fail-fast si faltan)
                 echo "🔍 Validando variables críticas del backend..."
                 MISSING_VARS=""
                 
                 for var in DATABASE_NAME DATASOURCE_USERNAME DATASOURCE_PASSWORD; do
-                  if ! grep -q "^${var}=" .env; then
+                  line=$(grep -E "^[[:space:]]*${var}=" .env | head -1 || true)
+                  if [ -z "${line}" ]; then
                     MISSING_VARS="${MISSING_VARS} ${var}"
-                  else
-                    value=$(grep "^${var}=" .env | cut -d= -f2- | head -1)
-                    if [ -z "${value}" ]; then
-                      MISSING_VARS="${MISSING_VARS} ${var}(empty)"
-                    fi
+                    continue
+                  fi
+                  value=$(printf '%s' "${line}" | sed -E "s/^[[:space:]]*${var}=[[:space:]]*(.*)/\1/" | sed -E 's/[[:space:]]+$//')
+                  if [ -z "${value}" ]; then
+                    MISSING_VARS="${MISSING_VARS} ${var}(empty)"
                   fi
                 done
                 
