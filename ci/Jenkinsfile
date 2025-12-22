@@ -393,12 +393,20 @@ pipeline {
                   printf '\nIMAGE_NAME=%s' "${IMAGE_REPOSITORY}" >> .env
                 fi
 
-                # Validar variables requeridas
-                for var in DB_ROOT_PASSWORD DATABASE_NAME DATASOURCE_USERNAME DATASOURCE_PASSWORD DB_VOLUME FILE_STORAGE_ROOT IMPORT_PATH DOCUMENTS_ROOT FILE_STORAGE_ROOT_VOL IMPORT_PATH_VOL DOCUMENTS_ROOT_VOL; do
-                  current=$(grep "^${var}=" .env | head -1 | cut -d= -f2- || true)
+                # Validar variables críticas (solo las esenciales para el backend)
+                for var in DATABASE_NAME DATASOURCE_USERNAME DATASOURCE_PASSWORD; do
+                  current=$(grep "^${var}=" .env | cut -d= -f2- | head -1 || echo "")
                   if [ -z "${current}" ]; then
-                    echo "❌ Variable requerida faltante o vacía en .env: ${var}" >&2
+                    echo "❌ Variable crítica faltante o vacía en .env: ${var}" >&2
                     exit 1
+                  fi
+                done
+                
+                # Advertir sobre variables opcionales faltantes (no bloquean deploy)
+                for var in DB_ROOT_PASSWORD DB_VOLUME FILE_STORAGE_ROOT IMPORT_PATH DOCUMENTS_ROOT FILE_STORAGE_ROOT_VOL IMPORT_PATH_VOL DOCUMENTS_ROOT_VOL; do
+                  current=$(grep "^${var}=" .env | cut -d= -f2- | head -1 || echo "")
+                  if [ -z "${current}" ]; then
+                    echo "⚠️ Variable opcional no configurada en .env: ${var}"
                   fi
                 done
                 echo "✅ Archivo .env actualizado"
