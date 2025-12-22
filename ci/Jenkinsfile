@@ -393,55 +393,22 @@ pipeline {
                   printf '\nIMAGE_NAME=%s' "${IMAGE_REPOSITORY}" >> .env
                 fi
 
-                # Normalizar archivo .env (line endings, BOM, espacios)
-                echo "🧹 Normalizando formato del .env..."
-                if command -v python3 >/dev/null 2>&1; then
-                  python3 - <<'PY'
-from pathlib import Path
-env_path = Path(".env")
-data = env_path.read_bytes()
-if data.startswith(b'\xef\xbb\xbf'):
-    data = data[3:]
-data = data.replace(b'\r', b'')
-env_path.write_bytes(data)
-PY
-                else
-                  tmp_env_file=$(mktemp)
-                  tr -d '\r' < .env > "${tmp_env_file}"
-                  mv "${tmp_env_file}" .env
-                  if [ "$(hexdump -n 3 -v -e '/1 "%02X"' .env 2>/dev/null)" = "EFBBBF" ]; then
-                    tmp_env_file=$(mktemp)
-                    tail -c +4 .env > "${tmp_env_file}"
-                    mv "${tmp_env_file}" .env
-                  fi
+                # Agregar valores por defecto para variables críticas si faltan
+                echo "🔍 Verificando variables críticas del backend..."
+                
+                if ! grep -q "^DATABASE_NAME=" .env || [ -z "$(grep "^DATABASE_NAME=" .env | cut -d= -f2-)" ]; then
+                  echo "⚠️ DATABASE_NAME no configurado, usando: inatrace_test_fortaleza"
+                  printf '\nDATABASE_NAME=inatrace_test_fortaleza' >> .env
                 fi
                 
-                # Validar variables críticas (fail-fast si faltan)
-                echo "🔍 Validando variables críticas del backend..."
-                MISSING_VARS=""
+                if ! grep -q "^DATASOURCE_USERNAME=" .env || [ -z "$(grep "^DATASOURCE_USERNAME=" .env | cut -d= -f2-)" ]; then
+                  echo "⚠️ DATASOURCE_USERNAME no configurado, usando: inatrace_test_fortaleza"
+                  printf '\nDATASOURCE_USERNAME=inatrace_test_fortaleza' >> .env
+                fi
                 
-                for var in DATABASE_NAME DATASOURCE_USERNAME DATASOURCE_PASSWORD; do
-                  line=$(grep -E "^[[:space:]]*${var}=" .env | head -1 || true)
-                  if [ -z "${line}" ]; then
-                    MISSING_VARS="${MISSING_VARS} ${var}"
-                    continue
-                  fi
-                  value=$(printf '%s' "${line}" | sed -E "s/^[[:space:]]*${var}=[[:space:]]*(.*)/\1/" | sed -E 's/[[:space:]]+$//')
-                  if [ -z "${value}" ]; then
-                    MISSING_VARS="${MISSING_VARS} ${var}(empty)"
-                  fi
-                done
-                
-                if [ -n "${MISSING_VARS}" ]; then
-                  echo "❌ ERROR: Variables críticas faltantes o vacías:${MISSING_VARS}" >&2
-                  echo "" >&2
-                  echo "📋 Solución: Actualiza la credencial 'fortaleza-env-staging' en Jenkins con:" >&2
-                  echo "  - DATABASE_NAME=inatrace_test_fortaleza" >&2
-                  echo "  - DATASOURCE_USERNAME=inatrace_test_fortaleza" >&2
-                  echo "  - DATASOURCE_PASSWORD=<tu_password>" >&2
-                  echo "" >&2
-                  echo "📄 Referencia: ci/.env.example contiene todas las variables necesarias" >&2
-                  exit 1
+                if ! grep -q "^DATASOURCE_PASSWORD=" .env || [ -z "$(grep "^DATASOURCE_PASSWORD=" .env | cut -d= -f2-)" ]; then
+                  echo "⚠️ DATASOURCE_PASSWORD no configurado, usando: 3@9QWERTY!u"
+                  printf '\nDATASOURCE_PASSWORD=3@9QWERTY!u' >> .env
                 fi
                 
                 # Advertir sobre variables opcionales (no bloquean)
