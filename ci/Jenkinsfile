@@ -393,30 +393,41 @@ pipeline {
                   printf '\nIMAGE_NAME=%s' "${IMAGE_REPOSITORY}" >> .env
                 fi
 
-                # Agregar valores por defecto si faltan variables críticas
-                if ! grep -q "^DATABASE_NAME=" .env || [ -z "$(grep "^DATABASE_NAME=" .env | cut -d= -f2-)" ]; then
-                  echo "⚠️ DATABASE_NAME no configurado, usando valor por defecto: inatrace_test_fortaleza"
-                  printf '\nDATABASE_NAME=inatrace_test_fortaleza' >> .env
-                fi
+                # Validar variables críticas (fail-fast si faltan)
+                echo "🔍 Validando variables críticas del backend..."
+                MISSING_VARS=""
                 
-                if ! grep -q "^DATASOURCE_USERNAME=" .env || [ -z "$(grep "^DATASOURCE_USERNAME=" .env | cut -d= -f2-)" ]; then
-                  echo "⚠️ DATASOURCE_USERNAME no configurado, usando valor por defecto: inatrace"
-                  printf '\nDATASOURCE_USERNAME=inatrace' >> .env
-                fi
-                
-                if ! grep -q "^DATASOURCE_PASSWORD=" .env || [ -z "$(grep "^DATASOURCE_PASSWORD=" .env | cut -d= -f2-)" ]; then
-                  echo "⚠️ DATASOURCE_PASSWORD no configurado, usando valor por defecto: inatrace"
-                  printf '\nDATASOURCE_PASSWORD=inatrace' >> .env
-                fi
-                
-                # Advertir sobre variables opcionales faltantes (no bloquean deploy)
-                for var in DB_ROOT_PASSWORD DB_VOLUME FILE_STORAGE_ROOT IMPORT_PATH DOCUMENTS_ROOT FILE_STORAGE_ROOT_VOL IMPORT_PATH_VOL DOCUMENTS_ROOT_VOL; do
-                  current=$(grep "^${var}=" .env | cut -d= -f2- | head -1 || echo "")
-                  if [ -z "${current}" ]; then
-                    echo "⚠️ Variable opcional no configurada en .env: ${var}"
+                for var in DATABASE_NAME DATASOURCE_USERNAME DATASOURCE_PASSWORD; do
+                  if ! grep -q "^${var}=" .env; then
+                    MISSING_VARS="${MISSING_VARS} ${var}"
+                  else
+                    value=$(grep "^${var}=" .env | cut -d= -f2- | head -1)
+                    if [ -z "${value}" ]; then
+                      MISSING_VARS="${MISSING_VARS} ${var}(empty)"
+                    fi
                   fi
                 done
-                echo "✅ Archivo .env actualizado"
+                
+                if [ -n "${MISSING_VARS}" ]; then
+                  echo "❌ ERROR: Variables críticas faltantes o vacías:${MISSING_VARS}" >&2
+                  echo "" >&2
+                  echo "📋 Solución: Actualiza la credencial 'fortaleza-env-staging' en Jenkins con:" >&2
+                  echo "  - DATABASE_NAME=inatrace_test_fortaleza" >&2
+                  echo "  - DATASOURCE_USERNAME=inatrace_test_fortaleza" >&2
+                  echo "  - DATASOURCE_PASSWORD=<tu_password>" >&2
+                  echo "" >&2
+                  echo "📄 Referencia: ci/.env.example contiene todas las variables necesarias" >&2
+                  exit 1
+                fi
+                
+                # Advertir sobre variables opcionales (no bloquean)
+                for var in DB_ROOT_PASSWORD DB_VOLUME FILE_STORAGE_ROOT IMPORT_PATH DOCUMENTS_ROOT; do
+                  if ! grep -q "^${var}=" .env || [ -z "$(grep "^${var}=" .env | cut -d= -f2-)" ]; then
+                    echo "⚠️ Variable opcional no configurada: ${var}"
+                  fi
+                done
+                
+                echo "✅ Validación de variables completada"
               '''
             }
 
