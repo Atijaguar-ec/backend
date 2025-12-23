@@ -454,26 +454,29 @@ pipeline {
 
             // Despliegue remoto solo para rama main (producción)
             if (params.BRANCH == 'main') {
-              sshagent(['usuario-prod-ssh']) {
+              withCredentials([sshUserPrivateKey(credentialsId: 'usuario-prod-ssh', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                 sh '''
                   set -e
 
-                  SSH_TARGET="${PROD_USER_PRIMARY}@${PROD_HOST_PRIMARY}"
+                  SSH_TARGET="${SSH_USER}@${PROD_HOST_PRIMARY}"
                   REMOTE_DIR="${PROD_TARGET_PRIMARY}"
 
                   echo "🚀 Sincronizando archivos a servidor remoto: ${SSH_TARGET}:${REMOTE_DIR}"
 
+                  # Configurar SSH para usar la llave privada
+                  export SSH_OPTS="-i ${SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
                   # Crear directorio remoto si no existe
-                  ssh "${SSH_TARGET}" "mkdir -p ${REMOTE_DIR}"
+                  ssh ${SSH_OPTS} "${SSH_TARGET}" "mkdir -p ${REMOTE_DIR}"
 
                   # Copiar archivos necesarios
-                  scp docker-compose.yml "${SSH_TARGET}:${REMOTE_DIR}/docker-compose.yml"
-                  scp .env "${SSH_TARGET}:${REMOTE_DIR}/.env"
+                  scp ${SSH_OPTS} docker-compose.yml "${SSH_TARGET}:${REMOTE_DIR}/docker-compose.yml"
+                  scp ${SSH_OPTS} .env "${SSH_TARGET}:${REMOTE_DIR}/.env"
 
                   echo "📋 Ejecutando despliegue remoto..."
 
                   # Ejecutar comandos en el servidor remoto
-                  ssh "${SSH_TARGET}" << 'EOSSH'
+                  ssh ${SSH_OPTS} "${SSH_TARGET}" << 'EOSSH'
 set -e
 cd ${REMOTE_DIR}
 
