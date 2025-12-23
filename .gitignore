@@ -175,3 +175,4 @@ docs/INFORME_FINAL_BACKEND_INATRACE_ECUADOR.md
 src/main/java/com/abelium/inatrace/db/migrations/README_PRODUCT_TYPE_MIGRATIONS.md
 docs/dicionario.docx
 docs/informe.docx
+ci/.env-prod
