@@ -442,14 +442,9 @@ pipeline {
                 fi
                 
                 # Asegurar variables de volúmenes (si faltan usar mismos paths locales)
-                declare -A VOLUME_MAP=(
-                  ["FILE_STORAGE_ROOT_VOL"]="FILE_STORAGE_ROOT"
-                  ["IMPORT_PATH_VOL"]="IMPORT_PATH"
-                  ["DOCUMENTS_ROOT_VOL"]="DOCUMENTS_ROOT"
-                )
-
-                for vol_var in "${!VOLUME_MAP[@]}"; do
-                  target_var="${VOLUME_MAP[$vol_var]}"
+                for vol_pair in "FILE_STORAGE_ROOT_VOL:FILE_STORAGE_ROOT" "IMPORT_PATH_VOL:IMPORT_PATH" "DOCUMENTS_ROOT_VOL:DOCUMENTS_ROOT"; do
+                  vol_var="${vol_pair%%:*}"
+                  target_var="${vol_pair##*:}"
                   target_value="$(grep "^${target_var}=" .env | cut -d= -f2- || true)"
                   if ! grep -q "^${vol_var}=" .env || [ -z "$(grep "^${vol_var}=" .env | cut -d= -f2-)" ]; then
                     if [ -n "${target_value}" ]; then
