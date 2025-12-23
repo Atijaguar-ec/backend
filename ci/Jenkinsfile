@@ -441,6 +441,26 @@ pipeline {
                   printf '\nDATASOURCE_PASSWORD=3@9QWERTY!u' >> .env
                 fi
                 
+                # Asegurar variables de volúmenes (si faltan usar mismos paths locales)
+                declare -A VOLUME_MAP=(
+                  ["FILE_STORAGE_ROOT_VOL"]="FILE_STORAGE_ROOT"
+                  ["IMPORT_PATH_VOL"]="IMPORT_PATH"
+                  ["DOCUMENTS_ROOT_VOL"]="DOCUMENTS_ROOT"
+                )
+
+                for vol_var in "${!VOLUME_MAP[@]}"; do
+                  target_var="${VOLUME_MAP[$vol_var]}"
+                  target_value="$(grep "^${target_var}=" .env | cut -d= -f2- || true)"
+                  if ! grep -q "^${vol_var}=" .env || [ -z "$(grep "^${vol_var}=" .env | cut -d= -f2-)" ]; then
+                    if [ -n "${target_value}" ]; then
+                      echo "ℹ️ ${vol_var} no definido, usando ${target_value}"
+                      printf '\n%s=%s' "${vol_var}" "${target_value}" >> .env
+                    else
+                      echo "⚠️ ${vol_var} no tiene ${target_var} base, deja valor vacío"
+                    fi
+                  fi
+                done
+
                 # Advertir sobre variables opcionales (no bloquean)
                 for var in DB_ROOT_PASSWORD DB_VOLUME FILE_STORAGE_ROOT IMPORT_PATH DOCUMENTS_ROOT; do
                   if ! grep -q "^${var}=" .env || [ -z "$(grep "^${var}=" .env | cut -d= -f2-)" ]; then
