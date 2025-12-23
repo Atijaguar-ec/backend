@@ -475,10 +475,10 @@ pipeline {
 
                   echo "📋 Ejecutando despliegue remoto..."
 
-                  # Ejecutar comandos en el servidor remoto
-                  ssh ${SSH_OPTS} "${SSH_TARGET}" << 'EOSSH'
+                  # Ejecutar comandos en el servidor remoto (inyectando REMOTE_DIR)
+                  cat <<'EOSSH' | ssh ${SSH_OPTS} "${SSH_TARGET}" "REMOTE_DIR='${REMOTE_DIR}' bash -s"
 set -e
-cd ${REMOTE_DIR}
+cd "${REMOTE_DIR}"
 
 echo "🔗 Verificando red Docker..."
 docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
