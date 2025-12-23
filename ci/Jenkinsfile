@@ -42,8 +42,8 @@ pipeline {
     // Parámetros producción
     string(
       name: 'PROD_HOST_PRIMARY',
-      defaultValue: '190.15.143.192',
-      description: 'IP del servidor de producción ESPAM/CEDIA'
+      defaultValue: '10.10.102.26',
+      description: 'IP interna del servidor de producción ESPAM/CEDIA'
     )
     string(
       name: 'PROD_USER_PRIMARY',
