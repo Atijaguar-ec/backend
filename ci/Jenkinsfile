@@ -500,13 +500,13 @@ docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
   docker network create inatrace-backend-network
 
 echo "📥 Descargando última imagen..."
-docker-compose pull || true
+docker compose pull || true
 
 echo "🔄 Desplegando servicios..."
-docker-compose up -d --remove-orphans --force-recreate
+docker compose up -d --remove-orphans --force-recreate
 
 echo "📊 Estado inicial de contenedores:"
-docker-compose ps
+docker compose ps
 
 echo "⏳ Esperando healthcheck nativo (remoto)..."
 RETRY_COUNT=0
@@ -516,7 +516,7 @@ SERVICE_NAME="backend"
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT + 1))
-  CONTAINER_ID=$(docker-compose ps -q "${SERVICE_NAME}")
+  CONTAINER_ID=$(docker compose ps -q "${SERVICE_NAME}")
   if [ -n "$CONTAINER_ID" ]; then
     HEALTH_STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Health.Status}}' 2>/dev/null || echo 'unknown')
   else
@@ -526,7 +526,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   if [ "$HEALTH_STATUS" = "healthy" ]; then
     echo "✅ Backend Fortaleza está saludable (Estado: $HEALTH_STATUS)"
     echo "📈 Logs recientes:"
-    docker-compose logs --tail=20 inatrace-be
+    docker compose logs --tail=20 inatrace-be
     exit 0
   fi
 
@@ -536,9 +536,9 @@ done
 
 echo "❌ Healthcheck nativo falló después de ${MAX_RETRIES} intentos" >&2
 echo "📋 Logs del contenedor:"
-docker-compose logs --tail=50 inatrace-be
+docker compose logs --tail=50 inatrace-be
 echo "📊 Estado final de contenedores:"
-docker-compose ps
+docker compose ps
 exit 1
 EOSSH
                 '''
@@ -553,13 +553,13 @@ EOSSH
                   docker network create inatrace-backend-network
 
                 echo "📥 Descargando última imagen..."
-                docker-compose pull || true
+                docker compose pull || true
 
                 echo "🛑 Deteniendo backend previo..."
-                docker-compose stop backend >/dev/null 2>&1 || true
+                docker compose stop backend >/dev/null 2>&1 || true
 
                 echo "🗑️ Eliminando backend previo..."
-                docker-compose rm -f backend >/dev/null 2>&1 || true
+                docker compose rm -f backend >/dev/null 2>&1 || true
 
                 if [ -f .env ]; then
                   echo "🧹 Limpiando contenedor backend definido en .env (si existe)..."
@@ -570,10 +570,10 @@ EOSSH
                 fi
 
                 echo "🔄 Desplegando servicios localmente..."
-                docker-compose up -d --remove-orphans --force-recreate backend
+                docker compose up -d --remove-orphans --force-recreate backend
 
                 echo "📊 Estado inicial de contenedores:"
-                docker-compose ps
+                docker compose ps
 
                 echo "⏳ Esperando healthcheck nativo (local)..."
                 RETRY_COUNT=0
@@ -584,7 +584,7 @@ EOSSH
 
                 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
                   RETRY_COUNT=$((RETRY_COUNT + 1))
-                  CONTAINER_ID=$(docker-compose ps -q "${SERVICE_NAME}")
+                  CONTAINER_ID=$(docker compose ps -q "${SERVICE_NAME}")
                   if [ -z "$CONTAINER_ID" ] && [ -n "$CONTAINER_NAME" ]; then
                     CONTAINER_ID=$(docker ps --filter "name=^/${CONTAINER_NAME}$" -q)
                   fi
@@ -597,7 +597,7 @@ EOSSH
                   if [ "$HEALTH_STATUS" = "healthy" ]; then
                     echo "✅ Backend local está saludable (Estado: $HEALTH_STATUS)"
                     echo "📈 Logs recientes:"
-                    docker-compose logs --tail=20 "$SERVICE_NAME"
+                    docker compose logs --tail=20 "$SERVICE_NAME"
                     exit 0
                   fi
 
@@ -607,9 +607,9 @@ EOSSH
 
                 echo "❌ Healthcheck nativo falló después de ${MAX_RETRIES} intentos" >&2
                 echo "📋 Logs del contenedor:"
-                docker-compose logs --tail=50 "$SERVICE_NAME"
+                docker compose logs --tail=50 "$SERVICE_NAME"
                 echo "📊 Estado final de contenedores:"
-                docker-compose ps
+                docker compose ps
                 exit 1
               '''
             } else {
