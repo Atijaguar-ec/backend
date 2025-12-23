@@ -441,6 +441,38 @@ pipeline {
                   printf '\nDATASOURCE_PASSWORD=3@9QWERTY!u' >> .env
                 fi
                 
+                # Configurar tipo de producto para evitar migraciones no deseadas
+                if ! grep -q "^INATRACE_PRODUCT_TYPE=" .env || [ -z "$(grep "^INATRACE_PRODUCT_TYPE=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ INATRACE_PRODUCT_TYPE no definido, usando: CACAO"
+                  printf '\nINATRACE_PRODUCT_TYPE=CACAO' >> .env
+                fi
+                
+                # Configurar datos de usuario/empresa administrador por defecto
+                if ! grep -q "^INATRACE_ADMIN_EMAIL=" .env || [ -z "$(grep "^INATRACE_ADMIN_EMAIL=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ INATRACE_ADMIN_EMAIL no definido, usando: inatrace@espam.edu.ec"
+                  printf '\nINATRACE_ADMIN_EMAIL=inatrace@espam.edu.ec' >> .env
+                fi
+                
+                if ! grep -q "^INATRACE_ADMIN_PASSWORD=" .env || [ -z "$(grep "^INATRACE_ADMIN_PASSWORD=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ INATRACE_ADMIN_PASSWORD no definido, usando: Admin123!"
+                  printf '\nINATRACE_ADMIN_PASSWORD=Admin123!' >> .env
+                fi
+                
+                if ! grep -q "^INATRACE_ADMIN_NAME=" .env || [ -z "$(grep "^INATRACE_ADMIN_NAME=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ INATRACE_ADMIN_NAME no definido, usando: Administrador"
+                  printf '\nINATRACE_ADMIN_NAME=Administrador' >> .env
+                fi
+                
+                if ! grep -q "^INATRACE_ADMIN_SURNAME=" .env || [ -z "$(grep "^INATRACE_ADMIN_SURNAME=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ INATRACE_ADMIN_SURNAME no definido, usando: Fortaleza"
+                  printf '\nINATRACE_ADMIN_SURNAME=Fortaleza' >> .env
+                fi
+                
+                if ! grep -q "^INATRACE_ADMIN_COMPANY_NAME=" .env || [ -z "$(grep "^INATRACE_ADMIN_COMPANY_NAME=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ INATRACE_ADMIN_COMPANY_NAME no definido, usando: Fortaleza del Valle"
+                  printf '\nINATRACE_ADMIN_COMPANY_NAME=Fortaleza del Valle' >> .env
+                fi
+                
                 # Asegurar variables de volúmenes (si faltan usar mismos paths locales)
                 for vol_pair in "FILE_STORAGE_ROOT_VOL:FILE_STORAGE_ROOT" "IMPORT_PATH_VOL:IMPORT_PATH" "DOCUMENTS_ROOT_VOL:DOCUMENTS_ROOT"; do
                   vol_var="${vol_pair%%:*}"
