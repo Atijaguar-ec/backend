@@ -42,13 +42,13 @@ pipeline {
     // Parámetros producción
     string(
       name: 'PROD_HOST_PRIMARY',
-      defaultValue: 'https://inatrace.espam.edu.ec',
-      description: 'Hostname o IP del servidor de producción principal (ej. prod-fortaleza.atijaguar.com)'
+      defaultValue: '190.15.143.192',
+      description: 'IP del servidor de producción ESPAM/CEDIA'
     )
     string(
       name: 'PROD_USER_PRIMARY',
-      defaultValue: 'inatrace',
-      description: 'Usuario SSH para el servidor de producción principal'
+      defaultValue: 'administrador',
+      description: 'Usuario SSH para el servidor de producción (usa credencial usuario-prod-ssh)'
     )
     string(
       name: 'PROD_TARGET_PRIMARY',
