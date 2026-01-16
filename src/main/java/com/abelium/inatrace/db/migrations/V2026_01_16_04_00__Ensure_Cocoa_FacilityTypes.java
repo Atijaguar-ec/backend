@@ -64,14 +64,6 @@ public class V2026_01_16_04_00__Ensure_Cocoa_FacilityTypes implements JpaMigrati
             return;
         }
 
-        // Check if we need to clean up COFFEE catalogs
-        boolean needsCleanup = checkIfNeedsCleanup(em);
-
-        if (needsCleanup) {
-            // Clean up COFFEE catalogs completely before inserting COCOA ones
-            cleanupOldCatalogs(em);
-        }
-
         // 1. Ensure ProductType "Cacao" exists
         ensureProductType(em);
 
@@ -86,46 +78,6 @@ public class V2026_01_16_04_00__Ensure_Cocoa_FacilityTypes implements JpaMigrati
 
         // 5. Link all catalogs to ValueChains
         linkCatalogsToValueChains(em);
-    }
-
-    private boolean checkIfNeedsCleanup(EntityManager em) {
-        // Check if ACOPIO exists (COCOA catalog)
-        Long acopioCount = em.createQuery(
-                "SELECT COUNT(ft) FROM FacilityType ft WHERE ft.code = :code", Long.class)
-                .setParameter("code", "ACOPIO")
-                .getSingleResult();
-
-        if (acopioCount != null && acopioCount > 0L) {
-            return false; // Already has COCOA catalog, no cleanup needed
-        }
-
-        // Check if WASHING_STATION exists (COFFEE catalog)
-        Long coffeeCount = em.createQuery(
-                "SELECT COUNT(ft) FROM FacilityType ft WHERE ft.code = :code", Long.class)
-                .setParameter("code", "WASHING_STATION")
-                .getSingleResult();
-
-        return coffeeCount != null && coffeeCount > 0L; // Has COFFEE catalog, needs cleanup
-    }
-
-    private void cleanupOldCatalogs(EntityManager em) {
-        // 1. Delete ValueChain links first (to avoid FK constraint violations)
-        em.createQuery("DELETE FROM ValueChainFacilityType vcft").executeUpdate();
-        em.createQuery("DELETE FROM ValueChainMeasureUnitType vcmut").executeUpdate();
-        em.flush();
-
-        // 2. Delete SemiProduct translations and SemiProducts
-        em.createQuery("DELETE FROM SemiProductTranslation spt").executeUpdate();
-        em.createQuery("DELETE FROM SemiProduct sp").executeUpdate();
-        em.flush();
-
-        // 3. Delete FacilityTypes
-        em.createQuery("DELETE FROM FacilityType ft").executeUpdate();
-        em.flush();
-
-        // 4. Delete MeasureUnitTypes
-        em.createQuery("DELETE FROM MeasureUnitType mut").executeUpdate();
-        em.flush();
     }
 
     private void ensureProductType(EntityManager em) {
