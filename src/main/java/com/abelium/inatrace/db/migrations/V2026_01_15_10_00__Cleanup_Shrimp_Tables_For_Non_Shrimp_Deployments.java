@@ -30,11 +30,7 @@ public class V2026_01_15_10_00__Cleanup_Shrimp_Tables_For_Non_Shrimp_Deployments
             return;
         }
 
-        // IMPORTANT: Drop FKs and columns from shared tables FIRST
-        // This allows us to drop shrimp tables without FK constraint errors
-        dropShrimpColumnsFromSharedTables(em);
-        // Then drop all shrimp-specific tables
-        dropShrimpTables(em);
+        return;
     }
 
     private void dropShrimpTables(EntityManager em) {
