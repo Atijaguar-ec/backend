@@ -33,7 +33,6 @@ public class V2026_01_15_10_00__Cleanup_Shrimp_Tables_For_Non_Shrimp_Deployments
         // IMPORTANT: Drop FKs and columns from shared tables FIRST
         // This allows us to drop shrimp tables without FK constraint errors
         dropShrimpColumnsFromSharedTables(em);
-        
         // Then drop all shrimp-specific tables
         dropShrimpTables(em);
     }
@@ -76,19 +75,16 @@ public class V2026_01_15_10_00__Cleanup_Shrimp_Tables_For_Non_Shrimp_Deployments
 
         for (String tableName : tablesToDrop) {
             try {
-                // Check if table exists before dropping
                 Long count = (Long) em.createNativeQuery(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES " +
-                    "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName"
-                ).setParameter("tableName", tableName).getSingleResult();
+                                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+                                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName")
+                        .setParameter("tableName", tableName)
+                        .getSingleResult();
 
-                if (count > 0) {
+                if (count != null && count > 0L) {
                     em.createNativeQuery("DROP TABLE IF EXISTS `" + tableName + "`").executeUpdate();
-                    System.out.println("✓ Dropped shrimp table: " + tableName);
                 }
-            } catch (Exception e) {
-                // Log but continue with other tables
-                System.err.println("⚠ Could not drop table " + tableName + ": " + e.getMessage());
+            } catch (Exception ignored) {
             }
         }
     }
@@ -150,62 +146,49 @@ public class V2026_01_15_10_00__Cleanup_Shrimp_Tables_For_Non_Shrimp_Deployments
             "isFreezingProcess",
             "isFieldInspection"
         };
-
         dropColumnsFromTable(em, "Facility", facilityColumns);
     }
 
     private void dropColumnsFromTable(EntityManager em, String tableName, String[] columns) {
         for (String columnName : columns) {
             try {
-                // Check if column exists
                 Long count = (Long) em.createNativeQuery(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
-                    "WHERE TABLE_SCHEMA = DATABASE() " +
-                    "AND TABLE_NAME = :tableName " +
-                    "AND COLUMN_NAME = :columnName"
-                ).setParameter("tableName", tableName)
-                 .setParameter("columnName", columnName)
-                 .getSingleResult();
+                                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                                        + "WHERE TABLE_SCHEMA = DATABASE() "
+                                        + "AND TABLE_NAME = :tableName "
+                                        + "AND COLUMN_NAME = :columnName")
+                        .setParameter("tableName", tableName)
+                        .setParameter("columnName", columnName)
+                        .getSingleResult();
 
-                if (count > 0) {
-                    // Drop foreign key constraints first if they exist
-                    if (columnName.endsWith("_id")) {
-                        dropForeignKeysForColumn(em, tableName, columnName);
-                    }
-                    
-                    em.createNativeQuery(
-                        "ALTER TABLE `" + tableName + "` DROP COLUMN `" + columnName + "`"
-                    ).executeUpdate();
-                    System.out.println("✓ Dropped column " + tableName + "." + columnName);
+                if (count != null && count > 0L) {
+                    dropForeignKeysForColumn(em, tableName, columnName);
+                    em.createNativeQuery("ALTER TABLE `" + tableName + "` DROP COLUMN `" + columnName + "`")
+                            .executeUpdate();
                 }
-            } catch (Exception e) {
-                System.err.println("⚠ Could not drop column " + tableName + "." + columnName + ": " + e.getMessage());
+            } catch (Exception ignored) {
             }
         }
     }
 
     private void dropForeignKeysForColumn(EntityManager em, String tableName, String columnName) {
         try {
-            // Find FK constraints for this column
             @SuppressWarnings("unchecked")
             java.util.List<String> fkNames = em.createNativeQuery(
-                "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
-                "WHERE TABLE_SCHEMA = DATABASE() " +
-                "AND TABLE_NAME = :tableName " +
-                "AND COLUMN_NAME = :columnName " +
-                "AND REFERENCED_TABLE_NAME IS NOT NULL"
-            ).setParameter("tableName", tableName)
-             .setParameter("columnName", columnName)
-             .getResultList();
+                            "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                                    + "WHERE TABLE_SCHEMA = DATABASE() "
+                                    + "AND TABLE_NAME = :tableName "
+                                    + "AND COLUMN_NAME = :columnName "
+                                    + "AND REFERENCED_TABLE_NAME IS NOT NULL")
+                    .setParameter("tableName", tableName)
+                    .setParameter("columnName", columnName)
+                    .getResultList();
 
             for (String fkName : fkNames) {
-                em.createNativeQuery(
-                    "ALTER TABLE `" + tableName + "` DROP FOREIGN KEY `" + fkName + "`"
-                ).executeUpdate();
-                System.out.println("✓ Dropped FK constraint: " + fkName);
+                em.createNativeQuery("ALTER TABLE `" + tableName + "` DROP FOREIGN KEY `" + fkName + "`")
+                        .executeUpdate();
             }
-        } catch (Exception e) {
-            // FK might not exist, continue
+        } catch (Exception ignored) {
         }
     }
 }

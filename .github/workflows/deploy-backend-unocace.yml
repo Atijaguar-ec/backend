@@ -235,6 +235,7 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_UNOCACE_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_UNOCACE_DATASOURCE_PASSWORD }}
+          INATRACE_PRODUCT_TYPE=${PRIMARY_PRODUCT_TYPE:-COCOA}
           CONTAINER_NAME_BE=inatrace-be-test-unocace
           CONTAINER_NAME_DB=inatrace-mysql
           HOST_PORT_BE=8080
