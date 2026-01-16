@@ -27,7 +27,7 @@ public class V2025_11_25_03__Complete_Shrimp_Catalogs implements JpaMigration {
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        String productTypeConfig = environment.getProperty("INATrace.product.type", "COFFEE");
+        String productTypeConfig = environment.getProperty("INATrace.product.type", "COCOA");
 
         if (!"SHRIMP".equalsIgnoreCase(productTypeConfig) && !"CAMARON".equalsIgnoreCase(productTypeConfig)) {
             return;

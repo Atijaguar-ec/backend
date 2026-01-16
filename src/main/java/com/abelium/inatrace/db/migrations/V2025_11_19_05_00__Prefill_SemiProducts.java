@@ -30,7 +30,7 @@ public class V2025_11_19_05_00__Prefill_SemiProducts implements JpaMigration {
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        String productType = environment.getProperty("INATrace.product.type", "COFFEE");
+        String productType = environment.getProperty("INATrace.product.type", "COCOA");
 
         if ("SHRIMP".equalsIgnoreCase(productType) || "CAMARON".equalsIgnoreCase(productType)) {
             prefillShrimpSemiProducts(em);

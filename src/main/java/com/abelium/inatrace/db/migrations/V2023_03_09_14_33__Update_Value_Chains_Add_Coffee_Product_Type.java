@@ -32,7 +32,7 @@ public class V2023_03_09_14_33__Update_Value_Chains_Add_Coffee_Product_Type impl
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        String productTypeConfig = environment.getProperty("INATrace.product.type", "COFFEE");
+        String productTypeConfig = environment.getProperty("INATrace.product.type", "COCOA");
         String primaryName;
         String primaryDescription;
 

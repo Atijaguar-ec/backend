@@ -20,7 +20,7 @@ public class V2021_08_11_11_33__Prefill_FacilityTypes implements JpaMigration {
 			return;
 		}
 
-		String productType = environment.getProperty("INATrace.product.type", "COFFEE");
+		String productType = environment.getProperty("INATrace.product.type", "COCOA");
 		List<FacilityType> facilityTypes;
 
 		if ("SHRIMP".equalsIgnoreCase(productType) || "CAMARON".equalsIgnoreCase(productType)) {

@@ -30,7 +30,7 @@ public class V2025_11_20_01_00__Link_SemiProducts_To_ValueChains implements JpaM
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        String productType = environment.getProperty("INATrace.product.type", "COFFEE");
+        String productType = environment.getProperty("INATrace.product.type", "COCOA");
 
         if ("COCOA".equalsIgnoreCase(productType)) {
             linkSemiProductsToValueChains(em, List.of(

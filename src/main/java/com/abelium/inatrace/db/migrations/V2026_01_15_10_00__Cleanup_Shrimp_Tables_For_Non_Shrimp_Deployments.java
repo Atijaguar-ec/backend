@@ -23,7 +23,7 @@ public class V2026_01_15_10_00__Cleanup_Shrimp_Tables_For_Non_Shrimp_Deployments
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        String productTypeConfig = environment.getProperty("INATrace.product.type", "COFFEE");
+        String productTypeConfig = environment.getProperty("INATrace.product.type", "COCOA");
 
         // Only run for NON-SHRIMP deployments
         if ("SHRIMP".equalsIgnoreCase(productTypeConfig) || "CAMARON".equalsIgnoreCase(productTypeConfig)) {

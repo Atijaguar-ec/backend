@@ -25,7 +25,7 @@ public class V2025_11_25_02__Create_Shrimp_Presentation_Type_Catalog implements 
 
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
-        String productTypeConfig = environment.getProperty("INATrace.product.type", "COFFEE");
+        String productTypeConfig = environment.getProperty("INATrace.product.type", "COCOA");
 
         // Only run for SHRIMP deployments
         if (!"SHRIMP".equalsIgnoreCase(productTypeConfig) && !"CAMARON".equalsIgnoreCase(productTypeConfig)) {

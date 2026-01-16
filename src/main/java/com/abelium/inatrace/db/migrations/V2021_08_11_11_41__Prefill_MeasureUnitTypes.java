@@ -21,7 +21,7 @@ public class V2021_08_11_11_41__Prefill_MeasureUnitTypes implements JpaMigration
 			return;
 		}
 
-		String productType = environment.getProperty("INATrace.product.type", "COFFEE");
+		String productType = environment.getProperty("INATrace.product.type", "COCOA");
 		List<MeasureUnitType> measureUnitTypes;
 
 		if ("SHRIMP".equalsIgnoreCase(productType) || "CAMARON".equalsIgnoreCase(productType)) {

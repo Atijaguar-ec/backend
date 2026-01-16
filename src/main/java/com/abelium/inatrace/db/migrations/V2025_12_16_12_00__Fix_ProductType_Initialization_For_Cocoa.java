@@ -15,7 +15,7 @@ public class V2025_12_16_12_00__Fix_ProductType_Initialization_For_Cocoa impleme
     @Override
     public void migrate(EntityManager em, Environment environment) throws Exception {
 
-        String configuredProductType = environment.getProperty("INATrace.product.type", "COFFEE");
+        String configuredProductType = environment.getProperty("INATrace.product.type", "COCOA");
         if (!"COCOA".equalsIgnoreCase(configuredProductType)) {
             return;
         }
