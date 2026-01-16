@@ -175,9 +175,15 @@ jobs:
           script: |
             mkdir -p /opt/inatrace/backend
             mkdir -p /opt/inatrace/import
+            mkdir -p /opt/inatrace/uploads
+            mkdir -p /opt/inatrace/documents
             chown -R $USER:$USER /opt/inatrace/backend
             chown -R $USER:$USER /opt/inatrace/import
+            chown -R $USER:$USER /opt/inatrace/uploads
+            chown -R $USER:$USER /opt/inatrace/documents
             chmod -R u+rwX /opt/inatrace/import
+            chmod -R u+rwX /opt/inatrace/uploads
+            chmod -R u+rwX /opt/inatrace/documents
             rm -f /opt/inatrace/import/countries.csv || true
 
       - name: 📤 Upload docker-compose.yml
@@ -373,8 +379,12 @@ jobs:
           password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
           script: |
             mkdir -p /opt/inatrace/backend /opt/inatrace/import
+            mkdir -p /opt/inatrace/uploads /opt/inatrace/documents
             chown -R $USER:$USER /opt/inatrace/backend /opt/inatrace/import
+            chown -R $USER:$USER /opt/inatrace/uploads /opt/inatrace/documents
             chmod -R u+rwX /opt/inatrace/import
+            chmod -R u+rwX /opt/inatrace/uploads
+            chmod -R u+rwX /opt/inatrace/documents
             rm -f /opt/inatrace/import/countries.csv || true
 
       - name: 📤 Upload docker-compose.yml
