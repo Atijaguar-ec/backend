@@ -32,14 +32,11 @@ public class ProductTypeEntityConfiguration {
     public HibernatePropertiesCustomizer hibernatePropertiesCustomizer() {
         return hibernateProperties -> {
             if (!isShrimpDeployment()) {
-                // Change from 'validate' to 'none' for non-shrimp deployments
-                // This skips schema validation but still allows the app to run
-                String currentDdlAuto = (String) hibernateProperties.get("hibernate.hbm2ddl.auto");
-                
-                if ("validate".equals(currentDdlAuto)) {
-                    System.out.println("⚠️ NON-SHRIMP DEPLOYMENT: Changing hibernate.hbm2ddl.auto from 'validate' to 'none' to skip shrimp entity validation");
-                    hibernateProperties.put("hibernate.hbm2ddl.auto", "none");
-                }
+                // Force-disable schema validation/updates for non-shrimp deployments.
+                // Some environments set ddl-auto via Spring, so this value may not be present yet.
+                // Setting it here ensures Hibernate doesn't fail startup validating shrimp entities.
+                hibernateProperties.put("hibernate.hbm2ddl.auto", "none");
+                hibernateProperties.put("javax.persistence.schema-generation.database.action", "none");
             }
         };
     }
