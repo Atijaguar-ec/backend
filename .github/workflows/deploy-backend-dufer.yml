@@ -201,6 +201,7 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.TEST_DUFER_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.TEST_DUFER_DATASOURCE_PASSWORD }}
+          INATRACE_PRODUCT_TYPE=${PRIMARY_PRODUCT_TYPE:-SHRIMP}
           CONTAINER_NAME_BE=inatrace-be-test-dufer
           CONTAINER_NAME_DB=inatrace-mysql-test-dufer
           HOST_PORT_BE=8080
@@ -330,6 +331,7 @@ jobs:
           DB_ROOT_PASSWORD=${{ secrets.PROD_DUFER_DB_ROOT_PASSWORD }}
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=${{ secrets.PROD_DUFER_DATASOURCE_PASSWORD }}
+          INATRACE_PRODUCT_TYPE=${PRIMARY_PRODUCT_TYPE:-SHRIMP}
           FILE_STORAGE_ROOT=/opt/inatrace/uploads
           IMPORT_PATH=/opt/inatrace/import
           DOCUMENTS_ROOT=/opt/inatrace/documents

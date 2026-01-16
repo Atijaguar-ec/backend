@@ -212,6 +212,7 @@ jobs:
           DB_ROOT_PASSWORD=$DB_ROOT
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=$DB_PASS
+          INATRACE_PRODUCT_TYPE=COCOA
           CONTAINER_NAME_BE=inatrace-be-dev
           CONTAINER_NAME_DB=inatrace-mysql-dev
           HOST_PORT_BE=8080
@@ -354,6 +355,7 @@ jobs:
           DATABASE_NAME=inatrace_shrimp
           DATASOURCE_USERNAME=$DB_USER
           DATASOURCE_PASSWORD=$DB_PASS
+          INATRACE_PRODUCT_TYPE=SHRIMP
           CONTAINER_NAME_BE=inatrace-be-dev-shrimp
           HOST_PORT_BE=8083
           DATABASE_HOSTNAME=inatrace-mysql-dev
