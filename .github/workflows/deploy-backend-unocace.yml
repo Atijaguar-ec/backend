@@ -230,7 +230,7 @@ jobs:
           DB_USER="${{ secrets.TEST_UNOCACE_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_test_unocace"
           FE_URL="${{ secrets.TEST_UNOCACE_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.test.unocace.com"
           MAIL_HOST="${{ secrets.TEST_UNOCACE_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.unocace.com"
-          MAIL_PORT="${{ secrets.TEST_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_PORT="${{ secrets.TEST_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="587"
           MAIL_USER="${{ secrets.TEST_UNOCACE_MAIL_USERNAME }}"; [ -z "$MAIL_USER" ] && MAIL_USER="inatrace@unocace.com"
 
           : "${ADMIN_PASSWORD:?Missing TEST_UNOCACE_ADMIN_PASSWORD}"
@@ -262,7 +262,8 @@ jobs:
           SPRING_MAIL_USERNAME=$MAIL_USER
           SPRING_MAIL_PASSWORD=${{ secrets.TEST_UNOCACE_MAIL_PASSWORD }}
           SPRING_MAIL_SMTP_AUTH=true
-          SPRING_MAIL_SMTP_SSL_ENABLE=true
+          SPRING_MAIL_SMTP_SSL_ENABLE=false
+          SPRING_MAIL_STARTTLS_ENABLE=true
           INATRACE_MAIL_SENDING_ENABLED=true
           INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-inatrace@unocace.com}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.TEST_UNOCACE_AGSTACK_PASSWORD }}
@@ -431,7 +432,7 @@ jobs:
           DB_USER="${{ secrets.PROD_UNOCACE_DATASOURCE_USERNAME }}"; [ -z "$DB_USER" ] && DB_USER="inatrace_prod_unocace"
           FE_URL="${{ secrets.PROD_UNOCACE_FE_URL }}"; [ -z "$FE_URL" ] && FE_URL="https://inatrace.unocace.com"
           MAIL_HOST="${{ secrets.PROD_UNOCACE_MAIL_HOST }}"; [ -z "$MAIL_HOST" ] && MAIL_HOST="mail.unocace.com"
-          MAIL_PORT="${{ secrets.PROD_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="465"
+          MAIL_PORT="${{ secrets.PROD_UNOCACE_MAIL_PORT }}"; [ -z "$MAIL_PORT" ] && MAIL_PORT="587"
           MAIL_USER="${{ secrets.PROD_UNOCACE_MAIL_USERNAME }}"; [ -z "$MAIL_USER" ] && MAIL_USER="inatrace@unocace.com"
 
           : "${ADMIN_PASSWORD:?Missing PROD_UNOCACE_ADMIN_PASSWORD}"
@@ -463,7 +464,8 @@ jobs:
           SPRING_MAIL_USERNAME=$MAIL_USER
           SPRING_MAIL_PASSWORD=${{ secrets.PROD_UNOCACE_MAIL_PASSWORD }}
           SPRING_MAIL_SMTP_AUTH=true
-          SPRING_MAIL_SMTP_SSL_ENABLE=true
+          SPRING_MAIL_SMTP_SSL_ENABLE=false
+          SPRING_MAIL_STARTTLS_ENABLE=true
           INATRACE_MAIL_SENDING_ENABLED=true
           INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-inatrace@unocace.com}
           INATRACE_AGSTACK_PASSWORD=${{ secrets.PROD_UNOCACE_AGSTACK_PASSWORD }}
