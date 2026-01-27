@@ -26,6 +26,12 @@ public final class StockOrderEvidenceFieldValueMapper {
 		apiSOEvidenceFieldValue.setEvidenceFieldId(entity.getProcessingEvidenceField().getId());
 		apiSOEvidenceFieldValue.setEvidenceFieldName(entity.getProcessingEvidenceField().getFieldName());
 		apiSOEvidenceFieldValue.setEvidenceFieldType(entity.getProcessingEvidenceField().getType());
+		
+		// Incluir el label del campo de evidencia para mostrar en el historial
+		String label = entity.getProcessingEvidenceField().getLabel();
+		if (label != null && !label.isEmpty()) {
+			apiSOEvidenceFieldValue.setEvidenceFieldName(label);
+		}
 
 		apiSOEvidenceFieldValue.setBooleanValue(entity.getBooleanValue());
 		apiSOEvidenceFieldValue.setStringValue(entity.getStringValue());
