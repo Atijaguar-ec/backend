@@ -829,14 +829,9 @@ public class StockOrderService extends BaseService {
 
             // Set the sibling Stock orders
             stockOrderHistory.getProcessingOrder().setTargetStockOrders(
-                    stockOrder.getProcessingOrder().getTargetStockOrders().stream().map(tSO -> {
-                        ApiStockOrder apiStockOrder = new ApiStockOrder();
-                        apiStockOrder.setId(tSO.getId());
-                        apiStockOrder.setTotalQuantity(tSO.getTotalQuantity());
-                        apiStockOrder.setMeasureUnitType(
-                                MeasureUnitTypeMapper.toApiMeasureUnitTypeBase(tSO.getMeasurementUnitType()));
-                        return apiStockOrder;
-                    }).collect(Collectors.toList()));
+                    stockOrder.getProcessingOrder().getTargetStockOrders().stream()
+                            .map(tSO -> StockOrderMapper.toApiStockOrderHistoryItem(tSO, language))
+                            .collect(Collectors.toList()));
         }
 
         // Set the output transaction for the chosen Stock order (the transactions where this Stock order was used as an input)

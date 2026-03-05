@@ -312,8 +312,29 @@ public class StockOrderMapper {
         apiStockOrder.setPaid(entity.getPaid());
         apiStockOrder.setBalance(entity.getBalance());
 
+        // Campos necesarios para mostrar en el historial
+        apiStockOrder.setInternalLotNumber(setupInternalLotNumberForSacked(entity.getInternalLotNumber(), entity.getSacNumber()));
+        apiStockOrder.setProductionDate(entity.getProductionDate());
+        apiStockOrder.setTotalQuantity(entity.getTotalQuantity());
+        apiStockOrder.setOrderType(entity.getOrderType());
+        apiStockOrder.setMeasureUnitType(MeasureUnitTypeMapper.toApiMeasureUnitType(entity.getMeasurementUnitType()));
+        apiStockOrder.setFacility(FacilityMapper.toApiFacilityBase(entity.getFacility(), language));
+
+        // Campos adicionales para el historial
+        apiStockOrder.setWeekNumber(entity.getWeekNumber());
+        apiStockOrder.setParcelLot(entity.getParcelLot());
+        apiStockOrder.setVariety(entity.getVariety());
+        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
+
         apiStockOrder.setSemiProduct(SemiProductMapper.toApiSemiProductBase(entity.getSemiProduct(), ApiSemiProduct.class, language));
         apiStockOrder.setFinalProduct(ProductApiTools.toApiFinalProductBase(entity.getFinalProduct()));
+
+        // Mapear los campos de evidencia requeridos (processing evidence fields)
+        if (!entity.getProcessingEFValues().isEmpty()) {
+            apiStockOrder.setRequiredEvidenceFieldValues(entity.getProcessingEFValues().stream()
+                    .map(StockOrderEvidenceFieldValueMapper::toApiStockOrderEvidenceFieldValue)
+                    .collect(Collectors.toList()));
+        }
 
         return apiStockOrder;
     }

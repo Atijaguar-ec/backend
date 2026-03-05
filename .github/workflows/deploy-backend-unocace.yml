@@ -18,6 +18,7 @@ on:
     paths:
       - 'src/**'
       - 'ci/**'
+      - 'import/**'
       - 'pom.xml'
       - 'Dockerfile'
       - '.github/workflows/deploy-backend-unocace.yml'
@@ -207,6 +208,17 @@ jobs:
           strip_components: 1
           overwrite: true
 
+      - name: 📤 Upload poligonos_16_10_2025.geojson
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          source: "import/poligonos_16_10_2025.geojson"
+          target: "/opt/inatrace/backend/"
+          strip_components: 1
+          overwrite: true
+
       - name: 📁 Install countries.csv
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -223,7 +235,23 @@ jobs:
             ls -l /opt/inatrace/import/countries.csv
             test -s /opt/inatrace/import/countries.csv
 
-      - name: 📝 Prepare .env
+      - name: � Install poligonos_16_10_2025.geojson
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.TEST_UNOCACE_HOST }}
+          username: ${{ secrets.TEST_UNOCACE_USER }}
+          password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
+          script: |
+            set -e
+            mkdir -p /opt/inatrace/import
+            cp -f /opt/inatrace/backend/poligonos_16_10_2025.geojson /opt/inatrace/import/poligonos_16_10_2025.geojson
+            chown $USER:$USER /opt/inatrace/import/poligonos_16_10_2025.geojson
+            chmod 0644 /opt/inatrace/import/poligonos_16_10_2025.geojson
+            echo "✅ poligonos_16_10_2025.geojson installed:"
+            ls -l /opt/inatrace/import/poligonos_16_10_2025.geojson
+            test -s /opt/inatrace/import/poligonos_16_10_2025.geojson
+
+      - name: � Prepare .env
         run: |
           IMAGE="${{ needs.build.outputs.image-ref }}"
           TAG="${{ needs.build.outputs.image-tag }}"
@@ -409,6 +437,17 @@ jobs:
           strip_components: 1
           overwrite: true
 
+      - name: 📤 Upload poligonos_16_10_2025.geojson
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          source: "import/poligonos_16_10_2025.geojson"
+          target: "/opt/inatrace/backend/"
+          strip_components: 1
+          overwrite: true
+
       - name: 📁 Install countries.csv
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -424,6 +463,22 @@ jobs:
             echo "✅ countries.csv installed:" 
             ls -l /opt/inatrace/import/countries.csv
             test -s /opt/inatrace/import/countries.csv
+
+      - name: 📁 Install poligonos_16_10_2025.geojson
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_UNOCACE_HOST }}
+          username: ${{ secrets.PROD_UNOCACE_USER }}
+          password: ${{ secrets.PROD_UNOCACE_PASSWORD }}
+          script: |
+            set -e
+            mkdir -p /opt/inatrace/import
+            cp -f /opt/inatrace/backend/poligonos_16_10_2025.geojson /opt/inatrace/import/poligonos_16_10_2025.geojson
+            chown $USER:$USER /opt/inatrace/import/poligonos_16_10_2025.geojson
+            chmod 0644 /opt/inatrace/import/poligonos_16_10_2025.geojson
+            echo "✅ poligonos_16_10_2025.geojson installed:"
+            ls -l /opt/inatrace/import/poligonos_16_10_2025.geojson
+            test -s /opt/inatrace/import/poligonos_16_10_2025.geojson
 
       - name: 📝 Prepare .env
         run: |

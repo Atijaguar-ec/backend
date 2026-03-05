@@ -42,12 +42,16 @@ public final class FacilityMapper {
 				.stream()
 				.filter(facilityTranslation -> facilityTranslation.getLanguage().equals(language))
 				.findFirst()
-				.orElse(new FacilityTranslation());
+				.orElse(null);
 
 		ApiFacility apiFacility = new ApiFacility();
 
 		apiFacility.setId(entity.getId());
-		apiFacility.setName(translation.getName());
+		// Usar el nombre de la traducción si existe, sino usar el nombre por defecto de la entidad
+		String facilityName = (translation != null && translation.getName() != null) 
+				? translation.getName() 
+				: entity.getName();
+		apiFacility.setName(facilityName);
 		apiFacility.setIsCollectionFacility(entity.getIsCollectionFacility());
 		apiFacility.setIsPublic(entity.getIsPublic());
 		apiFacility.setDeactivated(entity.getIsDeactivated());
