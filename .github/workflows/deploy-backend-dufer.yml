@@ -15,24 +15,26 @@ name: 🦐 Backend DUFER
 on:
   push:
     branches: [staging, main]
+    tags:
+      - "dufer-v*"
     paths:
-      - 'src/**'
-      - 'ci/**'
-      - 'pom.xml'
-      - 'Dockerfile'
-      - '.github/workflows/deploy-backend-dufer.yml'
+      - "src/**"
+      - "ci/**"
+      - "pom.xml"
+      - "Dockerfile"
+      - ".github/workflows/deploy-backend-dufer.yml"
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: "Target environment"
         required: true
-        default: 'staging'
+        default: "staging"
         type: choice
         options:
           - staging
           - production
       skip_quality:
-        description: 'Skip quality checks'
+        description: "Skip quality checks"
         required: false
         default: false
         type: boolean
@@ -40,7 +42,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-inatrace
-  JAVA_VERSION: '17'
+  JAVA_VERSION: "17"
   # DUFER specific
   COMPANY_NAME: DUFER
   PRIMARY_PRODUCT_TYPE: SHRIMP
@@ -72,7 +74,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
+          distribution: "temurin"
           cache: maven
       - name: 🔍 Run tests
         continue-on-error: true
@@ -243,20 +245,20 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/backend
-            
+
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
-            
+
             echo "📥 Pulling image..."
             docker-compose pull backend
-            
+
             echo "🛑 Stopping old containers..."
             docker stop inatrace-be-test-dufer 2>/dev/null || true
             docker rm inatrace-be-test-dufer 2>/dev/null || true
-            
+
             echo "🚀 Starting..."
             docker-compose up -d --no-deps --force-recreate backend
-            
+
             echo "⏳ Health check..."
             for i in {1..12}; do
               sleep 10
@@ -266,7 +268,7 @@ jobs:
               fi
               echo "  Attempt $i/12..."
             done
-            
+
             echo "❌ Health check failed"
             docker logs inatrace-be-test-dufer --tail 50
             exit 1
@@ -278,7 +280,7 @@ jobs:
     name: 🚀 Deploy DUFER Production
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+    if: (github.ref_type == 'tag' && startsWith(github.ref_name, 'dufer-v')) || github.event.inputs.environment == 'production'
     environment:
       name: dufer-production
       url: https://inatrace.empacadoradufer.com
@@ -381,16 +383,16 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/backend
-            
+
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-dufer-network >/dev/null 2>&1 || docker network create inatrace-backend-dufer-network
-            
+
             echo "📦 Loading image..."
             docker-compose pull || true
-            
+
             echo "🚀 Deploying..."
             docker-compose up -d --remove-orphans
-            
+
             echo "⏳ Health check..."
             for i in {1..12}; do
               sleep 10
@@ -400,6 +402,6 @@ jobs:
               fi
               echo "  Attempt $i/12..."
             done
-            
+
             echo "❌ Health check failed"
             exit 1
