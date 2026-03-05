@@ -265,6 +265,6 @@ Enviar archivos + descripción del problema.
 
 ---
 
-**Versión**: 1.0 UNOCACE  
+**Versión**: 1.1 UNOCACE  
 **Producto**: Cacao  
-**Última actualización**: Enero 2025
+**Última actualización**: Febrero 2026
