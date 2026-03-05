@@ -15,25 +15,27 @@ name: 🍫 Backend UNOCACE
 on:
   push:
     branches: [staging, main]
+    tags:
+      - "unocace-v*"
     paths:
-      - 'src/**'
-      - 'ci/**'
-      - 'import/**'
-      - 'pom.xml'
-      - 'Dockerfile'
-      - '.github/workflows/deploy-backend-unocace.yml'
+      - "src/**"
+      - "ci/**"
+      - "import/**"
+      - "pom.xml"
+      - "Dockerfile"
+      - ".github/workflows/deploy-backend-unocace.yml"
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: "Target environment"
         required: true
-        default: 'staging'
+        default: "staging"
         type: choice
         options:
           - staging
           - production
       skip_quality:
-        description: 'Skip quality checks '
+        description: "Skip quality checks "
         required: false
         default: false
         type: boolean
@@ -41,7 +43,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-inatrace
-  JAVA_VERSION: '17'
+  JAVA_VERSION: "17"
   # UNOCACE specific
   COMPANY_NAME: UNOCACE
   PRIMARY_PRODUCT_TYPE: COCOA
@@ -73,7 +75,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
+          distribution: "temurin"
           cache: maven
       - name: 🔍 Run tests
         continue-on-error: true
@@ -318,7 +320,7 @@ jobs:
           source: ".env"
           target: "/opt/inatrace/backend/"
 
-      - name: 🚀 Deploy Staging 
+      - name: 🚀 Deploy Staging
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
@@ -327,13 +329,13 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/backend
-            
+
             echo "🔗 Ensuring network... "
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
-            
+
             echo "📥 Pulling image..."
             docker compose pull backend
-            
+
             echo "🔧 Running Flyway repair (if needed)..."
             DB_USER=$(grep "^DATASOURCE_USERNAME=" .env | cut -d= -f2)
             DB_PASS=$(grep "^DATASOURCE_PASSWORD=" .env | cut -d= -f2)
@@ -352,14 +354,14 @@ jobs:
               DELETE FROM schema_version 
               WHERE version = '2025.12.22.12.30' AND success = 0;
             " 2>/dev/null || echo "⚠️ Flyway repair SQL skipped (DB not ready or already fixed)"
-            
+
             echo "🛑 Stopping old containers..."
             docker stop inatrace-be-test-unocace 2>/dev/null || true
             docker rm inatrace-be-test-unocace 2>/dev/null || true
-            
+
             echo "🚀 Starting..."
             docker compose up -d --no-deps --force-recreate backend
-            
+
             echo "⏳ Health check..."
             for i in {1..12}; do
               sleep 10
@@ -369,7 +371,7 @@ jobs:
               fi
               echo "  Attempt $i/12..."
             done
-            
+
             echo "❌ Health check failed"
             docker logs inatrace-be-test-unocace --tail 50
             exit 1
@@ -381,7 +383,7 @@ jobs:
     name: 🚀 Deploy UNOCACE Production
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+    if: (github.ref_type == 'tag' && startsWith(github.ref_name, 'unocace-v')) || github.event.inputs.environment == 'production'
     environment:
       name: unocace-production
       url: https://inatrace.unocace.com
@@ -575,16 +577,16 @@ jobs:
           script: |
             set -e
             cd /opt/inatrace/backend
-            
+
             echo "🔗 Ensuring network..."
             docker network inspect inatrace-backend-network >/dev/null 2>&1 || docker network create inatrace-backend-network
-            
+
             echo "📥 Pulling image..."
             docker compose pull backend || true
-            
+
             echo "🚀 Deploying..."
             docker compose up -d --remove-orphans
-            
+
             echo "⏳ Health check (local)..."
             for i in {1..30}; do
               sleep 10
