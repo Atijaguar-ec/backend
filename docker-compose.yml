@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: inatrace_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: inatrace
+      POSTGRES_USER: inatrace
+      POSTGRES_PASSWORD: inatrace
+    ports:
+      - "5432:5432"
+    volumes:
+      - inatrace_pgdata:/var/lib/postgresql/data
+
+volumes:
+  inatrace_pgdata:

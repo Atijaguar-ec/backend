@@ -1,0 +1,92 @@
+# Migration Audit — postgres-migration
+
+> Fecha de auditoría: 2026-03-23  
+> Auditor: sdd-apply (automatizado + revisión manual)
+
+---
+
+## Resultado: ✅ LIMPIO — Todos los archivos son compatibles con PostgreSQL
+
+No se encontró ninguna sintaxis MySQL-específica en los archivos de migración.
+
+---
+
+## SQL Migrations (`src/main/resources/db/migrations/*.sql`)
+
+Verificaciones ejecutadas (grep sobre todos los archivos):
+- `ENGINE=` → **0 coincidencias** ✅
+- Backticks (`` `identifier` ``) → **0 coincidencias** ✅  
+- `TINYINT` → **0 coincidencias** ✅
+- `AUTO_INCREMENT` → **0 coincidencias** ✅
+
+| Archivo | Estado | Notas |
+|---------|--------|-------|
+| `V2023_06_14_10_04__Drop__column__ingredients__in__Product.sql` | ✅ OK | `ALTER TABLE Product DROP COLUMN ingredients;` |
+| `V2023_06_14_10_14__Drop__column__ingredients__in__ProductLabelContent.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_10_37__Delete__ingredients__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_11_54__Drop__column__nutritionalValue__in__Product__and__ProductLabelContent.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_11_59__Delete__nutritionalValue__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_12_07__Drop__column__howToUse__in__Product__and__ProductLabelContent.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_12_09__Delete__howToUse__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_12_39__Drop__tables__Product_keyMarketsShare__and__ProductLabelContent_keyMarketsShare.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_12_41__Delete__keyMarketsShare__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_13_13__Drop__columns__specialityDoc_and_specialityDesc__in__Product__and__ProductLabelContent.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_13_36__Delete__specialityDesc__and__specialityDoc__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_15_21__Drop__tables__ProcessStandard__and__ProcessDocument.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_15_23__Drop__columns__storage__and__codesOfConduct__in__Process.sql` | ✅ OK | DDL estándar |
+| `V2023_06_14_15_25__Delete__process__fields__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+| `V2023_06_15_07_40__Drop__columns__in__Responsability.sql` | ✅ OK | DDL estándar |
+| `V2023_06_15_07_48__Drop__table__ResponsibilityFarmerPicture.sql` | ✅ OK | DDL estándar |
+| `V2023_06_15_07_51__Delete__responsibility__fields__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+| `V2023_06_15_09_50__Drop__column__knowledgeBlog__in__Product__and__ProductLabelContent.sql` | ✅ OK | DDL estándar |
+| `V2023_06_15_10_02__Drop__columns__in__ProductSettings.sql` | ✅ OK | DDL estándar |
+| `V2023_06_15_10_04__Delete__settings__fields__in__ProductLabel_fields.sql` | ✅ OK | DDL estándar |
+
+---
+
+## Java Migrations (`src/main/java/com/abelium/inatrace/db/migrations/*.java`)
+
+Verificaciones:
+- `createNativeQuery` → **0 coincidencias** ✅ (todas las migraciones usan JPQL o flush via EntityManager)
+- Queries usan `em.createQuery()` con JPQL estándar — no hay SQL nativo
+
+| Archivo | Estado | Notas |
+|---------|--------|-------|
+| `V2020_03_27_15_00__Prefill_Countries.java` | ✅ OK | JPQL/EntityManager |
+| `V2020_10_06_19_30__Update_Label_Content.java` | ✅ OK | JPQL/EntityManager |
+| `V2020_11_26_12_30__Update_Company_User_Role.java` | ✅ OK | JPQL update |
+| `V2021_08_11_11_33__Prefill_FacilityTypes.java` | ✅ OK | JPQL/EntityManager |
+| `V2021_08_11_11_41__Prefill_MeasureUnitTypes.java` | ✅ OK | JPQL/EntityManager |
+| `V2021_10_12_10_01__Update_Product_Company.java` | ✅ OK | JPQL/EntityManager |
+| `V2021_10_21_14_33__Update_Facility_Translations.java` | ✅ OK | JPQL/EntityManager |
+| `V2021_10_24_17_22__Update_Semi_Product_Translations.java` | ✅ OK | JPQL/EntityManager |
+| `V2021_11_02_10_07__Update_Processing_Evidence_Field_Translations.java` | ✅ OK | JPQL/EntityManager |
+| `V2021_11_02_13_31__Update_Processing_Evidence_Type_Translations.java` | ✅ OK | JPQL/EntityManager |
+| `V2022_05_03_15_54__Update_Business_To_Customer_Settings.java` | ✅ OK | JPQL/EntityManager |
+| `V2022_05_05_09_15__Update_Business_To_Customer_Settings_Defaults.java` | ✅ OK | JPQL/EntityManager |
+| `V2022_05_17_08_51__Update_Business_To_Customer_Settings_Graphics_Defaults.java` | ✅ OK | JPQL/EntityManager |
+| `V2022_08_30_11_00__Update_Business_To_Customer_Settings_Add_Prod_Title_Color.java` | ✅ OK | JPQL/EntityManager |
+| `V2023_03_09_14_33__Update_Value_Chains_Add_Coffee_Product_Type.java` | ✅ OK | JPQL/EntityManager |
+| `V2023_04_12_14_00__Update_Product_Type_Translations.java` | ✅ OK | JPQL/EntityManager |
+| `V2023_04_17_11_00__Update_Product_Type_FieldName.java` | ✅ OK | JPQL/EntityManager |
+| `V2023_05_16_10_34__Migrate_repackedOutput_to_ProcActionOSM.java` | ✅ OK | JPQL/EntityManager |
+| `V2023_05_24_12_11__Rename__Role__ADMIN__into__SYSTEM_ADMIN.java` | ✅ OK | JPQL update |
+| `V2023_05_24_17_09__Rename__CompanyUserRole__ADMIN__into__COMPANY_ADMIN.java` | ✅ OK | JPQL update |
+| `V2023_05_24_17_26__Rename__CompanyUserRole__USER__into__COMPANY_USER.java` | ✅ OK | JPQL update |
+
+---
+
+## Directorio `import/`
+
+| Archivo | Tipo | Estado |
+|---------|------|--------|
+| `countries.csv` | CSV | ✅ No aplica — solo datos, no DDL |
+
+---
+
+## Conclusión
+
+> ✅ **Todas las migraciones son compatibles con PostgreSQL sin modificaciones.**
+> 
+> No se requieren correcciones en ningún archivo de migración. El riesgo catalogado  
+> como "Media" en la propuesta fue mitigado — el DDL es estándar en todos los casos.

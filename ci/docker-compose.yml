@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+
+  inatrace-postgres:
+    image: postgres:16.10
+    container_name: inatrace-postgres
+    environment:
+      - POSTGRES_PASSWORD=${DB_ROOT_PASSWORD}
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATASOURCE_USERNAME}
+    volumes:
+      - ${DB_VOLUME}:/var/lib/postgresql/data
+    networks:
+      - backend
+    restart: always
+
+  inatrace-backend:
+    image: ${IMAGE_NAME}:${TAG}
+    container_name: inatrace-be
+    environment:
+      - INATRACE_DATABASE_NAME=${DATABASE_NAME}
+      - INATRACE_DATABASE_HOSTNAME=inatrace-postgres
+      - SPRING_DATASOURCE_USERNAME=${DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DATASOURCE_PASSWORD}
+      - INATRACE_FILESTORAGE_ROOT=${FILE_STORAGE_ROOT}
+      - INATRACE_IMPORT_PATH=${IMPORT_PATH}
+      - INATRACE_DOCUMENTS_ROOT=${DOCUMENTS_ROOT}
+      - INATRACE_REQUESTLOG_TOKEN=${REQUESTLOG_TOKEN}
+      - INATRACE_EXCHANGERATE_APIKEY=${EXCHANGERATE_APIKEY}
+    volumes:
+      - ${FILE_STORAGE_ROOT_VOL}:${FILE_STORAGE_ROOT}
+      - ${IMPORT_PATH_VOL}:${IMPORT_PATH}
+      - ${DOCUMENTS_ROOT_VOL}:${DOCUMENTS_ROOT}
+    networks:
+      - backend
+    depends_on:
+      - inatrace-postgres
+    ports:
+      - "8080:8080"
+    restart: always
+
+networks:
+  backend:
+    name: inatrace-backend-network

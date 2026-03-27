@@ -1,0 +1,180 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------< com.abelium.INATrace:coffee-backend >-----------------
+[INFO] Building Coffee backend 2.39.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.3.3:run (default-cli) > test-compile @ coffee-backend >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ coffee-backend ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 27 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ coffee-backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 538 source files with javac [debug parameters release 17] to target/classes
+[INFO] /Users/alvarogeovani/proyectos/inatrace/inatrace-backend/src/main/java/com/abelium/inatrace/tools/documents/DocxDocumentCreator.java: /Users/alvarogeovani/proyectos/inatrace/inatrace-backend/src/main/java/com/abelium/inatrace/tools/documents/DocxDocumentCreator.java uses or overrides a deprecated API.
+[INFO] /Users/alvarogeovani/proyectos/inatrace/inatrace-backend/src/main/java/com/abelium/inatrace/tools/documents/DocxDocumentCreator.java: Recompile with -Xlint:deprecation for details.
+[INFO] /Users/alvarogeovani/proyectos/inatrace/inatrace-backend/src/main/java/com/abelium/inatrace/tools/queries/WhereBuilder.java: /Users/alvarogeovani/proyectos/inatrace/inatrace-backend/src/main/java/com/abelium/inatrace/tools/queries/WhereBuilder.java uses unchecked or unsafe operations.
+[INFO] /Users/alvarogeovani/proyectos/inatrace/inatrace-backend/src/main/java/com/abelium/inatrace/tools/queries/WhereBuilder.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ coffee-backend ---
+[INFO] skip non existing resourceDirectory /Users/alvarogeovani/proyectos/inatrace/inatrace-backend/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ coffee-backend ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [debug parameters release 17] to target/test-classes
+[INFO] 
+[INFO] <<< spring-boot:3.3.3:run (default-cli) < test-compile @ coffee-backend <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.3.3:run (default-cli) @ coffee-backend ---
+[INFO] Attaching agents: []
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+2026-03-23T12:51:26.156-05:00  INFO 37580 --- [           main] c.a.inatrace.INATraceBackendApplication  : Starting INATraceBackendApplication using Java 17.0.18 with PID 37580 (/Users/alvarogeovani/proyectos/inatrace/inatrace-backend/target/classes started by alvarogeovani in /Users/alvarogeovani/proyectos/inatrace/inatrace-backend)
+2026-03-23T12:51:26.158-05:00  INFO 37580 --- [           main] c.a.inatrace.INATraceBackendApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-03-23T12:51:27.225-05:00  INFO 37580 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-23T12:51:27.257-05:00  INFO 37580 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 27 ms. Found 0 JPA repository interfaces.
+2026-03-23T12:51:27.582-05:00  WARN 37580 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'customProxyTransactionManagementConfiguration' of type [com.abelium.inatrace.configuration.CustomProxyTransactionManagementConfiguration$$SpringCGLIB$$0] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [healthEndpointGroupsBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2026-03-23T12:51:27.589-05:00  WARN 37580 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'transactionAttributeSource' of type [com.abelium.inatrace.configuration.CustomProxyTransactionManagementConfiguration$CustomTransactionAttribute] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [healthEndpointGroupsBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2026-03-23T12:51:27.668-05:00  WARN 37580 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'transactionInterceptor' of type [org.springframework.transaction.interceptor.TransactionInterceptor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [healthEndpointGroupsBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2026-03-23T12:51:27.668-05:00  WARN 37580 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.transaction.config.internalTransactionAdvisor' of type [org.springframework.transaction.interceptor.BeanFactoryTransactionAttributeSourceAdvisor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [healthEndpointGroupsBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2026-03-23T12:51:27.941-05:00  INFO 37580 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-23T12:51:27.950-05:00  INFO 37580 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-23T12:51:27.950-05:00  INFO 37580 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.28]
+2026-03-23T12:51:28.009-05:00  INFO 37580 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-23T12:51:28.009-05:00  INFO 37580 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1822 ms
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+2026-03-23T12:51:28.416-05:00  INFO 37580 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-23T12:51:28.462-05:00  INFO 37580 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
+2026-03-23T12:51:28.486-05:00  INFO 37580 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-23T12:51:28.539-05:00  INFO 37580 --- [           main] o.h.e.boot.internal.EnversServiceImpl    : Envers integration enabled? : true
+2026-03-23T12:51:28.688-05:00  INFO 37580 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-23T12:51:28.707-05:00  WARN 37580 --- [           main] com.zaxxer.hikari.HikariConfig           : HikariPool-1 - idleTimeout is close to or more than maxLifetime, disabling it.
+2026-03-23T12:51:28.707-05:00  INFO 37580 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-23T12:51:28.898-05:00  INFO 37580 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@64fba3e6
+2026-03-23T12:51:28.899-05:00  INFO 37580 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-23T12:51:29.450-05:00  INFO 37580 --- [           main] o.h.e.c.i.m.AuditMetadataGenerator       : Adding properties for entity: com.abelium.inatrace.db.entities.common.User
+2026-03-23T12:51:29.694-05:00  WARN 37580 --- [           main] org.hibernate.mapping.RootClass          : HHH000038: Composite-id class does not override equals(): com.abelium.inatrace.db.entities.product.ProductLabelCompanyDocument
+2026-03-23T12:51:29.694-05:00  WARN 37580 --- [           main] org.hibernate.mapping.RootClass          : HHH000039: Composite-id class does not override hashCode(): com.abelium.inatrace.db.entities.product.ProductLabelCompanyDocument
+2026-03-23T12:51:30.796-05:00 ERROR 37580 --- [           main] o.h.metamodel.internal.MetadataContext   : HHH015007: Illegal argument on static metamodel field injection : org.hibernate.envers.DefaultRevisionEntity_#class_; expected type :  org.hibernate.metamodel.model.domain.internal.EntityTypeImpl; encountered type : jakarta.persistence.metamodel.MappedSuperclassType
+2026-03-23T12:51:30.846-05:00  INFO 37580 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-23T12:51:36.049-05:00  INFO 37580 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-23T12:51:36.876-05:00  INFO 37580 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://192.168.100.173:5432/inatrace (PostgreSQL 16.10)
+2026-03-23T12:51:37.051-05:00  INFO 37580 --- [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 2023.06.15.10.04
+2026-03-23T12:51:37.052-05:00  WARN 37580 --- [           main] o.f.core.internal.command.DbMigrate      : outOfOrder mode is active. Migration of schema "public" may not be reproducible.
+2026-03-23T12:51:37.060-05:00  INFO 37580 --- [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-03-23T12:51:37.273-05:00  WARN 37580 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-03-23T12:51:37.318-05:00  INFO 37580 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsServiceImpl
+2026-03-23T12:51:37.740-05:00  INFO 37580 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-03-23T12:51:38.517-05:00  INFO 37580 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-23T12:51:38.536-05:00  INFO 37580 --- [           main] c.a.inatrace.INATraceBackendApplication  : Started INATraceBackendApplication in 12.741 seconds (process running for 13.257)
+2026-03-23T12:51:38.895-05:00 ERROR 37580 --- [           main] i.n.r.d.DnsServerAddressStreamProviders  : Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+org.springframework.web.reactive.function.client.WebClientResponseException$Unauthorized: 401 Unauthorized from GET http://api.exchangeratesapi.io/v1/symbols
+	at org.springframework.web.reactive.function.client.WebClientResponseException.create(WebClientResponseException.java:322)
+	Suppressed: The stacktrace has been enhanced by Reactor, refer to additional information below: 
+Error has been observed at the following site(s):
+	*__checkpoint ⇢ 401 UNAUTHORIZED from GET http://api.exchangeratesapi.io/v1/symbols [DefaultWebClient]
+Original Stack Trace:
+		at org.springframework.web.reactive.function.client.WebClientResponseException.create(WebClientResponseException.java:322)
+		at org.springframework.web.reactive.function.client.DefaultClientResponse.lambda$createException$1(DefaultClientResponse.java:214)
+		at reactor.core.publisher.FluxMap$MapSubscriber.onNext(FluxMap.java:106)
+		at reactor.core.publisher.FluxOnErrorReturn$ReturnSubscriber.onNext(FluxOnErrorReturn.java:162)
+		at reactor.core.publisher.FluxDefaultIfEmpty$DefaultIfEmptySubscriber.onNext(FluxDefaultIfEmpty.java:122)
+		at reactor.core.publisher.FluxMapFuseable$MapFuseableSubscriber.onNext(FluxMapFuseable.java:129)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onNext(FluxContextWrite.java:107)
+		at reactor.core.publisher.FluxMapFuseable$MapFuseableConditionalSubscriber.onNext(FluxMapFuseable.java:299)
+		at reactor.core.publisher.FluxFilterFuseable$FilterFuseableConditionalSubscriber.onNext(FluxFilterFuseable.java:337)
+		at reactor.core.publisher.Operators$BaseFluxToMonoOperator.completePossiblyEmpty(Operators.java:2097)
+		at reactor.core.publisher.MonoCollect$CollectSubscriber.onComplete(MonoCollect.java:145)
+		at reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:144)
+		at reactor.core.publisher.FluxPeek$PeekSubscriber.onComplete(FluxPeek.java:260)
+		at reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:144)
+		at reactor.netty.channel.FluxReceive.onInboundComplete(FluxReceive.java:415)
+		at reactor.netty.channel.ChannelOperations.onInboundComplete(ChannelOperations.java:445)
+		at reactor.netty.channel.ChannelOperations.terminate(ChannelOperations.java:499)
+		at reactor.netty.http.client.HttpClientOperations.onInboundNext(HttpClientOperations.java:800)
+		at reactor.netty.channel.ChannelOperationsHandler.channelRead(ChannelOperationsHandler.java:115)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+		at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+		at io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.fireChannelRead(CombinedChannelDuplexHandler.java:436)
+		at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346)
+		at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:318)
+		at io.netty.channel.CombinedChannelDuplexHandler.channelRead(CombinedChannelDuplexHandler.java:251)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+		at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1407)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918)
+		at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+		at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+		at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+		at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+		at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+		at java.base/java.lang.Thread.run(Thread.java:840)
+org.springframework.web.reactive.function.client.WebClientResponseException$Unauthorized: 401 Unauthorized from GET http://api.exchangeratesapi.io/v1/latest
+	at org.springframework.web.reactive.function.client.WebClientResponseException.create(WebClientResponseException.java:322)
+	Suppressed: The stacktrace has been enhanced by Reactor, refer to additional information below: 
+Error has been observed at the following site(s):
+	*__checkpoint ⇢ 401 UNAUTHORIZED from GET http://api.exchangeratesapi.io/v1/latest [DefaultWebClient]
+Original Stack Trace:
+		at org.springframework.web.reactive.function.client.WebClientResponseException.create(WebClientResponseException.java:322)
+		at org.springframework.web.reactive.function.client.DefaultClientResponse.lambda$createException$1(DefaultClientResponse.java:214)
+		at reactor.core.publisher.FluxMap$MapSubscriber.onNext(FluxMap.java:106)
+		at reactor.core.publisher.FluxOnErrorReturn$ReturnSubscriber.onNext(FluxOnErrorReturn.java:162)
+		at reactor.core.publisher.FluxDefaultIfEmpty$DefaultIfEmptySubscriber.onNext(FluxDefaultIfEmpty.java:122)
+		at reactor.core.publisher.FluxMapFuseable$MapFuseableSubscriber.onNext(FluxMapFuseable.java:129)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onNext(FluxContextWrite.java:107)
+		at reactor.core.publisher.FluxMapFuseable$MapFuseableConditionalSubscriber.onNext(FluxMapFuseable.java:299)
+		at reactor.core.publisher.FluxFilterFuseable$FilterFuseableConditionalSubscriber.onNext(FluxFilterFuseable.java:337)
+		at reactor.core.publisher.Operators$BaseFluxToMonoOperator.completePossiblyEmpty(Operators.java:2097)
+		at reactor.core.publisher.MonoCollect$CollectSubscriber.onComplete(MonoCollect.java:145)
+		at reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:144)
+		at reactor.core.publisher.FluxPeek$PeekSubscriber.onComplete(FluxPeek.java:260)
+		at reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:144)
+		at reactor.netty.channel.FluxReceive.onInboundComplete(FluxReceive.java:415)
+		at reactor.netty.channel.ChannelOperations.onInboundComplete(ChannelOperations.java:445)
+		at reactor.netty.channel.ChannelOperations.terminate(ChannelOperations.java:499)
+		at reactor.netty.http.client.HttpClientOperations.onInboundNext(HttpClientOperations.java:800)
+		at reactor.netty.channel.ChannelOperationsHandler.channelRead(ChannelOperationsHandler.java:115)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+		at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+		at io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.fireChannelRead(CombinedChannelDuplexHandler.java:436)
+		at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:346)
+		at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:318)
+		at io.netty.channel.CombinedChannelDuplexHandler.channelRead(CombinedChannelDuplexHandler.java:251)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+		at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1407)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+		at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+		at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:918)
+		at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+		at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+		at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+		at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+		at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+		at java.base/java.lang.Thread.run(Thread.java:840)
+2026-03-23T13:49:23.755-05:00  INFO 37580 --- [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-03-23T13:49:23.800-05:00  INFO 37580 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-23T13:49:23.805-05:00  INFO 37580 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
