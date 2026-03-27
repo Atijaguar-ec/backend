@@ -13,7 +13,6 @@ public class Process extends BaseEntity {
 	 * If the ingredients are organic, describe how you achieve that 
 	 * (e.g. organic seedlings, no chemical fertilizers, etc.)
 	 */
-	@Lob
 	@Column(columnDefinition = "TEXT")
 	private String production;
 

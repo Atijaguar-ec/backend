@@ -53,7 +53,6 @@ public class Company extends BaseEntity implements CompanyTranslatables {
 	 * about the company - briefly describe your company and its history. 
 	 * Include the company mission and vision as well as core values. (max 2000 characters)
 	 */
-	@Lob
 	@Column(columnDefinition = "TEXT")
 	private String about;
 	
@@ -61,7 +60,6 @@ public class Company extends BaseEntity implements CompanyTranslatables {
 	 * interview - 
 	 * (max 2000 characters)
 	 */
-	@Lob
 	@Column(columnDefinition = "TEXT")
 	private String interview;
 	

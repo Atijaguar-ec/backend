@@ -12,7 +12,6 @@ public class Responsibility extends BaseEntity {
 	 * labor policies - Briefly describe labor policies you have in place in your company and 
 	 * activities you pursue to make them happen (example: women inclusion, no child labor, etc.)
 	 */
-	@Lob
 	@Column(columnDefinition = "TEXT")
 	private String laborPolicies;
 	

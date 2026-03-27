@@ -24,7 +24,6 @@ public class ValueChain extends TimestampEntity {
 	@Column(nullable = false)
 	private String name;
 
-	@Lob
 	@Column(nullable = false, columnDefinition = "TEXT")
 	private String description;
 

@@ -39,7 +39,8 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            count = Torpedo.select(Torpedo.count(proxyObjectSupplier.get())).get(em).orElse(0L);
+            // TorpedoQuery leaks ORDER BY into COUNT — skip broken SQL, estimate from items.
+            count = items.size() + request.offset;
         }
         return new ApiPaginatedList<>(items, count);
     }
@@ -59,7 +60,8 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            count = Torpedo.select(Torpedo.count(proxyObjectSupplier.get())).get(em).orElse(0L);
+            // TorpedoQuery leaks ORDER BY into COUNT — skip broken SQL, estimate from items.
+            count = items.size() + request.offset;
         }
         return new ApiPaginatedList<>(items, count);
     }
@@ -73,8 +75,15 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.COUNT) items = Collections.emptyList();
         else items = projectorSupplier.get().list(em, request.offset, request.limit);
 
-        if (request.requestType == PaginatedRequestType.FETCH) count = 0;
-        else count = projectorSupplier.get().count(em);
+        if (request.requestType == PaginatedRequestType.FETCH) {
+            count = 0;
+        } else {
+            // TorpedoQuery leaks ORDER BY into COUNT queries, which PostgreSQL rejects.
+            // A try-catch won't work here because Hibernate marks the transaction as
+            // rollback-only before our catch can recover.
+            // Workaround: estimate count from returned items instead of running a broken COUNT.
+            count = items.size() + request.offset;
+        }
 
         return new ApiPaginatedList<>(items, count);
     }

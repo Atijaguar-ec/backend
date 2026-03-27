@@ -32,7 +32,6 @@ public class BulkPayment extends TimestampEntity {
 	@ManyToOne
 	private Company payingCompany;
 	
-	@Lob
 	@Column(columnDefinition = "TEXT")
 	private String paymentDescription;
 	
