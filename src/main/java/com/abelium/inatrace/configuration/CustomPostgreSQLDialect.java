@@ -20,5 +20,12 @@ public class CustomPostgreSQLDialect extends PostgreSQLDialect {
 
         functionContributions.getFunctionRegistry()
                 .register("STRING_AGG", new StandardSQLFunction("string_agg", StandardBasicTypes.STRING));
+
+        functionContributions.getFunctionRegistry()
+                .registerPattern("MONTH", "extract(month from ?1)");
+        functionContributions.getFunctionRegistry()
+                .registerPattern("YEAR", "extract(year from ?1)");
+        functionContributions.getFunctionRegistry()
+                .registerPattern("WEEK", "extract(week from ?1)");
     }
 }
