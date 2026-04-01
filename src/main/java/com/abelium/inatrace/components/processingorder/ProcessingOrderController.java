@@ -26,13 +26,9 @@ import jakarta.validation.Valid;
 public class ProcessingOrderController {
 
     private final ProcessingOrderService processingOrderService;
-    private final ClassificationExcelService classificationExcelService;
-
     @Autowired
-    public ProcessingOrderController(ProcessingOrderService processingOrderService,
-                                    ClassificationExcelService classificationExcelService) {
+    public ProcessingOrderController(ProcessingOrderService processingOrderService) {
         this.processingOrderService = processingOrderService;
-        this.classificationExcelService = classificationExcelService;
     }
 
     @GetMapping("{id}")
@@ -65,52 +61,6 @@ public class ProcessingOrderController {
         return new ApiDefaultResponse();
     }
 
-    @GetMapping(value = "{id}/classification/liquidacion", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    @Operation(summary = "Export classification batch 'Liquidación de Pesca' Excel for the provided stock order ID")
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    content = @Content(schema = @Schema(type = "string", format = "binary"))
-            )
-    })
-    public ResponseEntity<byte[]> downloadClassificationLiquidacion(
-            @Valid @Parameter(description = "Stock Order ID (target output)", required = true) @PathVariable("id") Long stockOrderId,
-            @AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
 
-        byte[] response;
-        try {
-            response = processingOrderService.exportClassificationLiquidacion(stockOrderId, authUser);
-        } catch (Exception e) {
-            throw new ApiException(ApiStatus.ERROR, "Error while generating Excel file: " + e.getMessage());
-        }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header("Content-Disposition", "attachment; filename=Liquidacion_Pesca_" + stockOrderId + ".xlsx")
-                .body(response);
-    }
-
-    @GetMapping(value = "{id}/classification/liquidacion-compra", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    @Operation(summary = "Export 'Liquidación de Compra' Excel for the provided stock order ID - includes pricing and monetary totals")
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    content = @Content(schema = @Schema(type = "string", format = "binary"))
-            )
-    })
-    public ResponseEntity<byte[]> downloadLiquidacionCompra(
-            @Valid @Parameter(description = "Stock Order ID (target output)", required = true) @PathVariable("id") Long stockOrderId,
-            @AuthenticationPrincipal CustomUserDetails authUser) throws ApiException {
-
-        byte[] response;
-        try {
-            response = processingOrderService.generateLiquidacionCompraExcel(stockOrderId);
-        } catch (Exception e) {
-            throw new ApiException(ApiStatus.ERROR, "Error while generating Purchase Settlement Excel: " + e.getMessage());
-        }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header("Content-Disposition", "attachment; filename=Liquidacion_Compra_" + stockOrderId + ".xlsx")
-                .body(response);
-    }
 
 }
