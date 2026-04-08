@@ -23,10 +23,15 @@ public class V2026_04_08_16_00__Delete_Legacy_Shrimp_FacilityTypes implements Jp
             "LOTEPARAEXPORTARCOLA", "AREAVARORAGREGADO"
         );
 
-        // 1. Delete mapping to value chains
-        em.createNativeQuery("DELETE FROM value_chain_facility_type WHERE facility_type_id IN (SELECT id FROM facility_type WHERE code IN (:codes))")
-          .setParameter("codes", shrimpCodes)
-          .executeUpdate();
+        // 1. Delete mapping to value chains, only if the table exists (it might have been removed or never existed in some DBs)
+        Number count = (Number) em.createNativeQuery("SELECT count(*) FROM information_schema.tables WHERE table_name = 'value_chain_facility_type' AND table_schema = DATABASE()")
+                                  .getSingleResult();
+        
+        if (count != null && count.intValue() > 0) {
+            em.createNativeQuery("DELETE FROM value_chain_facility_type WHERE facility_type_id IN (SELECT id FROM facility_type WHERE code IN (:codes))")
+              .setParameter("codes", shrimpCodes)
+              .executeUpdate();
+        }
 
         // 2. Fetch all facilities associated with these types to delete their cascading dependencies
         List<Object[]> facilities = em.createNativeQuery(
