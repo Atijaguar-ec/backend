@@ -23,6 +23,16 @@ public class V2026_04_08_16_00__Delete_Legacy_Shrimp_FacilityTypes implements Jp
             "LOTEPARAEXPORTARCOLA", "AREAVARORAGREGADO"
         );
 
+        // 0. Safeguard: Check if the foundational tables exist. If they don't, this database 
+        // doesn't have the schema initialized or it was purposely omitted, so nothing to clean up.
+        Number baseTablesCount = (Number) em.createNativeQuery(
+            "SELECT count(*) FROM information_schema.tables WHERE table_name IN ('facility', 'facility_type') AND table_schema = DATABASE()")
+            .getSingleResult();
+        
+        if (baseTablesCount == null || baseTablesCount.intValue() < 2) {
+            return; // Skip migration entirely
+        }
+
         // 1. Delete mapping to value chains, only if the table exists (it might have been removed or never existed in some DBs)
         Number count = (Number) em.createNativeQuery("SELECT count(*) FROM information_schema.tables WHERE table_name = 'value_chain_facility_type' AND table_schema = DATABASE()")
                                   .getSingleResult();
