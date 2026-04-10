@@ -255,6 +255,30 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private String repackedOriginStockOrderId;
 
+	@Column
+	private Integer weekNumber;
+
+	@Column
+	private String parcelLot;
+
+	@Column
+	private String variety;
+
+	@Column
+	private String organicCertification;
+
+	@Column
+	private BigDecimal moisturePercentage;
+
+	@Column
+	private BigDecimal moistureWeightDeduction;
+
+	@Column
+	private BigDecimal netQuantity;
+
+	@Column
+	private BigDecimal finalPriceDiscount;
+
 	public User getCreatedBy() {
 		return createdBy;
 	}
@@ -700,5 +724,69 @@ public class StockOrder extends TimestampEntity {
 
 	public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
 		this.damagedWeightDeduction = damagedWeightDeduction;
+	}
+
+	public Integer getWeekNumber() {
+		return weekNumber;
+	}
+
+	public void setWeekNumber(Integer weekNumber) {
+		this.weekNumber = weekNumber;
+	}
+
+	public String getParcelLot() {
+		return parcelLot;
+	}
+
+	public void setParcelLot(String parcelLot) {
+		this.parcelLot = parcelLot;
+	}
+
+	public String getVariety() {
+		return variety;
+	}
+
+	public void setVariety(String variety) {
+		this.variety = variety;
+	}
+
+	public String getOrganicCertification() {
+		return organicCertification;
+	}
+
+	public void setOrganicCertification(String organicCertification) {
+		this.organicCertification = organicCertification;
+	}
+
+	public BigDecimal getMoisturePercentage() {
+		return moisturePercentage;
+	}
+
+	public void setMoisturePercentage(BigDecimal moisturePercentage) {
+		this.moisturePercentage = moisturePercentage;
+	}
+
+	public BigDecimal getMoistureWeightDeduction() {
+		return moistureWeightDeduction;
+	}
+
+	public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
+		this.moistureWeightDeduction = moistureWeightDeduction;
+	}
+
+	public BigDecimal getNetQuantity() {
+		return netQuantity;
+	}
+
+	public void setNetQuantity(BigDecimal netQuantity) {
+		this.netQuantity = netQuantity;
+	}
+
+	public BigDecimal getFinalPriceDiscount() {
+		return finalPriceDiscount;
+	}
+
+	public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+		this.finalPriceDiscount = finalPriceDiscount;
 	}
 }

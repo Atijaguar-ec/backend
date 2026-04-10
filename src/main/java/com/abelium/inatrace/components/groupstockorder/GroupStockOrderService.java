@@ -28,7 +28,9 @@ public class GroupStockOrderService extends BaseService {
             "SO.orderType, SPT.name, CONCAT(FP.name, ' (', P.name, ')'), " +
             "SUM(SO.totalQuantity), SUM(SO.fulfilledQuantity), SUM(SO.availableQuantity), " +
             "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
-            "SO.isAvailable " +
+            "SO.isAvailable, " +
+            "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, " +
+            "SO.facility.name, CONCAT(SO.producerUserCustomer.name, ' ', SO.producerUserCustomer.surname) " +
             ") FROM StockOrder SO " +
             "LEFT JOIN SO.processingOrder PO " +
             "LEFT JOIN SO.measurementUnitType MUT " +
@@ -58,7 +60,9 @@ public class GroupStockOrderService extends BaseService {
         // Add GROUP BY query string for grouping common columns
         queryString.append(
                 " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, MUT.label, " +
-                "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name "
+                "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name, " +
+                "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, SO.facility.name, " +
+                "SO.producerUserCustomer.name, SO.producerUserCustomer.surname "
         );
 
         // Add ORDER BY query string to sort on requested field and direction

@@ -40,6 +40,15 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Women only'")
 	private Boolean displayWomenOnly;
 
+	@Schema(description = "Facility level in hierarchy")
+	private Integer level;
+
+	@Schema(description = "Enable form control 'Final price discount'")
+	private Boolean displayFinalPriceDiscount;
+
+	@Schema(description = "Enable form control 'Moisture percentage'")
+	private Boolean displayMoisturePercentage;
+
 	@Schema(description = "Facility is activated")
 	private Boolean isDeactivated;
 
@@ -137,6 +146,30 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayWomenOnly(Boolean displayWomenOnly) {
 		this.displayWomenOnly = displayWomenOnly;
+	}
+
+	public Integer getLevel() {
+		return level;
+	}
+
+	public void setLevel(Integer level) {
+		this.level = level;
+	}
+
+	public Boolean getDisplayFinalPriceDiscount() {
+		return displayFinalPriceDiscount;
+	}
+
+	public void setDisplayFinalPriceDiscount(Boolean displayFinalPriceDiscount) {
+		this.displayFinalPriceDiscount = displayFinalPriceDiscount;
+	}
+
+	public Boolean getDisplayMoisturePercentage() {
+		return displayMoisturePercentage;
+	}
+
+	public void setDisplayMoisturePercentage(Boolean displayMoisturePercentage) {
+		this.displayMoisturePercentage = displayMoisturePercentage;
 	}
 
 	public Boolean getDeactivated() {

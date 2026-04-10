@@ -49,9 +49,17 @@ public class StockOrderMapper {
             apiStockOrder.setQrCodeTagFinalProduct(ProductApiTools.toApiFinalProductBase(entity.getQrCodeTagFinalProduct()));
         }
 
-        // Map women share and organic only
+        // Map women share, organic and cocoa specific properties
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
+        apiStockOrder.setWeekNumber(entity.getWeekNumber());
+        apiStockOrder.setParcelLot(entity.getParcelLot());
+        apiStockOrder.setVariety(entity.getVariety());
+        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
+        apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
+        apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
+        apiStockOrder.setNetQuantity(entity.getNetQuantity());
+        apiStockOrder.setFinalPriceDiscount(entity.getFinalPriceDiscount());
 
         // Farmer
         apiStockOrder.setProducerUserCustomer(
@@ -183,6 +191,14 @@ public class StockOrderMapper {
         apiStockOrder.setComments(entity.getComments());
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
+        apiStockOrder.setWeekNumber(entity.getWeekNumber());
+        apiStockOrder.setParcelLot(entity.getParcelLot());
+        apiStockOrder.setVariety(entity.getVariety());
+        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
+        apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
+        apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
+        apiStockOrder.setNetQuantity(entity.getNetQuantity());
+        apiStockOrder.setFinalPriceDiscount(entity.getFinalPriceDiscount());
 
         // Set price and currency for end customer (used in Quote orders for final products)
         apiStockOrder.setPricePerUnitForEndCustomer(entity.getPricePerUnitForEndCustomer());
@@ -228,6 +244,14 @@ public class StockOrderMapper {
 
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());
+        apiStockOrder.setWeekNumber(entity.getWeekNumber());
+        apiStockOrder.setParcelLot(entity.getParcelLot());
+        apiStockOrder.setVariety(entity.getVariety());
+        apiStockOrder.setOrganicCertification(entity.getOrganicCertification());
+        apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
+        apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
+        apiStockOrder.setNetQuantity(entity.getNetQuantity());
+        apiStockOrder.setFinalPriceDiscount(entity.getFinalPriceDiscount());
 
         // Map payments
         apiStockOrder.setPayments(entity.getPayments().stream().map(payment -> PaymentMapper.toApiPayment(payment, null)).collect(Collectors.toList()));

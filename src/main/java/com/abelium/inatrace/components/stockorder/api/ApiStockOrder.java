@@ -201,6 +201,30 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "The ID from which this repacked stock order was created; This ID is generated and provided by the client; Only applicable for repacked stock orders")
     private String repackedOriginStockOrderId;
 
+    @Schema(description = "The week number when the delivery was made")
+    private Integer weekNumber;
+
+    @Schema(description = "The parcel lot identifier")
+    private String parcelLot;
+
+    @Schema(description = "The variety of the product")
+    private String variety;
+
+    @Schema(description = "The organic certification status of the stock order")
+    private String organicCertification;
+
+    @Schema(description = "The moisture percentage measured")
+    private BigDecimal moisturePercentage;
+
+    @Schema(description = "The moisture weight deduction calculated")
+    private BigDecimal moistureWeightDeduction;
+
+    @Schema(description = "The net quantity after all deductions")
+    private BigDecimal netQuantity;
+
+    @Schema(description = "The final price discount applied")
+    private BigDecimal finalPriceDiscount;
+
     public String getIdentifier() {
         return identifier;
     }
@@ -667,5 +691,69 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setRepackedOriginStockOrderId(String repackedOriginStockOrderId) {
         this.repackedOriginStockOrderId = repackedOriginStockOrderId;
+    }
+
+    public Integer getWeekNumber() {
+        return weekNumber;
+    }
+
+    public void setWeekNumber(Integer weekNumber) {
+        this.weekNumber = weekNumber;
+    }
+
+    public String getParcelLot() {
+        return parcelLot;
+    }
+
+    public void setParcelLot(String parcelLot) {
+        this.parcelLot = parcelLot;
+    }
+
+    public String getVariety() {
+        return variety;
+    }
+
+    public void setVariety(String variety) {
+        this.variety = variety;
+    }
+
+    public String getOrganicCertification() {
+        return organicCertification;
+    }
+
+    public void setOrganicCertification(String organicCertification) {
+        this.organicCertification = organicCertification;
+    }
+
+    public BigDecimal getMoisturePercentage() {
+        return moisturePercentage;
+    }
+
+    public void setMoisturePercentage(BigDecimal moisturePercentage) {
+        this.moisturePercentage = moisturePercentage;
+    }
+
+    public BigDecimal getMoistureWeightDeduction() {
+        return moistureWeightDeduction;
+    }
+
+    public void setMoistureWeightDeduction(BigDecimal moistureWeightDeduction) {
+        this.moistureWeightDeduction = moistureWeightDeduction;
+    }
+
+    public BigDecimal getNetQuantity() {
+        return netQuantity;
+    }
+
+    public void setNetQuantity(BigDecimal netQuantity) {
+        this.netQuantity = netQuantity;
+    }
+
+    public BigDecimal getFinalPriceDiscount() {
+        return finalPriceDiscount;
+    }
+
+    public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+        this.finalPriceDiscount = finalPriceDiscount;
     }
 }

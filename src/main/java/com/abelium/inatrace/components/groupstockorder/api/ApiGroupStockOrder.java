@@ -27,7 +27,13 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
             String unitLabel,
             LocalDate deliveryTime,
             Instant updateTimestamp,
-            Boolean isAvailable
+            Boolean isAvailable,
+            Integer weekNumber,
+            String parcelLot,
+            String variety,
+            String organicCertification,
+            String facilityName,
+            String farmerName
     ) {
         setProductionDate(productionDate);
         setInternalLotNumber(internalLotNumber);
@@ -43,6 +49,12 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         setNoOfSacs(noOfSacs);
         setFinalProductName(finalProductName);
         setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
+        setWeekNumber(weekNumber);
+        setParcelLot(parcelLot);
+        setVariety(variety);
+        setOrganicCertification(organicCertification);
+        setFacilityName(facilityName);
+        setFarmerName(farmerName);
     }
 
     @Schema(description = "List of stock order ID's, belonging to this group")
@@ -86,6 +98,24 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Is stock available")
     private Boolean isAvailable;
+
+    @Schema(description = "The week number when the delivery was made")
+    private Integer weekNumber;
+
+    @Schema(description = "The parcel lot identifier")
+    private String parcelLot;
+
+    @Schema(description = "The variety of the product")
+    private String variety;
+
+    @Schema(description = "The organic certification status of the stock order")
+    private String organicCertification;
+
+    @Schema(description = "The facility name")
+    private String facilityName;
+
+    @Schema(description = "The farmer name")
+    private String farmerName;
 
     public Instant getUpdateTimestamp() {
         return updateTimestamp;
@@ -197,5 +227,53 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     public void setGroupedIds(List<Long> groupedIds) {
         this.groupedIds = groupedIds;
+    }
+
+    public Integer getWeekNumber() {
+        return weekNumber;
+    }
+
+    public void setWeekNumber(Integer weekNumber) {
+        this.weekNumber = weekNumber;
+    }
+
+    public String getParcelLot() {
+        return parcelLot;
+    }
+
+    public void setParcelLot(String parcelLot) {
+        this.parcelLot = parcelLot;
+    }
+
+    public String getVariety() {
+        return variety;
+    }
+
+    public void setVariety(String variety) {
+        this.variety = variety;
+    }
+
+    public String getOrganicCertification() {
+        return organicCertification;
+    }
+
+    public void setOrganicCertification(String organicCertification) {
+        this.organicCertification = organicCertification;
+    }
+
+    public String getFacilityName() {
+        return facilityName;
+    }
+
+    public void setFacilityName(String facilityName) {
+        this.facilityName = facilityName;
+    }
+
+    public String getFarmerName() {
+        return farmerName;
+    }
+
+    public void setFarmerName(String farmerName) {
+        this.farmerName = farmerName;
     }
 }

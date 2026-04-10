@@ -5,6 +5,7 @@ import com.abelium.inatrace.db.base.BaseEntity;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.product.Product;
 import com.abelium.inatrace.types.Gender;
+import com.abelium.inatrace.types.PersonType;
 import com.abelium.inatrace.types.UserCustomerType;
 import jakarta.persistence.*;
 
@@ -58,6 +59,16 @@ public class UserCustomer extends BaseEntity {
 	 */
 	@Column(length = Lengths.SURNAME)
 	private String surname;
+
+	@Enumerated(EnumType.STRING)
+	@Column(length = 20)
+	private PersonType personType;
+
+	@Column(length = 255)
+	private String companyName;
+
+	@Column(length = 255)
+	private String legalRepresentative;
 	
 	/**
 	 * phone number
@@ -160,6 +171,30 @@ public class UserCustomer extends BaseEntity {
 
 	public void setSurname(String surname) {
 		this.surname = surname;
+	}
+
+	public PersonType getPersonType() {
+		return personType;
+	}
+
+	public void setPersonType(PersonType personType) {
+		this.personType = personType;
+	}
+
+	public String getCompanyName() {
+		return companyName;
+	}
+
+	public void setCompanyName(String companyName) {
+		this.companyName = companyName;
+	}
+
+	public String getLegalRepresentative() {
+		return legalRepresentative;
+	}
+
+	public void setLegalRepresentative(String legalRepresentative) {
+		this.legalRepresentative = legalRepresentative;
 	}
 
 	public String getPhone() {

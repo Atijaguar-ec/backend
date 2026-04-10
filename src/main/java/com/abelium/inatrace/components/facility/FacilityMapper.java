@@ -78,6 +78,9 @@ public final class FacilityMapper {
 		apiFacility.setDisplayTare(entity.getDisplayTare());
 		apiFacility.setDisplayWomenOnly(entity.getDisplayWomenOnly());
 		apiFacility.setDisplayPriceDeterminedLater(entity.getDisplayPriceDeterminedLater());
+		apiFacility.setLevel(entity.getLevel());
+		apiFacility.setDisplayFinalPriceDiscount(entity.getDisplayFinalPriceDiscount());
+		apiFacility.setDisplayMoisturePercentage(entity.getDisplayMoisturePercentage());
 
 		// Map facility location data
 		ApiFacilityLocation apiFacilityLocation = new ApiFacilityLocation();

@@ -1,0 +1,11 @@
+phase: tasks
+status: complete
+---
+explore: complete
+propose: complete
+spec: skipped
+design: complete
+tasks: complete
+apply: pending
+verify: pending
+archive: pending

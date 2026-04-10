@@ -26,6 +26,9 @@ public class FarmInformation {
     @Column
     private Date startTransitionToOrganic;
 
+    @Column
+    private BigDecimal maxProductionQuantity;
+
     public BigDecimal getTotalCultivatedArea() {
         return totalCultivatedArea;
     }
@@ -64,5 +67,13 @@ public class FarmInformation {
     
     public void setAreaUnit(String areaUnit) {
         this.areaUnit = areaUnit;
+    }
+
+    public BigDecimal getMaxProductionQuantity() {
+        return maxProductionQuantity;
+    }
+
+    public void setMaxProductionQuantity(BigDecimal maxProductionQuantity) {
+        this.maxProductionQuantity = maxProductionQuantity;
     }
 }

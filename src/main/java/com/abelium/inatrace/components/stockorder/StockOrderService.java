@@ -1010,6 +1010,18 @@ public class StockOrderService extends BaseService {
         entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setCurrency(apiStockOrder.getCurrency());
+        entity.setWeekNumber(apiStockOrder.getWeekNumber());
+        entity.setParcelLot(apiStockOrder.getParcelLot());
+        entity.setVariety(apiStockOrder.getVariety());
+        entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
+        entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
+        entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
+        entity.setNetQuantity(apiStockOrder.getNetQuantity());
+        entity.setFinalPriceDiscount(apiStockOrder.getFinalPriceDiscount());
+
+        if (apiStockOrder.getOrderType() == OrderType.PURCHASE_ORDER) {
+            calculateNetQuantity(apiStockOrder, entity);
+        }
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders
         calculateQuantities(apiStockOrder, entity, processingOrder, null);
@@ -1079,7 +1091,13 @@ public class StockOrderService extends BaseService {
                     pricePerUnitReduced = entity.getPricePerUnit().subtract(entity.getDamagedPriceDeduction());
                 }
                 if (!Boolean.TRUE.equals(apiStockOrder.getPriceDeterminedLater())) {
-                    entity.setCost(pricePerUnitReduced.multiply(entity.getTotalQuantity()));
+                    BigDecimal quantityForCost = entity.getNetQuantity() != null ? entity.getNetQuantity() : entity.getTotalQuantity();
+                    BigDecimal calculatedCost = pricePerUnitReduced.multiply(quantityForCost);
+                    
+                    if (entity.getFinalPriceDiscount() != null) {
+                        calculatedCost = calculatedCost.subtract(entity.getFinalPriceDiscount());
+                    }
+                    entity.setCost(calculatedCost);
 
                     if (processingOrder == null) {
                         entity.setBalance(calculateBalanceForPurchaseOrder(entity));
@@ -1142,6 +1160,23 @@ public class StockOrderService extends BaseService {
         }
 
         return new ApiBaseEntity(entity);
+    }
+
+    private void calculateNetQuantity(ApiStockOrder api, StockOrder entity) {
+        BigDecimal gross = api.getTotalGrossQuantity() != null ? api.getTotalGrossQuantity() : BigDecimal.ZERO;
+        BigDecimal tare = api.getTare() != null ? api.getTare() : BigDecimal.ZERO;
+        BigDecimal damaged = api.getDamagedWeightDeduction() != null ? api.getDamagedWeightDeduction() : BigDecimal.ZERO;
+        
+        BigDecimal grossTareDamaged = gross.subtract(tare).subtract(damaged);
+
+        if (api.getMoisturePercentage() != null && api.getMoisturePercentage().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal moistureDeduction = grossTareDamaged.multiply(api.getMoisturePercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            entity.setMoistureWeightDeduction(moistureDeduction);
+            entity.setNetQuantity(grossTareDamaged.subtract(moistureDeduction));
+        } else {
+            entity.setMoistureWeightDeduction(BigDecimal.ZERO);
+            entity.setNetQuantity(grossTareDamaged);
+        }
     }
 
     public void calculateQuantities(ApiStockOrder apiStockOrder, StockOrder stockOrder, ProcessingOrder processingOrder, Long newInputTransactionId) throws ApiException{

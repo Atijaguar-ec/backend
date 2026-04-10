@@ -53,6 +53,15 @@ public class Facility extends TimestampEntity {
 	private Boolean displayWomenOnly;
 
 	@Column
+	private Integer level;
+
+	@Column
+	private Boolean displayFinalPriceDiscount;
+
+	@Column
+	private Boolean displayMoisturePercentage;
+
+	@Column
 	private Boolean isDeactivated;
 
 	@Column
@@ -232,6 +241,30 @@ public class Facility extends TimestampEntity {
 			facilityTranslations = new HashSet<>();
 		}
 		return facilityTranslations;
+	}
+
+	public Integer getLevel() {
+		return level;
+	}
+
+	public void setLevel(Integer level) {
+		this.level = level;
+	}
+
+	public Boolean getDisplayFinalPriceDiscount() {
+		return displayFinalPriceDiscount;
+	}
+
+	public void setDisplayFinalPriceDiscount(Boolean displayFinalPriceDiscount) {
+		this.displayFinalPriceDiscount = displayFinalPriceDiscount;
+	}
+
+	public Boolean getDisplayMoisturePercentage() {
+		return displayMoisturePercentage;
+	}
+
+	public void setDisplayMoisturePercentage(Boolean displayMoisturePercentage) {
+		this.displayMoisturePercentage = displayMoisturePercentage;
 	}
 
 	public Facility() {
