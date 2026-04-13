@@ -31,9 +31,17 @@
 | **Autenticación** | Keycloak (OAuth2 Resource Server) | — |
 | **Build** | Maven | — |
 
-### Configuración Crítica de Flyway
+### Configuración de Naming y Schema
 ```properties
-spring.jpa.hibernate.ddl-auto = validate
+# Hibernate preserva los nombres Java tal cual (Facility → Facility).
+# PostgreSQL foldea identificadores sin comillas a minúsculas → facility, stockorder, etc.
+spring.jpa.hibernate.naming.physical-strategy = org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+spring.jpa.hibernate.naming.implicit-strategy = org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl
+
+# Hibernate crea/actualiza el esquema al arrancar; Flyway corre DESPUÉS para DDL adicional + seeds.
+spring.jpa.properties.hibernate.hbm2ddl.auto = update
+
+# Flyway
 spring.flyway.baseline-on-migrate = true
 spring.flyway.out-of-order = true
 spring.flyway.validate-on-migrate = false
@@ -41,22 +49,35 @@ spring.flyway.table = schema_version
 spring.flyway.locations = com.abelium.inatrace.db.migrations,classpath:/db/migrations
 ```
 
-> **REGLA:** Hibernate está en modo `validate`. Nunca usa `update` ni `create`.
-> Todo cambio de esquema **DEBE** hacerse mediante scripts Flyway explícitos.
+> **REGLA:** `hbm2ddl.auto = update` crea las tablas base al arrancar.
+> Flyway se usa para DDL que Hibernate no puede inferir (defaults, constraints, seeds).
+> Las migraciones Flyway deben ser **idempotentes** (`IF NOT EXISTS` / `IF EXISTS`).
 
 ---
 
 ## 3. Convenciones de Naming
 
-### Base de datos (PostgreSQL)
-- **Tablas:** PascalCase → `StockOrder`, `FacilityType`, `UserCustomer`
-- **Columnas:** camelCase → `weekNumber`, `parcelLot`, `organicCertification`
-- **Foreign keys:** `{tabla_referenciada}_id` en camelCase → `company_id`, `processing_action_id`
-- **Índices:** `idx_{tabla}_{columna}` → `idx_stock_order_week_number`
-- **Constraints:** `chk_{tabla}_{regla}` → `chk_stock_order_week_number`
-- **Unique:** `uk_{tabla}_{columnas}` → `uk_company_processing_action_company_action`
+### Base de datos (PostgreSQL) — TODO MINÚSCULAS
+PostgreSQL foldea identificadores sin comillas a minúsculas. Hibernate envía los nombres Java
+sin comillas, por lo que la tabla real siempre es lowercase:
 
-> **REGLA:** Mantener la convención original de INATrace. NO renombrar tablas a snake_case.
+| Java (entidad) | PostgreSQL (tabla real) |
+|---|---|
+| `Facility` | `facility` |
+| `FacilityType` | `facilitytype` |
+| `StockOrder` | `stockorder` |
+| `UserCustomer` | `usercustomer` |
+| `CertificationType` | `certificationtype` |
+
+- **Tablas:** lowercase sin separadores → `stockorder`, `facilitytype`, `usercustomer`
+- **Columnas:** lowercase sin separadores → `weeknumber`, `parcellot`, `organiccertification`
+- **Foreign keys:** `{entidad_referenciada}_id` lowercase → `company_id`, `facilitytype_id`
+- **Embeddables:** prefijo del campo + `_` → `farm_maxproductionquantity`, `bank_accountnumber`
+- **Constraints:** `uk_{descripcion}` → `uk_certification_type_code`
+
+> **REGLA CRÍTICA:** NUNCA usar doble-comillas (`"Facility"`) en migraciones Flyway SQL
+> ni en Java migrations, **excepto** para palabras reservadas de PostgreSQL
+> (ej: `"order"` en FacilityType). Usar siempre identificadores sin comillas en minúsculas.
 
 ### Código Java
 - **Entidades:** PascalCase, mismo nombre que la tabla → `StockOrder.java`
@@ -68,9 +89,12 @@ spring.flyway.locations = com.abelium.inatrace.db.migrations,classpath:/db/migra
 - **Repositorios:** Sufijo `Repository` → No se usan Spring Data repos; se usa `EntityManager` + Torpedo Query.
 
 ### Migraciones Flyway
-- **SQL:** `V{YYYY_MM_DD_HH_MM}__{Descripcion}.sql`
-- **Java:** `V{YYYY_MM_DD_HH_MM}__{Descripcion}.java` (implementan `JpaMigration`)
+- **SQL:** `V{YYYY_MM_DD_HH_MM}__{Descripcion}.sql` en `src/main/resources/db/migrations/`
+- **Java:** `V{YYYY_MM_DD_HH_MM}__{Descripcion}.java` en `com.abelium.inatrace.db.migrations` (extienden `BaseJavaMigration`)
 - **Sintaxis:** PostgreSQL nativo. **NUNCA** MySQL (`SET @var`, `PREPARE/EXECUTE`, `INFORMATION_SCHEMA`-MySQL-style).
+- **Baseline limpio:** Las migraciones legadas de 2023 fueron eliminadas (2026-04-13). Solo existen migraciones V2026+.
+- **Idempotencia obligatoria:** Todo `ALTER TABLE` debe usar `IF NOT EXISTS` / `IF EXISTS`.
+- **Tablas/columnas en SQL Flyway:** Siempre lowercase sin comillas. Ej: `ALTER TABLE stockorder ADD COLUMN IF NOT EXISTS weeknumber INT;`
 
 ---
 
@@ -146,14 +170,18 @@ La exportación Excel genera columnas adicionales para estos campos.
 
 2. **NO usar sintaxis MySQL en migraciones Flyway.**
    - ❌ `SET @var := ...`; `PREPARE ... EXECUTE`; `INFORMATION_SCHEMA` con `TABLE_SCHEMA = DATABASE()`
-   - ✅ `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`; `DO $$ BEGIN ... END $$;`
+   - ✅ `ALTER TABLE stockorder ADD COLUMN IF NOT EXISTS weeknumber INT;`
 
-3. **NO cambiar `ddl-auto` a `update` o `create`.**
-   Siempre debe ser `validate`. Todo cambio de esquema se hace vía Flyway.
+3. **NO usar doble-comillas en identificadores SQL** (excepto palabras reservadas como `"order"`).
+   - ❌ `ALTER TABLE "StockOrder" ADD COLUMN "weekNumber" INT;`
+   - ✅ `ALTER TABLE stockorder ADD COLUMN IF NOT EXISTS weeknumber INT;`
+   PostgreSQL foldea todo a lowercase; poner comillas fuerza case-sensitivity y rompe todo.
 
 4. **NO eliminar campos de Cacao** del inventario de la sección 4 sin revisión explícita del equipo.
 
-5. **NO crear tablas con nombres en snake_case.** Mantener PascalCase: `StockOrder`, no `stock_order`.
+5. **NO usar `globally_quoted_identifiers = true`.**
+   Esto quoteaba también `columnDefinition` (`"TEXT"`) causando errores de tipo PostgreSQL.
+   Se documentó como anti-patrón el 2026-04-13.
 
 6. **NO usar `TokenAuthenticationFilter` ni JWT local.**
    La autenticación se maneja vía `KeycloakJwtAuthenticationConverter` + Spring Security OAuth2 Resource Server.
@@ -181,7 +209,9 @@ La exportación Excel genera columnas adicionales para estos campos.
 | Excluir `CompanyProcessingAction` | Solo era un CRUD de personalización por empresa; no es requerido para Cacao | 2026-04-09 |
 | Excluir flags de camarón en `Facility` | Son específicos de la operativa camaronera (inspección, laboratorio, clasificación, congelado) | 2026-04-09 |
 | Consolidar migraciones en 1 script PostgreSQL | Las migraciones de staging eran incrementales MySQL con muchos fixes/rollbacks; en Postgres partimos limpio | 2026-04-09 |
-| Mantener naming PascalCase en tablas | Convención original de INATrace; cambiar rompería todas las entidades JPA y queries JPQL | 2026-04-09 |
+| Naming lowercase en PostgreSQL | `PhysicalNamingStrategyStandardImpl` sin quoting → PostgreSQL auto-foldea a lowercase. Elimina toda complejidad de comillas dobles | 2026-04-13 |
+| Eliminar migraciones V2023 legacy | Eran `DROP COLUMN` de campos que ya no existen en los modelos Java; inútiles en un arranque limpio | 2026-04-13 |
+| `hbm2ddl.auto = update` + Flyway | Hibernate crea el esquema base; Flyway aporta DDL idempotente y seeds como safety net | 2026-04-13 |
 | Idiomas reducidos a EN/ES | Solo se soportan inglés y español en producción | 2026-04-09 |
 | Eliminar `quality_document_id` de StockOrder | Era para documentos de laboratorio de camarón; no aplica a Cacao | 2026-04-09 |
 | Migración de Infraestructura Staging a PostgreSQL | Se clona el PostgreSQL limpio en Port 5432 paralelo a MySQL en el Remote Server de `test/fortaleza` para compatibilidad dual | 2026-04-10 |
