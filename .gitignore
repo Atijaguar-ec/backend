@@ -177,3 +177,6 @@ docs/dicionario.docx
 docs/informe.docx
 ci/.env-prod
 scripts/*
+
+# Scripts no versionados (Deploy local)
+scripts/deploy/
