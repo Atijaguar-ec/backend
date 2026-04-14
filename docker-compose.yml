@@ -1,18 +1,36 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:16-alpine
     container_name: inatrace_postgres
     restart: always
     environment:
-      POSTGRES_DB: inatrace
+      POSTGRES_DB: inatrace_fortaleza_stage
       POSTGRES_USER: inatrace
       POSTGRES_PASSWORD: inatrace
     ports:
       - "5432:5432"
     volumes:
       - inatrace_pgdata:/var/lib/postgresql/data
+      - ./scripts/deploy/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: inatrace_keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/inatrace_keycloak
+      KC_DB_USERNAME: inatrace
+      KC_DB_PASSWORD: inatrace
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_FEATURES: organization
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./scripts/keycloak/keycloak-theme/inatrace:/opt/keycloak/themes/inatrace
+    depends_on:
+      - db
 
 volumes:
   inatrace_pgdata:
