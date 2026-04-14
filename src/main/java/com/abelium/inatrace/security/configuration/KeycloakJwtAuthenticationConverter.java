@@ -16,6 +16,11 @@ import org.slf4j.LoggerFactory;
  * Converts a Keycloak JWT into a UsernamePasswordAuthenticationToken
  * whose principal is a CustomUserDetails, bridging the gap between
  * OAuth2 Resource Server JWT auth and the existing @AuthenticationPrincipal usage.
+ *
+ * Security policy:
+ *  - If the JWT has no user claim (email / preferred_username) → reject (401)
+ *  - If the user is not found in the INATrace database → reject (401)
+ *  - Only fully resolved, database-registered users are authenticated.
  */
 public class KeycloakJwtAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
@@ -29,28 +34,35 @@ public class KeycloakJwtAuthenticationConverter implements Converter<Jwt, Abstra
 
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
-        // Keycloak JWT typically has 'email' or 'preferred_username' claim
+        // Keycloak JWT typically contains 'email' or 'preferred_username'
         String email = jwt.getClaimAsString("email");
         if (email == null) {
             email = jwt.getClaimAsString("preferred_username");
         }
 
         if (email == null) {
-            logger.warn("JWT token does not contain 'email' or 'preferred_username' claim. Sub: {}", jwt.getSubject());
-            return new UsernamePasswordAuthenticationToken(null, jwt, java.util.Collections.emptyList());
+            logger.error("JWT token is missing both 'email' and 'preferred_username' claims. Sub: {}. Rejecting.", jwt.getSubject());
+            // Throw instead of returning a null-principal token — Spring Security
+            // will treat this as unauthenticated and return 401.
+            throw new UsernameNotFoundException("JWT token has no identifiable user claim");
         }
 
         try {
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
             CustomUserDetails customUser = (CustomUserDetails) userDetails;
+            logger.debug("Authenticated JWT for user: {}", email);
             return new UsernamePasswordAuthenticationToken(
                 customUser,
                 jwt,
                 customUser.getAuthorities()
             );
         } catch (UsernameNotFoundException e) {
-            logger.warn("User with email '{}' from JWT not found in database: {}", email, e.getMessage());
-            return new UsernamePasswordAuthenticationToken(null, jwt, java.util.Collections.emptyList());
+            logger.error("User '{}' from valid Keycloak JWT not found in INATrace database. " +
+                "User must be registered in the application first. Rejecting.", email);
+            // Reject clearly — do NOT silently grant an anonymous-like token.
+            throw new UsernameNotFoundException(
+                "Keycloak user '" + email + "' has a valid token but is not registered in INATrace."
+            );
         }
     }
 }
