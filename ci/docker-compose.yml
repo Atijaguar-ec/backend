@@ -43,3 +43,4 @@ services:
 networks:
   backend:
     name: inatrace-backend-network
+    external: true
