@@ -551,7 +551,7 @@ echo "⏳ Esperando healthcheck nativo (remoto)..."
 RETRY_COUNT=0
 MAX_RETRIES=12
 SLEEP_TIME=10
-SERVICE_NAME="backend"
+SERVICE_NAME="inatrace-backend"
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT + 1))
@@ -565,7 +565,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   if [ "$HEALTH_STATUS" = "healthy" ]; then
     echo "✅ Backend Fortaleza está saludable (Estado: $HEALTH_STATUS)"
     echo "📈 Logs recientes:"
-    docker compose logs --tail=20 backend
+    docker compose logs --tail=20 inatrace-backend
     exit 0
   fi
 
@@ -575,7 +575,7 @@ done
 
 echo "❌ Healthcheck nativo falló después de ${MAX_RETRIES} intentos" >&2
 echo "📋 Logs del contenedor:"
-docker compose logs --tail=50 backend
+docker compose logs --tail=50 inatrace-backend
 echo "📊 Estado final de contenedores:"
 docker compose ps
 exit 1
@@ -595,10 +595,10 @@ EOSSH
                 docker compose pull || true
 
                 echo "🛑 Deteniendo backend previo..."
-                docker compose stop backend >/dev/null 2>&1 || true
+                docker compose stop inatrace-backend >/dev/null 2>&1 || true
 
                 echo "🗑️ Eliminando backend previo..."
-                docker compose rm -f backend >/dev/null 2>&1 || true
+                docker compose rm -f inatrace-backend >/dev/null 2>&1 || true
 
                 if [ -f .env ]; then
                   echo "🧹 Limpiando contenedor backend definido en .env (si existe)..."
@@ -609,7 +609,7 @@ EOSSH
                 fi
 
                 echo "🔄 Desplegando servicios localmente..."
-                docker compose up -d --remove-orphans --force-recreate backend
+                docker compose up -d --remove-orphans --force-recreate inatrace-backend
 
                 echo "📊 Estado inicial de contenedores:"
                 docker compose ps
@@ -618,7 +618,7 @@ EOSSH
                 RETRY_COUNT=0
                 MAX_RETRIES=12
                 SLEEP_TIME=10
-                SERVICE_NAME="backend"
+                SERVICE_NAME="inatrace-backend"
                 CONTAINER_NAME="${CONTAINER_NAME_BE:-inatrace-be-dev}"
 
                 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
