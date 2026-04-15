@@ -394,6 +394,7 @@ pipeline {
 
                 echo "📋 Preparando archivo .env..."
                 cp $ENVFILE .env
+                chmod 644 .env
 
                 echo "📝 Verificando docker-compose.yml..."
                 if [ ! -f docker-compose.yml ]; then
