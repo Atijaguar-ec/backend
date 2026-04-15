@@ -34,9 +34,6 @@ public class CurrencyTypeService extends BaseService {
     @Value("${INAtrace.exchangerate.apiKey}")
     private String apiKey;
 
-    @Value("${INATrace.exchangerate.enabled:true}")
-    private boolean exchangeRateEnabled;
-
     public List<ApiCurrencyType> getCurrencyTypeList() {
         List<CurrencyType> currencyTypeList = em.createNamedQuery("CurrencyType.getAllCurrencyTypes", CurrencyType.class).getResultList();
         return CurrencyTypeMapper.toApiCurrencyTypeList(currencyTypeList);
@@ -67,18 +64,12 @@ public class CurrencyTypeService extends BaseService {
     @Scheduled(cron = "0 1 0 * * *")
     @EventListener(ApplicationReadyEvent.class)
     public void updateCurrencies() {
-    // Evita llamadas automáticas en desarrollo
-    String activeProfile = System.getProperty("spring.profiles.active", "");
-    if ("dev".equalsIgnoreCase(activeProfile) || "local".equalsIgnoreCase(activeProfile)) {
-        System.out.println("[INFO] updateCurrencies() ignorado en entorno de desarrollo ('" + activeProfile + "').");
-        return;
-    }
-        // Respetar el flag de configuración para deshabilitar llamadas externas
-        if (!exchangeRateEnabled) {
-            System.out.println("[INFO] Exchange rate updates disabled by INATrace.exchangerate.enabled=false. Skipping updateCurrencies().");
+        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("your_api_key_here")) {
+            System.out.println("WARN: Exchange rates API key is not configured. Skipping currency update on startup.");
             return;
         }
-        WebClient webClientSymbols = WebClient.create("https://api.exchangerate.host/symbols?access_key=" + apiKey);
+
+        WebClient webClientSymbols = WebClient.create("http://api.exchangeratesapi.io/v1/symbols?access_key=" + apiKey);
         ApiCurrencySymbolsResponse apiCurrencySymbolsResponse = webClientSymbols
                 .get()
                 .accept(MediaType.APPLICATION_JSON)
@@ -99,7 +90,7 @@ public class CurrencyTypeService extends BaseService {
             }
         }
 
-        WebClient webClientRates = WebClient.create("https://api.exchangerate.host/latest?access_key=" + apiKey + "&base=EUR");
+        WebClient webClientRates = WebClient.create("http://api.exchangeratesapi.io/v1/latest?access_key=" + apiKey + "&base=EUR");
         ApiCurrencyRatesResponse apiCurrencyResponse = webClientRates
                 .get()
                 .accept(MediaType.APPLICATION_JSON)

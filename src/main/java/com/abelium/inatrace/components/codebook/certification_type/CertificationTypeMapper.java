@@ -8,81 +8,55 @@ import com.abelium.inatrace.types.Language;
 
 import java.util.stream.Collectors;
 
-/**
- * Mapper for CertificationType entity.
- *
- * @author Álvaro Sánchez
- */
-public final class CertificationTypeMapper {
+public class CertificationTypeMapper {
 
     private CertificationTypeMapper() {
         throw new IllegalStateException("Utility class");
     }
 
-    /**
-     * Mapping the base entity attributes - no associations are included.
-     *
-     * @param entity   DB entity.
-     * @param language Requested language.
-     * @return API model entity.
-     */
     public static ApiCertificationType toApiCertificationTypeBase(CertificationType entity, Language language) {
-
-        if (entity == null) {
+        if(entity == null) {
             return null;
         }
+
+        ApiCertificationType api = new ApiCertificationType();
+        api.setId(entity.getId());
+        api.setCode(entity.getCode());
+        api.setCategory(entity.getCategory());
+        api.setStatus(entity.getStatus());
 
         CertificationTypeTranslation translation = entity.getTranslations().stream()
                 .filter(t -> t.getLanguage().equals(language))
                 .findFirst()
-                .orElse(new CertificationTypeTranslation());
+                .orElse(null);
 
-        // Fallback to English if translation not found
-        if (translation.getName() == null || translation.getName().isEmpty()) {
-            translation = entity.getTranslations().stream()
-                    .filter(t -> t.getLanguage().equals(Language.EN))
-                    .findFirst()
-                    .orElse(new CertificationTypeTranslation());
-        }
+        api.setName(translation != null ? translation.getName() : entity.getName());
 
-        ApiCertificationType apiCertificationType = new ApiCertificationType();
-        apiCertificationType.setId(entity.getId());
-        apiCertificationType.setCode(entity.getCode());
-        apiCertificationType.setLabel(translation.getName() != null ? translation.getName() : entity.getName());
-        apiCertificationType.setCategory(entity.getCategory());
-        apiCertificationType.setStatus(entity.getStatus());
-
-        return apiCertificationType;
+        return api;
     }
 
-    /**
-     * Mapping of the base attributes and all the associations.
-     *
-     * @param entity   DB entity.
-     * @param language Requested language.
-     * @return API model entity.
-     */
     public static ApiCertificationType toApiCertificationType(CertificationType entity, Language language) {
+        ApiCertificationType api = toApiCertificationTypeBase(entity, language);
 
-        ApiCertificationType apiCertificationType = CertificationTypeMapper.toApiCertificationTypeBase(entity, language);
-
-        if (apiCertificationType == null) {
+        if(api == null) {
             return null;
         }
 
-        apiCertificationType.setTranslations(
-                entity.getTranslations().stream()
-                        .map(CertificationTypeMapper::toApiCertificationTypeTranslation)
-                        .collect(Collectors.toList())
-        );
+        api.setTranslations(entity.getTranslations().stream()
+                .map(CertificationTypeMapper::toApiCertificationTypeTranslation)
+                .collect(Collectors.toList()));
 
-        return apiCertificationType;
+        return api;
     }
 
-    public static ApiCertificationTypeTranslation toApiCertificationTypeTranslation(CertificationTypeTranslation translation) {
-        ApiCertificationTypeTranslation apiTranslation = new ApiCertificationTypeTranslation();
-        apiTranslation.setLanguage(translation.getLanguage());
-        apiTranslation.setName(translation.getName());
-        return apiTranslation;
+    public static ApiCertificationTypeTranslation toApiCertificationTypeTranslation(CertificationTypeTranslation entity) {
+        if(entity == null) {
+            return null;
+        }
+
+        ApiCertificationTypeTranslation api = new ApiCertificationTypeTranslation();
+        api.setName(entity.getName());
+        api.setLanguage(entity.getLanguage());
+        return api;
     }
 }

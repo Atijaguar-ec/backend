@@ -33,8 +33,7 @@ public class ProductLabelFeedback extends TimestampEntity {
 	/**
 	 * feedback
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String feedback;
 	
 	/**

@@ -5,6 +5,11 @@ import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.dialect.function.StandardSQLFunction;
 import org.hibernate.type.StandardBasicTypes;
 
+/**
+ * @deprecated Replaced by {@link CustomPostgreSQLDialect} as part of the postgres-migration change.
+ * This class is kept for reference only and is no longer registered in application.properties.
+ */
+@Deprecated(since = "postgres-migration", forRemoval = true)
 public class CustomMySQLDialect extends MySQLDialect {
 
     @Override

@@ -62,10 +62,7 @@ public class ProcessingOrderService extends BaseService {
                 companyQueries.fetchCompanyProducts(processingOrder.getProcessingAction().getCompany().getId()),
                 authUser);
 
-        ApiProcessingOrder apiProcessingOrder = ProcessingOrderMapper.toApiProcessingOrder(processingOrder, language);
-        
-        
-        return apiProcessingOrder;
+        return ProcessingOrderMapper.toApiProcessingOrder(processingOrder, language);
     }
 
     /**
@@ -250,10 +247,6 @@ public class ProcessingOrderService extends BaseService {
             }
         }
 
-        if (entity.getId() == null) {
-            em.persist(entity);
-        }
-
         Boolean isProcessing = processingAction.getType() != ProcessingActionType.TRANSFER;
 
         // Get the first input Transaction with generated QR code tag (if present)
@@ -297,17 +290,13 @@ public class ProcessingOrderService extends BaseService {
             // Set targetStockOrders for TRANSFER
             if (processingAction.getType() == ProcessingActionType.TRANSFER) {
 
-                ApiStockOrder apiTargetStockOrder = apiProcessingOrder.getTargetStockOrders().get(i);
-
-                Long targetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiTargetStockOrder, user, entity).getId();
+                Long targetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiProcessingOrder.getTargetStockOrders().get(i), user, entity).getId();
                 StockOrder targetStockOrder = fetchEntity(targetStockOrderId, StockOrder.class);
                 targetStockOrder.setProcessingOrder(entity);
 
                 // Transfer the QR code tag (if present) to the target Stock order
                 targetStockOrder.setQrCodeTag(presentQrCodeTag);
                 targetStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
-
-
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
@@ -317,7 +306,7 @@ public class ProcessingOrderService extends BaseService {
         if (processingAction.getType() != ProcessingActionType.TRANSFER) {
 
             for (ApiStockOrder apiTargetStockOrder: apiProcessingOrder.getTargetStockOrders()) {
-                
+
                 Long insertedTargetStockOrderId = stockOrderService.createOrUpdateStockOrder(apiTargetStockOrder, user, entity).getId();
                 StockOrder targetStockOrder = fetchEntity(insertedTargetStockOrderId, StockOrder.class);
                 targetStockOrder.setProcessingOrder(entity);
@@ -330,6 +319,10 @@ public class ProcessingOrderService extends BaseService {
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
+        }
+
+        if (entity.getId() == null) {
+            em.persist(entity);
         }
 
         return new ApiBaseEntity(entity);
@@ -507,7 +500,5 @@ public class ProcessingOrderService extends BaseService {
         E entity = Queries.get(em, entityClass, id);
         return entity == null ? defaultValue : entity;
     }
-
-
 
 }

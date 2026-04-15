@@ -5,6 +5,7 @@ import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.entities.company.Company;
 import jakarta.persistence.*;
+import jakarta.persistence.JoinColumn;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -19,6 +20,7 @@ public class BulkPayment extends TimestampEntity {
 	private Long entityVersion;
 	
 	@ManyToOne(optional = false)
+	@JoinColumn(name = "createdby_id")
 	private User createdBy;
 	
 	@Column
@@ -30,8 +32,7 @@ public class BulkPayment extends TimestampEntity {
 	@ManyToOne
 	private Company payingCompany;
 	
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String paymentDescription;
 	
 	@Enumerated(EnumType.STRING)

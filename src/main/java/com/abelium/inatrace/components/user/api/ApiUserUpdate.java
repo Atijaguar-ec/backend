@@ -18,7 +18,7 @@ public class ApiUserUpdate {
 	public String surname;
 	
 	@Schema(description = "language")
-	public Language language = Language.ES;
+	public Language language = Language.EN;
 	
 	public String getName() {
 		return name;

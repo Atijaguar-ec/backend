@@ -47,13 +47,6 @@ public class UserCustomer extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(length = Lengths.ENUM)
 	private UserCustomerType type;
-
-	/**
-	 * person type (natural, legal)
-	 */
-	@Enumerated(EnumType.STRING)
-	@Column(length = Lengths.ENUM)
-	private PersonType personType;
 	
 	/**
 	 * name
@@ -67,16 +60,14 @@ public class UserCustomer extends BaseEntity {
 	@Column(length = Lengths.SURNAME)
 	private String surname;
 
-	/**
-	 * legal entity company name (when personType = LEGAL)
-	 */
-	@Column(length = Lengths.NAME)
+	@Enumerated(EnumType.STRING)
+	@Column(length = 20)
+	private PersonType personType;
+
+	@Column(length = 255)
 	private String companyName;
 
-	/**
-	 * legal representative full name (when personType = LEGAL)
-	 */
-	@Column(length = Lengths.NAME)
+	@Column(length = 255)
 	private String legalRepresentative;
 	
 	/**
@@ -113,7 +104,7 @@ public class UserCustomer extends BaseEntity {
 	@Column
 	private BankInformation bank;
 
-	@Embedded
+	@Column
 	private FarmInformation farm;
 
 	@OneToMany(mappedBy = "userCustomer", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -140,14 +131,6 @@ public class UserCustomer extends BaseEntity {
 
 	public void setType(UserCustomerType type) {
 		this.type = type;
-	}
-
-	public PersonType getPersonType() {
-		return personType;
-	}
-
-	public void setPersonType(PersonType personType) {
-		this.personType = personType;
 	}
 
 	public Company getCompany() {
@@ -188,6 +171,14 @@ public class UserCustomer extends BaseEntity {
 
 	public void setSurname(String surname) {
 		this.surname = surname;
+	}
+
+	public PersonType getPersonType() {
+		return personType;
+	}
+
+	public void setPersonType(PersonType personType) {
+		this.personType = personType;
 	}
 
 	public String getCompanyName() {

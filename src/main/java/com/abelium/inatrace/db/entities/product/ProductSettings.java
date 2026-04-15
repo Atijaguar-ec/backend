@@ -36,8 +36,7 @@ public class ProductSettings extends BaseEntity {
 	/**
 	 * increase in income - description
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String incomeIncreaseDescription;
 	
 	/**
@@ -45,27 +44,24 @@ public class ProductSettings extends BaseEntity {
 	 */
 	@Enumerated(EnumType.STRING)
     @Column(nullable = false, length = Lengths.ENUM)
-	private Language language = Language.ES;
+	private Language language = Language.EN;
 	
 	/**
 	 * GDPR text
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String gdprText;
 	
 	/**
 	 * Privacy policy text
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String privacyPolicyText;
 	
 	/**
 	 * Terms of use text
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String termsOfUseText;
 
 	public Boolean getCostBreakdown() {

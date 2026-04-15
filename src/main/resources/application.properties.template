@@ -25,9 +25,9 @@ springdoc.default-produces-media-type = application/json
 # DataSource settings
 INATrace.database.name =
 INATrace.database.hostname = localhost
-INATrace.database.port = 3306
+INATrace.database.port = 5432
 
-spring.datasource.url = jdbc:mysql://${INATrace.database.hostname}:${INATrace.database.port}/${INATrace.database.name}?autoReconnect=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+spring.datasource.url = jdbc:postgresql://${INATrace.database.hostname}:${INATrace.database.port}/${INATrace.database.name}
 spring.datasource.username =
 spring.datasource.password =
 # spring.jpa.show-sql = true
@@ -47,7 +47,7 @@ spring.datasource.hikari.maxLifetime = 30000
 # Hibernate naming strategies (fixes case with one class being embedded multiple times into same entity
 spring.jpa.hibernate.naming.implicit-strategy = org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl
 spring.jpa.hibernate.naming.physical-strategy = org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
-spring.jpa.properties.hibernate.dialect = com.abelium.inatrace.configuration.CustomMySQLDialect
+spring.jpa.properties.hibernate.dialect = com.abelium.inatrace.configuration.CustomPostgreSQLDialect
 
 # Create/update envers auditing tables
 spring.jpa.properties.hibernate.hbm2ddl.auto = update
@@ -141,7 +141,8 @@ beyco.oauth2.url =
 
 beyco.integration.url =
 
-#AgStack integration
-INATrace.agstack.apiKey =
-INATrace.agstack.clientSecret =
+# AgStack integration
+INATrace.agstack.email =
+INATrace.agstack.password =
 INATrace.agstack.baseURL =
+INATrace.agstack.loginBaseURL =

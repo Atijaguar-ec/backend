@@ -13,7 +13,6 @@ public class ApiCompanyBase extends ApiBaseEntity {
 
 	@Size(max = Lengths.DEFAULT)
 	@Schema(description = "company name", maxLength = Lengths.DEFAULT)
-	@com.fasterxml.jackson.annotation.JsonProperty("name")
 	public String name;
 
 	@Size(max = Lengths.DEFAULT)

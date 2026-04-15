@@ -11,10 +11,10 @@
 	</parent>
 	
 	<groupId>com.abelium.INATrace</groupId>
-	<artifactId>cacao-backend</artifactId>
-	<version>2.38.0-SNAPSHOT</version>
-	<name>Cacao backend</name>
-	<description>Cacao backend services</description>
+	<artifactId>coffee-backend</artifactId>
+	<version>2.39.0-SNAPSHOT</version>
+	<name>Coffee backend</name>
+	<description>Coffee backend services</description>
 
     <properties>
         <java.version>17</java.version>
@@ -48,17 +48,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
-        <!-- MacOS DNS resolver for Netty -->
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <classifier>osx-x86_64</classifier>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <classifier>osx-aarch_64</classifier>
-        </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -81,12 +70,12 @@
 		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-mysql</artifactId>
+			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 		
 		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 		
@@ -122,12 +111,6 @@
 	      <groupId>commons-beanutils</groupId>
 	      <artifactId>commons-beanutils</artifactId>
 	      <version>1.9.4</version>
-	      <exclusions>
-	        <exclusion>
-	          <groupId>commons-logging</groupId>
-	          <artifactId>commons-logging</artifactId>
-	        </exclusion>
-	      </exclusions>
 	    </dependency>                       
 
         <!-- Torpedo - easier & nicer query builder -->
@@ -155,13 +138,6 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.3.0</version>
-        </dependency>
-
-        <!-- Ensure compatible Commons IO version for Apache POI 5.3.0 -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.16.1</version>
         </dependency>
 
         <!-- PDF Creation and manipulation -->
@@ -197,7 +173,13 @@
 	        <version>4.2.1</version>
 	    </dependency>
 	    
-	    <!-- JWT token -->
+	    <!-- OAuth2 Resource Server (Keycloak) -->
+	    <dependency>
+	        <groupId>org.springframework.boot</groupId>
+	        <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+	    </dependency>
+
+	    <!-- Legacy JWT token (for UserService password resets while migrating) -->
         <dependency>
             <groupId>com.auth0</groupId>
             <artifactId>java-jwt</artifactId>
@@ -242,12 +224,6 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.flywaydb</groupId>
-        <artifactId>flyway-maven-plugin</artifactId>
-        <version>10.10.0</version>
       </plugin>
     </plugins>
   </build>

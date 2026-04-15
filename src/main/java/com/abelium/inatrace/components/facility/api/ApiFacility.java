@@ -31,14 +31,8 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Price deduction damage'")
 	private Boolean displayPriceDeductionDamage;
 
-	@Schema(description = "Enable form control 'Final price discount'")
-	private Boolean displayFinalPriceDiscount;
-
 	@Schema(description = "Enable form control 'Weight deduction damage'")
 	private Boolean displayWeightDeductionDamage;
-
-	@Schema(description = "Enable form control 'Moisture percentage'")
-	private Boolean displayMoisturePercentage;
 
 	@Schema(description = "Enable form control 'Tare'")
 	private Boolean displayTare;
@@ -46,16 +40,20 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Women only'")
 	private Boolean displayWomenOnly;
 
+	@Schema(description = "Facility level in hierarchy")
+	private Integer level;
+
+	@Schema(description = "Enable form control 'Final price discount'")
+	private Boolean displayFinalPriceDiscount;
+
+	@Schema(description = "Enable form control 'Moisture percentage'")
+	private Boolean displayMoisturePercentage;
+
 	@Schema(description = "Facility is activated")
 	private Boolean isDeactivated;
 
 	@Schema(description = "Enable form control 'Price determined later'")
 	private Boolean displayPriceDeterminedLater;
-
-
-
-	@Schema(description = "Custom facility level overriding facility type order")
-	private Integer level;
 
 	@Schema(description = "Facility location")
 	private ApiFacilityLocation facilityLocation;
@@ -126,28 +124,12 @@ public class ApiFacility extends ApiBaseEntity {
 		this.displayPriceDeductionDamage = displayPriceDeductionDamage;
 	}
 
-	public Boolean getDisplayFinalPriceDiscount() {
-		return displayFinalPriceDiscount;
-	}
-
-	public void setDisplayFinalPriceDiscount(Boolean displayFinalPriceDiscount) {
-		this.displayFinalPriceDiscount = displayFinalPriceDiscount;
-	}
-
 	public Boolean getDisplayWeightDeductionDamage() {
 		return displayWeightDeductionDamage;
 	}
 
 	public void setDisplayWeightDeductionDamage(Boolean displayWeightDeductionDamage) {
 		this.displayWeightDeductionDamage = displayWeightDeductionDamage;
-	}
-
-	public Boolean getDisplayMoisturePercentage() {
-		return displayMoisturePercentage;
-	}
-
-	public void setDisplayMoisturePercentage(Boolean displayMoisturePercentage) {
-		this.displayMoisturePercentage = displayMoisturePercentage;
 	}
 
 	public Boolean getDisplayTare() {
@@ -166,6 +148,30 @@ public class ApiFacility extends ApiBaseEntity {
 		this.displayWomenOnly = displayWomenOnly;
 	}
 
+	public Integer getLevel() {
+		return level;
+	}
+
+	public void setLevel(Integer level) {
+		this.level = level;
+	}
+
+	public Boolean getDisplayFinalPriceDiscount() {
+		return displayFinalPriceDiscount;
+	}
+
+	public void setDisplayFinalPriceDiscount(Boolean displayFinalPriceDiscount) {
+		this.displayFinalPriceDiscount = displayFinalPriceDiscount;
+	}
+
+	public Boolean getDisplayMoisturePercentage() {
+		return displayMoisturePercentage;
+	}
+
+	public void setDisplayMoisturePercentage(Boolean displayMoisturePercentage) {
+		this.displayMoisturePercentage = displayMoisturePercentage;
+	}
+
 	public Boolean getDeactivated() {
 		return isDeactivated;
 	}
@@ -180,14 +186,6 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayPriceDeterminedLater(Boolean displayPriceDeterminedLater) {
 		this.displayPriceDeterminedLater = displayPriceDeterminedLater;
-	}
-
-	public Integer getLevel() {
-		return level;
-	}
-
-	public void setLevel(Integer level) {
-		this.level = level;
 	}
 
 	public ApiFacilityLocation getFacilityLocation() {

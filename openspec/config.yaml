@@ -1,0 +1,41 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Tech stack: Java 17, Spring Boot 3.3.3, Hibernate 6 (Jakarta), PostgreSQL 14+, Flyway
+  Architecture: Layered (Controller → Service → EntityManager/TorpedoQuery), DTOs prefixed Api*
+  Testing: JUnit 5, Maven Surefire
+  Style: PascalCase tables, camelCase columns, INATrace original conventions
+  Auth: Keycloak OAuth2 Resource Server (KeycloakJwtAuthenticationConverter)
+  DB Dialect: CustomPostgreSQLDialect (MONTH, YEAR, WEEK functions)
+  Migrations: Flyway SQL + Java (JpaMigration), ddl-auto=validate
+  Product: INATrace Cacao-only (Fortaleza del Valle)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+    - Reference agent-context.md anti-patterns
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Validate against agent-context.md prohibited fields
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - All SQL MUST be PostgreSQL native (no MySQL syntax)
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing code patterns and conventions
+    - Read agent-context.md before any modification
+    tdd: false
+    test_command: "mvn clean test -pl ."
+  verify:
+    test_command: "mvn clean test -pl ."
+    build_command: "mvn clean compile -pl ."
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas (large removals)

@@ -1,5 +1,7 @@
 package com.abelium.inatrace.security.configuration;
 
+import com.abelium.inatrace.security.service.CustomUserDetailsServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -11,7 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 
 @Configuration
 @EnableWebSecurity
@@ -21,15 +23,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 )
 public class SpringSecurityConfig {
 
+    @Autowired
+    private CustomUserDetailsServiceImpl customUserDetailsService;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public TokenAuthenticationFilter tokenAuthenticationFilter() {
-        return new TokenAuthenticationFilter();
-    }
+
 
 	private static final String[] SWAGGER_EXCEPTIONS = new String[] {
         "/v3/api-docs",
@@ -40,15 +42,15 @@ public class SpringSecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
+		KeycloakJwtAuthenticationConverter jwtConverter =
+				new KeycloakJwtAuthenticationConverter(customUserDetailsService);
+
 		http
 				.cors(Customizer.withDefaults())
+				.sessionManagement(smc -> smc.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.csrf(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)
 				.httpBasic(AbstractHttpConfigurer::disable)
-				// STATELESS session - prevents "Cannot create a session after the response has been committed" error
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				// Disable request cache to prevent HttpSessionRequestCache from trying to save requests
-				.requestCache(AbstractHttpConfigurer::disable)
 				.exceptionHandling(ehc -> ehc.authenticationEntryPoint(new RestAuthenticationEntryPoint()))
 				.authorizeHttpRequests(matcherRegistry -> {
 					matcherRegistry.requestMatchers(
@@ -58,15 +60,30 @@ public class SpringSecurityConfig {
 							"/api/user/register",
 							"/api/user/request_reset_password",
 							"/api/user/reset_password",
-							"/api/user/confirm_email",
-							"/actuator/**"
+							"/api/user/confirm_email"
 					).permitAll();
 					matcherRegistry.requestMatchers(SWAGGER_EXCEPTIONS).permitAll();
 					matcherRegistry.anyRequest().authenticated();
-				});
-		http.addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+				})
+				.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)));
 
 		return http.build();
+	}
+	@org.springframework.beans.factory.annotation.Value("${INATrace.fe.url:http://localhost:4200}")
+	private String frontendUrl;
+
+	@Bean
+	public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+		org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+		configuration.setAllowedOrigins(java.util.Arrays.asList(frontendUrl));
+		configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"));
+		configuration.setAllowedHeaders(java.util.Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", "Language"));
+		configuration.setExposedHeaders(java.util.Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+		configuration.setAllowCredentials(true);
+		configuration.setMaxAge(3600L);
+		org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 
 }

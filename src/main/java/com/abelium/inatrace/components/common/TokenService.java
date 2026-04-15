@@ -26,19 +26,19 @@ import java.util.Optional;
 public class TokenService extends BaseService {
 	 protected final Logger logger = LoggerFactory.getLogger(TokenService.class);
 
-    @Value("${INATrace.auth.accessTokenCookieName}")
+    @Value("${INATrace.auth.accessTokenCookieName:inatrace-accessToken}")
     private String accessTokenCookieName;
 
-    @Value("${INATrace.auth.refreshTokenCookieName}")
+    @Value("${INATrace.auth.refreshTokenCookieName:inatrace-refreshToken}")
     private String refreshTokenCookieName;
     
-    @Value("${INATrace.auth.accessTokenExpirationSec}")
+    @Value("${INATrace.auth.accessTokenExpirationSec:3600}")
     private Integer accessTokenExpirationSec;
     
-    @Value("${INATrace.auth.refreshTokenExpirationSec}")
+    @Value("${INATrace.auth.refreshTokenExpirationSec:300}")
     private Integer refreshTokenExpirationSec;
     
-    @Value("${INATrace.auth.jwtSigningKey}")
+    @Value("${INATrace.auth.jwtSigningKey:obsolete}")
     private String jwtSigningKey;
 
     

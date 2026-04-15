@@ -17,7 +17,7 @@ import java.util.Set;
 
 @Entity
 @Audited
-@Table(indexes = { @Index(columnList = "status"), @Index(columnList = "email", unique = true) })
+@Table(name = "\"User\"", indexes = { @Index(columnList = "status"), @Index(columnList = "email", unique = true) })
 public class User extends TimestampEntity {
 
 	@Version
@@ -60,7 +60,7 @@ public class User extends TimestampEntity {
 	 */
 	@Enumerated(EnumType.STRING)
     @Column(nullable = false, length = Lengths.ENUM)
-	private Language language = Language.ES;
+	private Language language = Language.EN;
 
 	/**
 	 * user role

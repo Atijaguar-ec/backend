@@ -153,8 +153,7 @@ public class DashboardService extends BaseService {
 
             totalQuantityList = em.createQuery(cq).getResultList().stream()
                     .map(data -> new ApiDeliveriesTotalItem(String.valueOf(data[0]), null,
-                            (data[1] != null ? (BigDecimal) data[1] : BigDecimal.ZERO)
-                                    .multiply(measuringUnitNormalisationQuotient)
+                            ((BigDecimal) data[1]).multiply(measuringUnitNormalisationQuotient)
                                     .setScale(2, RoundingMode.HALF_UP)))
                     .collect(Collectors.toList());
         }  else {
@@ -165,8 +164,7 @@ public class DashboardService extends BaseService {
             totalQuantityList = em.createQuery(cq).getResultList().stream()
                     .map(data -> new ApiDeliveriesTotalItem(
                             String.valueOf(data[0]), (Integer) data[1],
-                            (data[2] != null ? (BigDecimal) data[2] : BigDecimal.ZERO)
-                                    .multiply(measuringUnitNormalisationQuotient)
+                            ((BigDecimal) data[2]).multiply(measuringUnitNormalisationQuotient)
                                     .setScale(2, RoundingMode.HALF_UP)))
                     .collect(Collectors.toList());
         }
@@ -473,8 +471,7 @@ public class DashboardService extends BaseService {
             return BigDecimal.ONE;
         }
 
-        BigDecimal weight = semiProduct.getMeasurementUnitType().getWeight();
-        return weight != null ? weight : BigDecimal.ONE;
+        return semiProduct.getMeasurementUnitType().getWeight();
     }
 
     private BigDecimal calculateInputNormalisationQuotient(Long idProcessingAction) throws ApiException {

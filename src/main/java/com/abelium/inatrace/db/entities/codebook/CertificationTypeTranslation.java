@@ -1,36 +1,35 @@
 package com.abelium.inatrace.db.entities.codebook;
 
-import com.abelium.inatrace.db.base.TimestampEntity;
+import com.abelium.inatrace.db.base.BaseEntity;
 import com.abelium.inatrace.types.Language;
 import jakarta.persistence.*;
 
 /**
- * Translation entity for CertificationType.
- *
- * @author Álvaro Sánchez
+ * i18n entity for certification types.
  */
 @Entity
-@Table(name = "CertificationTypeTranslation",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"certification_type_id", "language"}))
-public class CertificationTypeTranslation extends TimestampEntity {
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "certification_type_id", nullable = false)
-    private CertificationType certificationType;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 64)
-    private Language language;
+@Table(uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"certification_type_id", "language"}, name = "uk_cert_type_trans_lang")
+})
+public class CertificationTypeTranslation extends BaseEntity {
 
     @Column(nullable = false, length = 255)
     private String name;
 
-    public CertificationType getCertificationType() {
-        return certificationType;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Language language;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "certification_type_id", nullable = false)
+    private CertificationType certificationType;
+
+    public String getName() {
+        return name;
     }
 
-    public void setCertificationType(CertificationType certificationType) {
-        this.certificationType = certificationType;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public Language getLanguage() {
@@ -41,11 +40,11 @@ public class CertificationTypeTranslation extends TimestampEntity {
         this.language = language;
     }
 
-    public String getName() {
-        return name;
+    public CertificationType getCertificationType() {
+        return certificationType;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setCertificationType(CertificationType certificationType) {
+        this.certificationType = certificationType;
     }
 }

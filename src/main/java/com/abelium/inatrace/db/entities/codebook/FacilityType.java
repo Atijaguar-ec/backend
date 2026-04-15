@@ -1,10 +1,7 @@
 package com.abelium.inatrace.db.entities.codebook;
 
 import com.abelium.inatrace.db.base.CodebookBaseEntity;
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
 
 /**
  * Codebook entity for facility types.
@@ -12,12 +9,11 @@ import jakarta.persistence.Table;
  * @author Pece Adjievski, Sunesis d.o.o.
  */
 @Entity
-@Table(indexes = { @Index(name = "idx_facility_type_order", columnList = "`order`") })
 public class FacilityType extends CodebookBaseEntity {
-
-	@Column(name = "`order`")
-	private Integer order = 0;
   
+	@jakarta.persistence.Column(name = "\"order\"")
+	private Integer order;
+
 	public FacilityType() {
 		super();
 	}

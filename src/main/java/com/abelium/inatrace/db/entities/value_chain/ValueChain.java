@@ -6,6 +6,7 @@ import com.abelium.inatrace.db.entities.codebook.ProductType;
 import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.entities.value_chain.enums.ValueChainStatus;
 import jakarta.persistence.*;
+import jakarta.persistence.JoinColumn;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -23,8 +24,7 @@ public class ValueChain extends TimestampEntity {
 	@Column(nullable = false)
 	private String name;
 
-	@Lob
-	@Column(nullable = false, columnDefinition = "LONGTEXT")
+	@Column(nullable = false, columnDefinition = "TEXT")
 	private String description;
 
 	@Enumerated(EnumType.STRING)
@@ -62,9 +62,11 @@ public class ValueChain extends TimestampEntity {
 	private Set<ValueChainProcessingEvidenceField> processingEvidenceFields;
 
 	@ManyToOne(optional = false, fetch = FetchType.LAZY)
+	@JoinColumn(name = "createdby_id")
 	private User createdBy;
 
 	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "updatedby_id")
 	private User updatedBy;
 
 	/**

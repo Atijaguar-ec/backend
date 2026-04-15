@@ -9,6 +9,7 @@ import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.db.entities.stockorder.enums.PreferredWayOfPayment;
 import jakarta.persistence.*;
+import jakarta.persistence.JoinColumn;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -45,9 +46,11 @@ public class Payment extends TimestampEntity {
 	private String orderReference; // stock order identifier
 
 	@ManyToOne(optional = false)
+	@JoinColumn(name = "createdby_id")
 	private User createdBy; // logged-in user
 	
 	@ManyToOne
+	@JoinColumn(name = "updatedby_id")
 	private User updatedBy;
 	
 	@Enumerated(EnumType.STRING)
@@ -111,6 +114,7 @@ public class Payment extends TimestampEntity {
 	private PaymentStatus paymentStatus; // unconfirmed, confirmed
 	
 	@ManyToOne
+	@JoinColumn(name = "paymentconfirmedbyuser_id")
 	private User paymentConfirmedByUser; // user logged-in
 	
 	@ManyToOne

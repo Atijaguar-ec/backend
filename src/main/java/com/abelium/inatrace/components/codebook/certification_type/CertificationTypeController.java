@@ -1,70 +1,50 @@
 package com.abelium.inatrace.components.codebook.certification_type;
 
-import com.abelium.inatrace.api.*;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.codebook.certification_type.api.ApiCertificationType;
-import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.types.Language;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * REST controller for certification type entity.
- *
- * @author Álvaro Sánchez
- */
+import java.util.List;
+
 @RestController
-@RequestMapping("/chain/certification-type")
+@RequestMapping("/api/codebook/certification-type")
+@Tag(name = "Codebook Certification Type")
 public class CertificationTypeController {
 
-    private final CertificationTypeService certificationTypeService;
+    private final CertificationTypeService service;
 
     @Autowired
-    public CertificationTypeController(CertificationTypeService certificationTypeService) {
-        this.certificationTypeService = certificationTypeService;
+    public CertificationTypeController(CertificationTypeService service) {
+        this.service = service;
     }
 
-    @GetMapping("list")
-    @Operation(summary = "Get a paginated list of certification types.")
-    public ApiPaginatedResponse<ApiCertificationType> getCertificationTypeList(
-            @Valid ApiPaginatedRequest request,
-            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) {
-
-        return new ApiPaginatedResponse<>(certificationTypeService.getCertificationTypeList(request, language));
+    @GetMapping
+    @Operation(summary = "List active certification types")
+    public List<ApiCertificationType> listActive(@RequestHeader(value = "Language") Language language) {
+        return service.listActiveCertificationTypes(language);
     }
 
-    @GetMapping("{id}")
-    @Operation(summary = "Get a single certification type with the provided ID.")
-    public ApiResponse<ApiCertificationType> getCertificationType(
-            @Valid @Parameter(description = "Certification type ID", required = true) @PathVariable("id") Long id,
-            @RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
-
-        return new ApiResponse<>(certificationTypeService.getCertificationType(id, language));
+    @GetMapping("/{id}")
+    @Operation(summary = "Get certification type by ID")
+    public ApiCertificationType getById(
+            @PathVariable Long id,
+            @RequestHeader(value = "Language") Language language) throws ApiException {
+        return service.getCertificationType(id, language);
     }
 
-    @PutMapping
-    @PreAuthorize("hasAnyAuthority('SYSTEM_ADMIN', 'REGIONAL_ADMIN')")
-    @Operation(summary = "Create or update certification type. If ID is provided, the entity with the provided ID is updated.")
-    public ApiResponse<ApiBaseEntity> createOrUpdateCertificationType(
-            @AuthenticationPrincipal CustomUserDetails authUser,
-            @Valid @RequestBody ApiCertificationType apiCertificationType) throws ApiException {
-
-        return new ApiResponse<>(
-                certificationTypeService.createOrUpdateCertificationType(authUser, apiCertificationType));
+    @PostMapping
+    @Operation(summary = "Create or update certification type")
+    public ApiCertificationType createOrUpdate(@RequestBody ApiCertificationType apiDTO) throws ApiException {
+        return service.createOrUpdateCertificationType(apiDTO);
     }
 
-    @DeleteMapping("{id}")
-    @PreAuthorize("hasAuthority('SYSTEM_ADMIN')")
-    @Operation(summary = "Deletes a certification type with the provided ID.")
-    public ApiDefaultResponse deleteCertificationType(
-            @Valid @Parameter(description = "Certification type ID", required = true) @PathVariable("id") Long id) throws ApiException {
-
-        certificationTypeService.deleteCertificationType(id);
-        return new ApiDefaultResponse();
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete certification type")
+    public void delete(@PathVariable Long id) throws ApiException {
+        service.deleteCertificationType(id);
     }
 }

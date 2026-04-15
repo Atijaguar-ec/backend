@@ -13,8 +13,7 @@ public class Sustainability extends BaseEntity {
 	 * and how you mitigate the pollution, how you utilize your waste, if you practice circular 
 	 * production… (max 1000 characters)
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String production;
 
 	/**
@@ -22,8 +21,7 @@ public class Sustainability extends BaseEntity {
 	 * do you use recycled packing, is your packing recyclable, do you collect the packaging and 
 	 * reuse it? (max 1000 characters)
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String packaging;
 	
 	/**

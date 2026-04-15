@@ -834,12 +834,9 @@ public class CompanyService extends BaseService {
 		userCustomer.setFarmerCompanyInternalId(apiUserCustomer.getFarmerCompanyInternalId());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
-		userCustomer.setPersonType(apiUserCustomer.getPersonType());
 		userCustomer.setEmail(apiUserCustomer.getEmail());
 		userCustomer.setName(apiUserCustomer.getName());
 		userCustomer.setSurname(apiUserCustomer.getSurname());
-		userCustomer.setCompanyName(apiUserCustomer.getCompanyName());
-		userCustomer.setLegalRepresentative(apiUserCustomer.getLegalRepresentative());
 		userCustomer.setPhone(apiUserCustomer.getPhone());
 		userCustomer.setHasSmartphone(apiUserCustomer.getHasSmartphone());
 
@@ -858,7 +855,6 @@ public class CompanyService extends BaseService {
 			userCustomer.getFarm().setOrganic(apiUserCustomer.getFarm().getOrganic());
 			userCustomer.getFarm().setStartTransitionToOrganic(apiUserCustomer.getFarm().getStartTransitionToOrganic());
 			userCustomer.getFarm().setTotalCultivatedArea(apiUserCustomer.getFarm().getTotalCultivatedArea());
-			userCustomer.getFarm().setMaxProductionQuantity(apiUserCustomer.getFarm().getMaxProductionQuantity());
 		}
 
 		UserCustomerLocation userCustomerLocation = new UserCustomerLocation();
@@ -997,9 +993,6 @@ public class CompanyService extends BaseService {
 		userCustomer.setHasSmartphone(apiUserCustomer.getHasSmartphone());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
-		userCustomer.setPersonType(apiUserCustomer.getPersonType());
-		userCustomer.setCompanyName(apiUserCustomer.getCompanyName());
-		userCustomer.setLegalRepresentative(apiUserCustomer.getLegalRepresentative());
 
 		if (userCustomer.getBank() == null) {
 			userCustomer.setBank(new BankInformation());
@@ -1017,7 +1010,6 @@ public class CompanyService extends BaseService {
 		userCustomer.getFarm().setOrganic(apiUserCustomer.getFarm().getOrganic());
 		userCustomer.getFarm().setStartTransitionToOrganic(apiUserCustomer.getFarm().getStartTransitionToOrganic());
 		userCustomer.getFarm().setTotalCultivatedArea(apiUserCustomer.getFarm().getTotalCultivatedArea());
-		userCustomer.getFarm().setMaxProductionQuantity(apiUserCustomer.getFarm().getMaxProductionQuantity());
 
 		if (userCustomer.getUserCustomerLocation() == null) {
 			userCustomer.setUserCustomerLocation(new UserCustomerLocation());
@@ -1383,33 +1375,27 @@ public class CompanyService extends BaseService {
 		try {
 			fixCoordinatesForApiCall(coordinates);
 
-			double areaInAcres = calculateAreaInAcres(coordinates);
-			if (areaInAcres > 1000d) {
-				logger.warn("Plot area exceeds AgStack limit: {} acres", areaInAcres);
-				throw new ApiException(ApiStatus.INVALID_REQUEST, "Cannot register a field with Area greater than 1000 acres");
-			}
-
 			ApiRegisterFieldBoundaryResponse response = agStackClientService.registerFieldBoundaryResponse(coordinates);
 			if (!CollectionUtils.isEmpty(response.getMatchedGeoIDs())) {
+                // On errors API returns additional message
+                if (response.getMessage() != null) {
+                    logger.error(response.getMessage());
+                }
 				return response.getMatchedGeoIDs().stream().findFirst().orElse(null);
 			} else {
+                // On errors API returns additional message
+                if (response.getGeoID() == null && response.getMessage() != null) {
+                    logger.error(response.getMessage());
+                }
 				return response.getGeoID();
 			}
 
 		} catch (Exception e) {
-			logger.error("Error while generating plot geoid", e);
+            logger.error(e.getMessage());
+			logger.error("Error while generating plot geoid");
 		}
 
 		return null;
-	}
-
-	private double calculateAreaInAcres(List<PlotCoordinate> coordinates) {
-		List<Point> ring = coordinates.stream()
-				.map(coordinate -> Point.fromLngLat(coordinate.getLongitude(), coordinate.getLatitude()))
-				.toList();
-		Polygon polygon = Polygon.fromLngLats(List.of(ring));
-		double areaSquareMeters = TurfMeasurement.area(polygon);
-		return areaSquareMeters / 4046.8564224d;
 	}
 
 	/**
@@ -1740,16 +1726,8 @@ public class CompanyService extends BaseService {
 		List<Long> valueChainIds = Torpedo.select(companyValueChainProxy.getValueChain().getId()).list(em);
 
 		ValueChain valueChainProxy = Torpedo.from(ValueChain.class);
-		
-		// Si no hay cadenas de valor asociadas, devolvemos un proxy con una condición que siempre será falsa
-		// para asegurar que la consulta no devuelva resultados
-		if (valueChainIds.isEmpty()) {
-			OnGoingLogicalCondition emptyCondition = Torpedo.condition(valueChainProxy.getId()).eq(-1L); // ID imposible
-			Torpedo.where(emptyCondition);
-		} else {
-			OnGoingLogicalCondition valueChainCondition = Torpedo.condition().and(valueChainProxy.getId()).in(valueChainIds);
-			Torpedo.where(valueChainCondition);
-		}
+		OnGoingLogicalCondition valueChainCondition = Torpedo.condition().and(valueChainProxy.getId()).in(valueChainIds);
+		Torpedo.where(valueChainCondition);
 
 		switch (request.sortBy) {
 			case "name":

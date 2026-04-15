@@ -4,7 +4,6 @@ import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.components.codebook.measure_unit_type.api.ApiMeasureUnitType;
 import com.abelium.inatrace.components.codebook.semiproduct.api.ApiSemiProduct;
 import com.abelium.inatrace.components.common.api.ApiActivityProof;
-import com.abelium.inatrace.components.common.api.ApiDocument;
 import com.abelium.inatrace.components.company.api.ApiCompany;
 import com.abelium.inatrace.components.company.api.ApiCompanyCustomer;
 import com.abelium.inatrace.components.company.api.ApiUserCustomer;
@@ -22,7 +21,6 @@ import org.springframework.validation.annotation.Validated;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -182,38 +180,14 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "Organic")
     private Boolean organic;
 
-    @Schema(description = "Week number for cacao deliveries (1-53)")
-    private Integer weekNumber;
-
-    @Schema(description = "Parcel lot for cacao deliveries")
-    private String parcelLot;
-
-    @Schema(description = "Variety for cacao deliveries")
-    private String variety;
-
-    @Schema(description = "Organic certification details")
-    private String organicCertification;
-
     @Schema(description = "Tare")
     private BigDecimal tare;
 
     @Schema(description = "Damaged price deduction")
     private BigDecimal damagedPriceDeduction;
 
-    @Schema(description = "Final price discount per unit")
-    private BigDecimal finalPriceDiscount;
-
     @Schema(description = "Damaged weight deduction")
     private BigDecimal damagedWeightDeduction;
-
-    @Schema(description = "Moisture percentage applied (0-100)")
-    private BigDecimal moisturePercentage;
-
-    @Schema(description = "Calculated weight deduction due to moisture")
-    private BigDecimal moistureWeightDeduction;
-
-    @Schema(description = "Net quantity after all deductions (tare, damaged weight, moisture)")
-    private BigDecimal netQuantity;
 
     @Schema(description = "Generated UUID tag for this stock order QR code")
     private String qrCodeTag;
@@ -226,6 +200,30 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     @Schema(description = "The ID from which this repacked stock order was created; This ID is generated and provided by the client; Only applicable for repacked stock orders")
     private String repackedOriginStockOrderId;
+
+    @Schema(description = "The week number when the delivery was made")
+    private Integer weekNumber;
+
+    @Schema(description = "The parcel lot identifier")
+    private String parcelLot;
+
+    @Schema(description = "The variety of the product")
+    private String variety;
+
+    @Schema(description = "The organic certification status of the stock order")
+    private String organicCertification;
+
+    @Schema(description = "The moisture percentage measured")
+    private BigDecimal moisturePercentage;
+
+    @Schema(description = "The moisture weight deduction calculated")
+    private BigDecimal moistureWeightDeduction;
+
+    @Schema(description = "The net quantity after all deductions")
+    private BigDecimal netQuantity;
+
+    @Schema(description = "The final price discount applied")
+    private BigDecimal finalPriceDiscount;
 
     public String getIdentifier() {
         return identifier;
@@ -639,6 +637,62 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.organic = organic;
     }
 
+    public BigDecimal getTare() {
+        return tare;
+    }
+
+    public void setTare(BigDecimal tare) {
+        this.tare = tare;
+    }
+
+    public BigDecimal getDamagedPriceDeduction() {
+        return damagedPriceDeduction;
+    }
+
+    public void setDamagedPriceDeduction(BigDecimal damagedPriceDeduction) {
+        this.damagedPriceDeduction = damagedPriceDeduction;
+    }
+
+    public BigDecimal getDamagedWeightDeduction() {
+        return damagedWeightDeduction;
+    }
+
+    public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
+        this.damagedWeightDeduction = damagedWeightDeduction;
+    }
+
+    public String getQrCodeTag() {
+        return qrCodeTag;
+    }
+
+    public void setQrCodeTag(String qrCodeTag) {
+        this.qrCodeTag = qrCodeTag;
+    }
+
+    public ApiFinalProduct getQrCodeTagFinalProduct() {
+        return qrCodeTagFinalProduct;
+    }
+
+    public void setQrCodeTagFinalProduct(ApiFinalProduct qrCodeTagFinalProduct) {
+        this.qrCodeTagFinalProduct = qrCodeTagFinalProduct;
+    }
+
+    public List<ApiPayment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<ApiPayment> payments) {
+        this.payments = payments;
+    }
+
+    public String getRepackedOriginStockOrderId() {
+        return repackedOriginStockOrderId;
+    }
+
+    public void setRepackedOriginStockOrderId(String repackedOriginStockOrderId) {
+        this.repackedOriginStockOrderId = repackedOriginStockOrderId;
+    }
+
     public Integer getWeekNumber() {
         return weekNumber;
     }
@@ -671,38 +725,6 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.organicCertification = organicCertification;
     }
 
-    public BigDecimal getTare() {
-        return tare;
-    }
-
-    public void setTare(BigDecimal tare) {
-        this.tare = tare;
-    }
-
-    public BigDecimal getDamagedPriceDeduction() {
-        return damagedPriceDeduction;
-    }
-
-    public void setDamagedPriceDeduction(BigDecimal damagedPriceDeduction) {
-        this.damagedPriceDeduction = damagedPriceDeduction;
-    }
-
-    public BigDecimal getFinalPriceDiscount() {
-        return finalPriceDiscount;
-    }
-
-    public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
-        this.finalPriceDiscount = finalPriceDiscount;
-    }
-
-    public BigDecimal getDamagedWeightDeduction() {
-        return damagedWeightDeduction;
-    }
-
-    public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
-        this.damagedWeightDeduction = damagedWeightDeduction;
-    }
-
     public BigDecimal getMoisturePercentage() {
         return moisturePercentage;
     }
@@ -727,37 +749,11 @@ public class ApiStockOrder extends ApiBaseEntity {
         this.netQuantity = netQuantity;
     }
 
-
-
-    public String getQrCodeTag() {
-        return qrCodeTag;
+    public BigDecimal getFinalPriceDiscount() {
+        return finalPriceDiscount;
     }
 
-    public void setQrCodeTag(String qrCodeTag) {
-        this.qrCodeTag = qrCodeTag;
-    }
-
-    public ApiFinalProduct getQrCodeTagFinalProduct() {
-        return qrCodeTagFinalProduct;
-    }
-
-    public void setQrCodeTagFinalProduct(ApiFinalProduct qrCodeTagFinalProduct) {
-        this.qrCodeTagFinalProduct = qrCodeTagFinalProduct;
-    }
-
-    public List<ApiPayment> getPayments() {
-        return payments;
-    }
-
-    public void setPayments(List<ApiPayment> payments) {
-        this.payments = payments;
-    }
-
-    public String getRepackedOriginStockOrderId() {
-        return repackedOriginStockOrderId;
-    }
-
-    public void setRepackedOriginStockOrderId(String repackedOriginStockOrderId) {
-        this.repackedOriginStockOrderId = repackedOriginStockOrderId;
+    public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+        this.finalPriceDiscount = finalPriceDiscount;
     }
 }

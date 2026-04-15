@@ -36,15 +36,13 @@ public class KnowledgeBlog extends TimestampEntity {
 	/**
 	 * Abstract
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String summary;
 	
 	/**
 	 * Content
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String content;
 
 	/**

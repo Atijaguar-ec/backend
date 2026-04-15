@@ -10,43 +10,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * API DTO for grouped stock orders.
- * Groups multiple stock orders by common attributes (production date, lot number, product, etc.)
- * and aggregates quantities for reporting and Excel export purposes.
- *
- * @author INATrace Development Team
- */
 public class ApiGroupStockOrder extends ApiBaseEntity {
 
-    /**
-     * Default constructor for serialization.
-     */
     public ApiGroupStockOrder() {}
-
-    /**
-     * Constructor for paginated list (without facility and farmer names).
-     * Used by JPQL queries for UI pagination where facility/farmer details are not needed.
-     *
-     * @param groupedIds Comma-separated IDs of stock orders in this group
-     * @param productionDate Production date for grouping
-     * @param internalLotNumber Internal lot number
-     * @param noOfSacs Count of sacs in this group
-     * @param orderType Type of order (PURCHASE, PROCESSING, etc.)
-     * @param semiProductName Name of semi-product
-     * @param finalProductName Name of final product
-     * @param weekNumber Week number (for cacao)
-     * @param parcelLot Parcel lot identifier
-     * @param variety Product variety
-     * @param organicCertification Organic certification details
-     * @param totalQuantity Sum of total quantities
-     * @param fulfilledQuantity Sum of fulfilled quantities
-     * @param availableQuantity Sum of available quantities
-     * @param unitLabel Measurement unit label
-     * @param deliveryTime Delivery date
-     * @param updateTimestamp Last update timestamp
-     * @param isAvailable Availability status
-     */
     public ApiGroupStockOrder(
             String groupedIds,
             LocalDate productionDate,
@@ -55,80 +21,6 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
             OrderType orderType,
             String semiProductName,
             String finalProductName,
-            Integer weekNumber,
-            String parcelLot,
-            String variety,
-            String organicCertification,
-            BigDecimal totalQuantity,
-            BigDecimal fulfilledQuantity,
-            BigDecimal availableQuantity,
-            String unitLabel,
-            LocalDate deliveryTime,
-            Instant updateTimestamp,
-            Boolean isAvailable
-    ) {
-        this(
-                groupedIds,
-                null,  // facilityName
-                productionDate,
-                internalLotNumber,
-                noOfSacs,
-                orderType,
-                semiProductName,
-                finalProductName,
-                weekNumber,
-                parcelLot,
-                variety,
-                organicCertification,
-                totalQuantity,
-                fulfilledQuantity,
-                availableQuantity,
-                unitLabel,
-                deliveryTime,
-                updateTimestamp,
-                isAvailable,
-                null  // farmerName - FIX: was missing, causing compilation error
-        );
-    }
-
-    /**
-     * Constructor for Excel export (with facility and farmer names).
-     * Used by JPQL queries for Excel generation where all details are needed.
-     *
-     * @param groupedIds Comma-separated IDs of stock orders in this group
-     * @param facilityName Facility (area) name where stock is located
-     * @param productionDate Production date for grouping
-     * @param internalLotNumber Internal lot number
-     * @param noOfSacs Count of sacs in this group
-     * @param orderType Type of order (PURCHASE, PROCESSING, etc.)
-     * @param semiProductName Name of semi-product
-     * @param finalProductName Name of final product
-     * @param weekNumber Week number (for cacao)
-     * @param parcelLot Parcel lot identifier
-     * @param variety Product variety
-     * @param organicCertification Organic certification details
-     * @param totalQuantity Sum of total quantities
-     * @param fulfilledQuantity Sum of fulfilled quantities
-     * @param availableQuantity Sum of available quantities
-     * @param unitLabel Measurement unit label
-     * @param deliveryTime Delivery date
-     * @param updateTimestamp Last update timestamp
-     * @param isAvailable Availability status
-     * @param farmerName Aggregated farmer name(s) - multiple names separated by comma if grouped
-     */
-    public ApiGroupStockOrder(
-            String groupedIds,
-            String facilityName,
-            LocalDate productionDate,
-            String internalLotNumber,
-            Long noOfSacs,
-            OrderType orderType,
-            String semiProductName,
-            String finalProductName,
-            Integer weekNumber,
-            String parcelLot,
-            String variety,
-            String organicCertification,
             BigDecimal totalQuantity,
             BigDecimal fulfilledQuantity,
             BigDecimal availableQuantity,
@@ -136,6 +28,11 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
             LocalDate deliveryTime,
             Instant updateTimestamp,
             Boolean isAvailable,
+            Integer weekNumber,
+            String parcelLot,
+            String variety,
+            String organicCertification,
+            String facilityName,
             String farmerName
     ) {
         setProductionDate(productionDate);
@@ -151,20 +48,13 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         setSemiProductName(semiProductName);
         setNoOfSacs(noOfSacs);
         setFinalProductName(finalProductName);
+        setGroupedIds(Arrays.stream(groupedIds.split(",")).map(Long::parseLong).collect(Collectors.toList()));
         setWeekNumber(weekNumber);
         setParcelLot(parcelLot);
         setVariety(variety);
         setOrganicCertification(organicCertification);
         setFacilityName(facilityName);
         setFarmerName(farmerName);
-        // Parse grouped IDs safely - handle potential null or empty string
-        if (groupedIds != null && !groupedIds.trim().isEmpty()) {
-            setGroupedIds(Arrays.stream(groupedIds.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList()));
-        }
     }
 
     @Schema(description = "List of stock order ID's, belonging to this group")
@@ -184,12 +74,6 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Order type")
     private OrderType orderType;
-
-    @Schema(description = "Facility (area) name")
-    private String facilityName;
-
-    @Schema(description = "Farmer name")
-    private String farmerName;
 
     @Schema(description = "Semi product name")
     private String semiProductName;
@@ -215,17 +99,23 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
     @Schema(description = "Is stock available")
     private Boolean isAvailable;
 
-    @Schema(description = "Week number for cacao deliveries (1-53)")
+    @Schema(description = "The week number when the delivery was made")
     private Integer weekNumber;
 
-    @Schema(description = "Parcel lot for cacao deliveries")
+    @Schema(description = "The parcel lot identifier")
     private String parcelLot;
 
-    @Schema(description = "Variety for cacao deliveries")
+    @Schema(description = "The variety of the product")
     private String variety;
 
-    @Schema(description = "Organic certification details")
+    @Schema(description = "The organic certification status of the stock order")
     private String organicCertification;
+
+    @Schema(description = "The facility name")
+    private String facilityName;
+
+    @Schema(description = "The farmer name")
+    private String farmerName;
 
     public Instant getUpdateTimestamp() {
         return updateTimestamp;
@@ -257,14 +147,6 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
 
     public void setSemiProductName(String semiProductName) {
         this.semiProductName = semiProductName;
-    }
-
-    public String getFacilityName() {
-        return facilityName;
-    }
-
-    public void setFacilityName(String facilityName) {
-        this.facilityName = facilityName;
     }
 
     public BigDecimal getTotalQuantity() {
@@ -315,6 +197,38 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         isAvailable = available;
     }
 
+    public LocalDate getProductionDate() {
+        return productionDate;
+    }
+
+    public void setProductionDate(LocalDate productionDate) {
+        this.productionDate = productionDate;
+    }
+
+    public Long getNoOfSacs() {
+        return noOfSacs;
+    }
+
+    public void setNoOfSacs(Long noOfSacs) {
+        this.noOfSacs = noOfSacs;
+    }
+
+    public String getFinalProductName() {
+        return finalProductName;
+    }
+
+    public void setFinalProductName(String finalProductName) {
+        this.finalProductName = finalProductName;
+    }
+
+    public List<Long> getGroupedIds() {
+        return groupedIds;
+    }
+
+    public void setGroupedIds(List<Long> groupedIds) {
+        this.groupedIds = groupedIds;
+    }
+
     public Integer getWeekNumber() {
         return weekNumber;
     }
@@ -347,36 +261,12 @@ public class ApiGroupStockOrder extends ApiBaseEntity {
         this.organicCertification = organicCertification;
     }
 
-    public LocalDate getProductionDate() {
-        return productionDate;
+    public String getFacilityName() {
+        return facilityName;
     }
 
-    public void setProductionDate(LocalDate productionDate) {
-        this.productionDate = productionDate;
-    }
-
-    public Long getNoOfSacs() {
-        return noOfSacs;
-    }
-
-    public void setNoOfSacs(Long noOfSacs) {
-        this.noOfSacs = noOfSacs;
-    }
-
-    public String getFinalProductName() {
-        return finalProductName;
-    }
-
-    public void setFinalProductName(String finalProductName) {
-        this.finalProductName = finalProductName;
-    }
-
-    public List<Long> getGroupedIds() {
-        return groupedIds;
-    }
-
-    public void setGroupedIds(List<Long> groupedIds) {
-        this.groupedIds = groupedIds;
+    public void setFacilityName(String facilityName) {
+        this.facilityName = facilityName;
     }
 
     public String getFarmerName() {

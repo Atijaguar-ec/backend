@@ -8,7 +8,7 @@ import com.abelium.inatrace.api.errors.validation.ApiValidationErrorDetails;
 
 
 @SuppressWarnings("serial")
-public class ApiException extends RuntimeException
+public class ApiException extends Exception
 {
     /**
      * Http status of the response.

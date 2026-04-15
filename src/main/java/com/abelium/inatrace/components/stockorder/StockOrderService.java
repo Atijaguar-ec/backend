@@ -5,6 +5,7 @@ import com.abelium.inatrace.api.ApiPaginatedList;
 import com.abelium.inatrace.api.ApiPaginatedRequest;
 import com.abelium.inatrace.api.ApiStatus;
 import com.abelium.inatrace.api.errors.ApiException;
+import com.abelium.inatrace.components.codebook.measure_unit_type.MeasureUnitTypeMapper;
 import com.abelium.inatrace.components.codebook.processing_evidence_type.ProcessingEvidenceTypeService;
 import com.abelium.inatrace.components.codebook.processingevidencefield.ProcessingEvidenceFieldService;
 import com.abelium.inatrace.components.codebook.semiproduct.SemiProductService;
@@ -134,7 +135,7 @@ public class StockOrderService extends BaseService {
 
         StockOrder stockOrder = fetchEntity(id, StockOrder.class);
 
-        // Check that the request user is from a company which is connected to the company that owns the quote order (or is a user of that company)
+        // Check that the request user is form a company which is connected to the company that owns the quote order (or is a user of that company)
         PermissionsUtil.checkUserIfConnectedWithProducts(companyQueries.fetchCompanyProducts(stockOrder.getCompany().getId()), user);
 
         // If Stock order has no Processing order set, exit with exception
@@ -142,7 +143,6 @@ public class StockOrderService extends BaseService {
             throw new ApiException(ApiStatus.INVALID_REQUEST, "The Stock order with ID: " + id + " doesn't have Processing order.");
         }
 
-        // Map base processing order (includes target stock orders through StockOrderMapper)
         return ProcessingOrderMapper.toApiProcessingOrder(stockOrder.getProcessingOrder(), language);
     }
 
@@ -164,10 +164,7 @@ public class StockOrderService extends BaseService {
                 () -> stockOrderQueryObject(
                         request,
                         queryRequest
-                ), stockOrder -> {
-                    ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language);
-                    return apiStockOrder;
-                });
+                ), stockOrder -> StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language));
     }
 
     public ApiPaginatedList<ApiStockOrder> getStockOrderListForCompany(ApiPaginatedRequest request,
@@ -197,10 +194,7 @@ public class StockOrderService extends BaseService {
                 () -> stockOrderQueryObject(
                         request,
                         queryRequest
-                ), stockOrder -> {
-                    ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language);
-                    return apiStockOrder;
-                });
+                ), stockOrder -> StockOrderMapper.toApiStockOrder(stockOrder, user.getUserId(), language));
     }
 
     private StockOrder stockOrderQueryObject(ApiPaginatedRequest request,
@@ -713,9 +707,14 @@ public class StockOrderService extends BaseService {
 
             // Set the sibling Stock orders
             stockOrderHistory.getProcessingOrder().setTargetStockOrders(
-                    stockOrder.getProcessingOrder().getTargetStockOrders().stream()
-                            .map(tSO -> StockOrderMapper.toApiStockOrderHistoryItem(tSO, language))
-                            .collect(Collectors.toList()));
+                    stockOrder.getProcessingOrder().getTargetStockOrders().stream().map(tSO -> {
+                        ApiStockOrder apiStockOrder = new ApiStockOrder();
+                        apiStockOrder.setId(tSO.getId());
+                        apiStockOrder.setTotalQuantity(tSO.getTotalQuantity());
+                        apiStockOrder.setMeasureUnitType(
+                                MeasureUnitTypeMapper.toApiMeasureUnitTypeBase(tSO.getMeasurementUnitType()));
+                        return apiStockOrder;
+                    }).collect(Collectors.toList()));
         }
 
         // Set the output transaction for the chosen Stock order (the transactions where this Stock order was used as an input)
@@ -886,7 +885,6 @@ public class StockOrderService extends BaseService {
             apiStockOrder.setIdentifier(farmer.getIdentifier());
             apiStockOrder.setOrganic(farmer.getOrganic());
             apiStockOrder.setDamagedPriceDeduction(farmer.getDamagedPriceDeduction());
-            apiStockOrder.setFinalPriceDiscount(farmer.getFinalPriceDiscount());
             apiStockOrder.setDamagedWeightDeduction(farmer.getDamagedWeightDeduction());
             apiStockOrder.setSemiProduct(farmer.getSemiProduct());
             apiStockOrder.setTare(farmer.getTare());
@@ -1009,17 +1007,21 @@ public class StockOrderService extends BaseService {
         entity.setOrganic(apiStockOrder.getOrganic());
         entity.setTare(apiStockOrder.getTare());
         entity.setWomenShare(apiStockOrder.getWomenShare());
+        entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
+        entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
+        entity.setCurrency(apiStockOrder.getCurrency());
         entity.setWeekNumber(apiStockOrder.getWeekNumber());
         entity.setParcelLot(apiStockOrder.getParcelLot());
         entity.setVariety(apiStockOrder.getVariety());
         entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
-        entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
-        entity.setFinalPriceDiscount(apiStockOrder.getFinalPriceDiscount());
-        entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
         entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
-        
-        entity.setCurrency(apiStockOrder.getCurrency());
+        entity.setNetQuantity(apiStockOrder.getNetQuantity());
+        entity.setFinalPriceDiscount(apiStockOrder.getFinalPriceDiscount());
+
+        if (apiStockOrder.getOrderType() == OrderType.PURCHASE_ORDER) {
+            calculateNetQuantity(apiStockOrder, entity);
+        }
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders
         calculateQuantities(apiStockOrder, entity, processingOrder, null);
@@ -1057,34 +1059,17 @@ public class StockOrderService extends BaseService {
         switch (apiStockOrder.getOrderType()) {
             case PURCHASE_ORDER:
 
-                // Calculate base quantity after tare and damaged weight deductions
-                BigDecimal quantityAfterDeductions = apiStockOrder.getTotalGrossQuantity();
+                // On purchase order, Total quantity is calculated by total gross quantity and tare
                 if (apiStockOrder.getTare() != null) {
-                    quantityAfterDeductions = quantityAfterDeductions.subtract(apiStockOrder.getTare());
+                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalGrossQuantity().subtract(apiStockOrder.getTare()));
+                } else {
+                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalGrossQuantity());
                 }
                 if (apiStockOrder.getDamagedWeightDeduction() != null) {
-                    quantityAfterDeductions = quantityAfterDeductions.subtract(apiStockOrder.getDamagedWeightDeduction());
+                    apiStockOrder.setTotalQuantity(apiStockOrder.getTotalQuantity().subtract(apiStockOrder.getDamagedWeightDeduction()));
                 }
-
-                // Calculate net quantity after all deductions including moisture
-                BigDecimal netQuantity = calculateNetQuantity(
-                    apiStockOrder.getTotalGrossQuantity(),
-                    apiStockOrder.getTare(),
-                    apiStockOrder.getDamagedWeightDeduction(),
-                    apiStockOrder.getMoisturePercentage()
-                );
-
-                // Persist gross quantity
+                entity.setTotalQuantity(apiStockOrder.getTotalQuantity());
                 entity.setTotalGrossQuantity(apiStockOrder.getTotalGrossQuantity());
-
-                // Persist net quantity and ensure total quantity mirrors it (legacy behaviour)
-                BigDecimal quantityToStore = netQuantity != null ? netQuantity : quantityAfterDeductions;
-                if (quantityToStore == null) {
-                    quantityToStore = quantityAfterDeductions;
-                }
-                apiStockOrder.setTotalQuantity(quantityToStore);
-                entity.setNetQuantity(quantityToStore);
-                entity.setTotalQuantity(quantityToStore);
 
                 // Required
                 if (apiStockOrder.getProducerUserCustomer() == null) {
@@ -1106,16 +1091,13 @@ public class StockOrderService extends BaseService {
                     pricePerUnitReduced = entity.getPricePerUnit().subtract(entity.getDamagedPriceDeduction());
                 }
                 if (!Boolean.TRUE.equals(apiStockOrder.getPriceDeterminedLater())) {
-                    // Use net quantity for cost calculation
                     BigDecimal quantityForCost = entity.getNetQuantity() != null ? entity.getNetQuantity() : entity.getTotalQuantity();
-                    BigDecimal cost = pricePerUnitReduced.multiply(quantityForCost);
+                    BigDecimal calculatedCost = pricePerUnitReduced.multiply(quantityForCost);
+                    
                     if (entity.getFinalPriceDiscount() != null) {
-                        cost = cost.subtract(entity.getFinalPriceDiscount());
+                        calculatedCost = calculatedCost.subtract(entity.getFinalPriceDiscount());
                     }
-                    if (cost.compareTo(BigDecimal.ZERO) < 0) {
-                        cost = BigDecimal.ZERO;
-                    }
-                    entity.setCost(cost);
+                    entity.setCost(calculatedCost);
 
                     if (processingOrder == null) {
                         entity.setBalance(calculateBalanceForPurchaseOrder(entity));
@@ -1175,12 +1157,26 @@ public class StockOrderService extends BaseService {
 
         if (entity.getId() == null) {
             em.persist(entity);
-            System.out.println("DEBUG: After persist - StockOrder ID: " + entity.getId());
-        } else {
-            System.out.println("DEBUG: Updating existing StockOrder ID: " + entity.getId());
         }
 
         return new ApiBaseEntity(entity);
+    }
+
+    private void calculateNetQuantity(ApiStockOrder api, StockOrder entity) {
+        BigDecimal gross = api.getTotalGrossQuantity() != null ? api.getTotalGrossQuantity() : BigDecimal.ZERO;
+        BigDecimal tare = api.getTare() != null ? api.getTare() : BigDecimal.ZERO;
+        BigDecimal damaged = api.getDamagedWeightDeduction() != null ? api.getDamagedWeightDeduction() : BigDecimal.ZERO;
+        
+        BigDecimal grossTareDamaged = gross.subtract(tare).subtract(damaged);
+
+        if (api.getMoisturePercentage() != null && api.getMoisturePercentage().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal moistureDeduction = grossTareDamaged.multiply(api.getMoisturePercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            entity.setMoistureWeightDeduction(moistureDeduction);
+            entity.setNetQuantity(grossTareDamaged.subtract(moistureDeduction));
+        } else {
+            entity.setMoistureWeightDeduction(BigDecimal.ZERO);
+            entity.setNetQuantity(grossTareDamaged);
+        }
     }
 
     public void calculateQuantities(ApiStockOrder apiStockOrder, StockOrder stockOrder, ProcessingOrder processingOrder, Long newInputTransactionId) throws ApiException{
@@ -1756,38 +1752,5 @@ public class StockOrderService extends BaseService {
         }
         // if areaSum is < 0, polygon order is counter-clockwise
         return areaSum < 0;
-    }
-
-    /**
-     * Calculate net quantity after all deductions (tare, damaged weight, moisture)
-     * Formula: Net = (Gross - Tare - DamagedWeight) * (MoisturePercentage / 100)
-     */
-    private BigDecimal calculateNetQuantity(BigDecimal grossQuantity, BigDecimal tare, 
-                                           BigDecimal damagedWeightDeduction, BigDecimal moisturePercentage) {
-        if (grossQuantity == null) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal baseWeight = grossQuantity;
-
-        // Apply tare deduction
-        if (tare != null) {
-            baseWeight = baseWeight.subtract(tare);
-        }
-
-        // Apply damaged weight deduction
-        if (damagedWeightDeduction != null) {
-            baseWeight = baseWeight.subtract(damagedWeightDeduction);
-        }
-
-        // Ensure base weight is not negative
-        baseWeight = baseWeight.max(BigDecimal.ZERO);
-
-        // Apply moisture percentage (percentage represents the net weight that remains)
-        if (moisturePercentage != null && moisturePercentage.compareTo(BigDecimal.ZERO) > 0) {
-            baseWeight = baseWeight.multiply(moisturePercentage.divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP));
-        }
-
-        return baseWeight.max(BigDecimal.ZERO);
     }
 }

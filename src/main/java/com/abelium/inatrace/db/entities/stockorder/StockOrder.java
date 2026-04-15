@@ -4,7 +4,6 @@ import com.abelium.inatrace.api.types.Lengths;
 import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.codebook.MeasureUnitType;
 import com.abelium.inatrace.db.entities.codebook.SemiProduct;
-import com.abelium.inatrace.db.entities.codebook.SemiProduct;
 import com.abelium.inatrace.db.entities.common.User;
 import com.abelium.inatrace.db.entities.common.UserCustomer;
 import com.abelium.inatrace.db.entities.company.Company;
@@ -17,9 +16,9 @@ import com.abelium.inatrace.db.entities.productorder.ProductOrder;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
 import com.abelium.inatrace.db.entities.stockorder.enums.PreferredWayOfPayment;
 import jakarta.persistence.*;
+import jakarta.persistence.JoinColumn;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
@@ -43,9 +42,11 @@ public class StockOrder extends TimestampEntity {
 	private Long entityVersion;
 
 	@ManyToOne(optional = false)
+	@JoinColumn(name = "createdby_id")
 	private User createdBy;
 
 	@ManyToOne
+	@JoinColumn(name = "updatedby_id")
 	private User updatedBy;
 
 	@Column
@@ -188,22 +189,6 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private Boolean organic;
 
-	// Week number for cacao deliveries (1-53)
-	@Column
-	private Integer weekNumber;
-
-	// Parcel lot for cacao deliveries
-	@Column(length = 255)
-	private String parcelLot;
-
-	// Variety for cacao deliveries
-	@Column(length = 255)
-	private String variety;
-
-	// Organic certification details
-	@Column(length = 255)
-	private String organicCertification;
-
 	@Column
 	private BigDecimal cost;
 	
@@ -219,23 +204,10 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private BigDecimal damagedPriceDeduction;
 
-	@Column(precision = 38, scale = 2)
-	private BigDecimal finalPriceDiscount;
-
 	@Column
 	private BigDecimal damagedWeightDeduction;
 
-	@Column
-	private BigDecimal moisturePercentage;
-
-	@Column
-	private BigDecimal moistureWeightDeduction;
-
-	// Net quantity after all deductions (tare, damaged weight, moisture)
-	@Column(precision = 38, scale = 2)
-	private BigDecimal netQuantity;
-
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	private ProcessingOrder processingOrder;
 	
 	@Enumerated(EnumType.STRING)
@@ -282,6 +254,30 @@ public class StockOrder extends TimestampEntity {
 	// Generated ID provided by the client; This is used to group repacked stock orders when doing repacking with multiple outputs
 	@Column
 	private String repackedOriginStockOrderId;
+
+	@Column
+	private Integer weekNumber;
+
+	@Column
+	private String parcelLot;
+
+	@Column
+	private String variety;
+
+	@Column
+	private String organicCertification;
+
+	@Column
+	private BigDecimal moisturePercentage;
+
+	@Column
+	private BigDecimal moistureWeightDeduction;
+
+	@Column
+	private BigDecimal netQuantity;
+
+	@Column
+	private BigDecimal finalPriceDiscount;
 
 	public User getCreatedBy() {
 		return createdBy;
@@ -706,6 +702,30 @@ public class StockOrder extends TimestampEntity {
 		this.organic = organic;
 	}
 
+	public BigDecimal getTare() {
+		return tare;
+	}
+
+	public void setTare(BigDecimal tare) {
+		this.tare = tare;
+	}
+
+	public BigDecimal getDamagedPriceDeduction() {
+		return damagedPriceDeduction;
+	}
+
+	public void setDamagedPriceDeduction(BigDecimal damagedPriceDeduction) {
+		this.damagedPriceDeduction = damagedPriceDeduction;
+	}
+
+	public BigDecimal getDamagedWeightDeduction() {
+		return damagedWeightDeduction;
+	}
+
+	public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
+		this.damagedWeightDeduction = damagedWeightDeduction;
+	}
+
 	public Integer getWeekNumber() {
 		return weekNumber;
 	}
@@ -738,38 +758,6 @@ public class StockOrder extends TimestampEntity {
 		this.organicCertification = organicCertification;
 	}
 
-	public BigDecimal getTare() {
-		return tare;
-	}
-
-	public void setTare(BigDecimal tare) {
-		this.tare = tare;
-	}
-
-	public BigDecimal getDamagedPriceDeduction() {
-		return damagedPriceDeduction;
-	}
-
-	public void setDamagedPriceDeduction(BigDecimal damagedPriceDeduction) {
-		this.damagedPriceDeduction = damagedPriceDeduction;
-	}
-
-	public BigDecimal getFinalPriceDiscount() {
-		return finalPriceDiscount;
-	}
-
-	public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
-		this.finalPriceDiscount = finalPriceDiscount;
-	}
-
-	public BigDecimal getDamagedWeightDeduction() {
-		return damagedWeightDeduction;
-	}
-
-	public void setDamagedWeightDeduction(BigDecimal damagedWeightDeduction) {
-		this.damagedWeightDeduction = damagedWeightDeduction;
-	}
-
 	public BigDecimal getMoisturePercentage() {
 		return moisturePercentage;
 	}
@@ -792,5 +780,13 @@ public class StockOrder extends TimestampEntity {
 
 	public void setNetQuantity(BigDecimal netQuantity) {
 		this.netQuantity = netQuantity;
+	}
+
+	public BigDecimal getFinalPriceDiscount() {
+		return finalPriceDiscount;
+	}
+
+	public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
+		this.finalPriceDiscount = finalPriceDiscount;
 	}
 }

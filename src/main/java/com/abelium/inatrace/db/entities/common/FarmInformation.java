@@ -26,7 +26,7 @@ public class FarmInformation {
     @Column
     private Date startTransitionToOrganic;
 
-    @Column(name = "farm_maxProductionQuantity")
+    @Column
     private BigDecimal maxProductionQuantity;
 
     public BigDecimal getTotalCultivatedArea() {

@@ -176,3 +176,7 @@ src/main/java/com/abelium/inatrace/db/migrations/README_PRODUCT_TYPE_MIGRATIONS.
 docs/dicionario.docx
 docs/informe.docx
 ci/.env-prod
+scripts/*
+
+# Scripts no versionados (Deploy local)
+scripts/deploy/

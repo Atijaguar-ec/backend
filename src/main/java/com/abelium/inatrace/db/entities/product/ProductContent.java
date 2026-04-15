@@ -24,16 +24,14 @@ public class ProductContent extends BaseEntity {
 	 * product description - briefly describe the product AND reasons why your product is worth buying 
 	 * (example: special properties, health benefits, great value, organic production....)
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String description;
 	
 	/**
 	 * origin - text and quantity input - Briefly describe where the product or its 
 	 * ingredients are produced. 
 	 */
-	@Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
 	private String originText;
 
 	/**

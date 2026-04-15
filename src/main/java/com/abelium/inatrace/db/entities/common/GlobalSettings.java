@@ -19,8 +19,7 @@ public class GlobalSettings extends BaseEntity {
     /**
      * Settings value
      */
-    @Lob
-	@Column(columnDefinition = "LONGTEXT")
+	@Column(columnDefinition = "TEXT")
     private String value;
     
     /**

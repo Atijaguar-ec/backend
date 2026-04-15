@@ -67,9 +67,7 @@ public class MailEngine
 
     public MimeMessageHelper createSimpleMail(String from, String to, String bcc, String subject, String plainText, String htmlText) throws MessagingException {
         MimeMessageHelper helper = createMessageHelper(true);
-        if (StringUtils.isNotBlank(from)) {
-            setFromAddress(helper, from);
-        }
+        if (from != null) helper.setFrom(from);
         helper.setTo(MailUtils.parseAddresses(helper, to));
         if (StringUtils.isNotBlank(bcc)) {
             helper.setBcc(MailUtils.parseAddresses(helper, bcc));
@@ -86,9 +84,7 @@ public class MailEngine
     
     public MimeMessageHelper createSimplePlainTextMail(String from, String to, String subject, String plainText) throws MessagingException {
     	MimeMessageHelper helper = createMessageHelper(true);
-        if (StringUtils.isNotBlank(from)) {
-            setFromAddress(helper, from);
-        }
+        if (from != null) helper.setFrom(from);
         helper.setTo(MailUtils.parseAddresses(helper, to));
         helper.setSubject(subject);
         helper.setText(plainText);
@@ -113,7 +109,7 @@ public class MailEngine
     public MimeMessageHelper createMessageHelper(boolean multipart) throws MessagingException {
         MimeMessage mail = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mail, multipart);
-        setFromAddress(helper, null);
+        helper.setFrom(fromAddress);
         return helper;
     }
     
@@ -237,28 +233,6 @@ public class MailEngine
     
     private BlockingQueue<Runnable> executorQueue = new LinkedBlockingQueue<>(10000);
     private ExecutorService executorService = createExecutorService(executorQueue);
-
-    private void setFromAddress(MimeMessageHelper helper, String override) throws MessagingException {
-        String candidate = StringUtils.trimToNull(override);
-        if (candidate == null) {
-            candidate = StringUtils.trimToNull(fromAddress);
-        }
-        if (candidate == null) {
-            candidate = StringUtils.trimToNull(mailSender.getUsername());
-            if (candidate != null) {
-                logger.debug("Using spring.mail.username as fallback 'from' address");
-            }
-        }
-        if (candidate == null) {
-            throw new MessagingException("Mail 'from' address is not configured.");
-        }
-
-        InternetAddress[] parsed = MailUtils.parseAddresses(helper, candidate);
-        if (parsed.length != 1) {
-            throw new MessagingException("Mail 'from' address must contain exactly one email.");
-        }
-        helper.setFrom(parsed[0]);
-    }
     
     private ExecutorService createExecutorService(BlockingQueue<Runnable> workQueue) {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 10, TimeUnit.MINUTES, workQueue);
