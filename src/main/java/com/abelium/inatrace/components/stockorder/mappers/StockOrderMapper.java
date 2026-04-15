@@ -3,7 +3,6 @@ package com.abelium.inatrace.components.stockorder.mappers;
 import com.abelium.inatrace.components.codebook.measure_unit_type.MeasureUnitTypeMapper;
 import com.abelium.inatrace.components.codebook.semiproduct.SemiProductMapper;
 import com.abelium.inatrace.components.codebook.semiproduct.api.ApiSemiProduct;
-import com.abelium.inatrace.components.common.CommonApiTools;
 import com.abelium.inatrace.components.common.mappers.ActivityProofMapper;
 import com.abelium.inatrace.components.company.mappers.CompanyCustomerMapper;
 import com.abelium.inatrace.components.company.mappers.CompanyMapper;
@@ -16,7 +15,6 @@ import com.abelium.inatrace.components.productorder.mappers.ProductOrderMapper;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrderEvidenceTypeValue;
 import com.abelium.inatrace.components.user.mappers.UserMapper;
-import com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.types.Language;
 import org.apache.commons.lang3.BooleanUtils;
@@ -25,32 +23,6 @@ import java.util.stream.Collectors;
 
 public class StockOrderMapper {
     
-    /**
-     * Populate laboratory analysis fields from LaboratoryAnalysis entity to ApiStockOrder.
-     * This method is used when reading stock orders for editing, to display existing lab data.
-     * 
-     * @param apiStockOrder The API stock order to populate
-     * @param laboratoryAnalysis The laboratory analysis entity with sensorial data
-     */
-    public static void populateLaboratoryAnalysisFields(ApiStockOrder apiStockOrder, LaboratoryAnalysis laboratoryAnalysis) {
-        if (laboratoryAnalysis == null) {
-            return;
-        }
-        
-        apiStockOrder.setSensorialRawOdor(laboratoryAnalysis.getSensorialRawOdor());
-        apiStockOrder.setSensorialRawOdorIntensity(laboratoryAnalysis.getSensorialRawOdorIntensity());
-        apiStockOrder.setSensorialRawTaste(laboratoryAnalysis.getSensorialRawTaste());
-        apiStockOrder.setSensorialRawTasteIntensity(laboratoryAnalysis.getSensorialRawTasteIntensity());
-        apiStockOrder.setSensorialRawColor(laboratoryAnalysis.getSensorialRawColor());
-        apiStockOrder.setSensorialCookedOdor(laboratoryAnalysis.getSensorialCookedOdor());
-        apiStockOrder.setSensorialCookedOdorIntensity(laboratoryAnalysis.getSensorialCookedOdorIntensity());
-        apiStockOrder.setSensorialCookedTaste(laboratoryAnalysis.getSensorialCookedTaste());
-        apiStockOrder.setSensorialCookedTasteIntensity(laboratoryAnalysis.getSensorialCookedTasteIntensity());
-        apiStockOrder.setSensorialCookedColor(laboratoryAnalysis.getSensorialCookedColor());
-        apiStockOrder.setQualityNotes(laboratoryAnalysis.getQualityNotes());
-        apiStockOrder.setMetabisulfiteLevelAcceptable(laboratoryAnalysis.getMetabisulfiteLevelAcceptable());
-        apiStockOrder.setApprovedForPurchase(laboratoryAnalysis.getApprovedForPurchase());
-    }
 
     public static ApiStockOrder toApiStockOrderBase(StockOrder entity) {
 
@@ -204,48 +176,6 @@ public class StockOrderMapper {
         apiStockOrder.setMoisturePercentage(entity.getMoisturePercentage());
         apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
         apiStockOrder.setNetQuantity(entity.getNetQuantity());
-        // 🦐 Shrimp-specific fields
-        apiStockOrder.setNumberOfGavetas(entity.getNumberOfGavetas());
-        apiStockOrder.setNumberOfBines(entity.getNumberOfBines());
-        apiStockOrder.setNumberOfPiscinas(entity.getNumberOfPiscinas());
-        apiStockOrder.setGuiaRemisionNumber(entity.getGuiaRemisionNumber());
-        // 🦐 Shrimp processing-specific fields
-        apiStockOrder.setCuttingType(entity.getCuttingType());
-        apiStockOrder.setCuttingEntryDate(entity.getCuttingEntryDate());
-        apiStockOrder.setCuttingExitDate(entity.getCuttingExitDate());
-        apiStockOrder.setCuttingTemperatureControl(entity.getCuttingTemperatureControl());
-        apiStockOrder.setTreatmentType(entity.getTreatmentType());
-        apiStockOrder.setTreatmentEntryDate(entity.getTreatmentEntryDate());
-        apiStockOrder.setTreatmentExitDate(entity.getTreatmentExitDate());
-        apiStockOrder.setTreatmentTemperatureControl(entity.getTreatmentTemperatureControl());
-        apiStockOrder.setTreatmentChemicalUsed(entity.getTreatmentChemicalUsed());
-        // 🦐 Shrimp processing: freezing fields
-        apiStockOrder.setFreezingType(entity.getFreezingType());
-        apiStockOrder.setFreezingEntryDate(entity.getFreezingEntryDate());
-        apiStockOrder.setFreezingExitDate(entity.getFreezingExitDate());
-        apiStockOrder.setFreezingTemperatureControl(entity.getFreezingTemperatureControl());
-        apiStockOrder.setTunnelProductionDate(entity.getTunnelProductionDate());
-        apiStockOrder.setTunnelExpirationDate(entity.getTunnelExpirationDate());
-        apiStockOrder.setTunnelNetWeight(entity.getTunnelNetWeight());
-        apiStockOrder.setTunnelSupplier(entity.getTunnelSupplier());
-        apiStockOrder.setTunnelFreezingType(entity.getTunnelFreezingType());
-        apiStockOrder.setTunnelEntryDate(entity.getTunnelEntryDate());
-        apiStockOrder.setTunnelExitDate(entity.getTunnelExitDate());
-        apiStockOrder.setWashingWaterTemperature(entity.getWashingWaterTemperature());
-        apiStockOrder.setWashingShrimpTemperatureControl(entity.getWashingShrimpTemperatureControl());
-        // 🔬 Laboratory-specific fields
-        apiStockOrder.setSampleNumber(entity.getSampleNumber());
-        apiStockOrder.setReceptionTime(entity.getReceptionTime());
-        apiStockOrder.setQualityDocument(CommonApiTools.toApiDocument(entity.getQualityDocument(), userId));
-        // 🔍 Field inspection (sensory testing) specific fields
-        apiStockOrder.setFlavorTestResult(entity.getFlavorTestResult());
-        if (entity.getFlavorDefectType() != null) {
-            apiStockOrder.setFlavorDefectTypeId(entity.getFlavorDefectType().getId());
-            apiStockOrder.setFlavorDefectTypeCode(entity.getFlavorDefectType().getCode());
-            apiStockOrder.setFlavorDefectTypeLabel(entity.getFlavorDefectType().getName());
-        }
-        apiStockOrder.setPurchaseRecommended(entity.getPurchaseRecommended());
-        apiStockOrder.setInspectionNotes(entity.getInspectionNotes());
         apiStockOrder.setCost(entity.getCost());
         apiStockOrder.setPaid(entity.getPaid());
         apiStockOrder.setBalance(entity.getBalance());

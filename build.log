@@ -1,0 +1,434 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------< com.abelium.INATrace:cacao-backend >-----------------
+[INFO] Building Cacao backend 2.38.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ cacao-backend ---
+[INFO] Deleting /Users/alvarogeovani/proyectos/giz/backend/target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ cacao-backend ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 66 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ cacao-backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 572 source files with javac [debug parameters release 17] to target/classes
+[INFO] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/api/ApiClassificationDetail.java: Some input files use or override a deprecated API.
+[INFO] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/api/ApiClassificationDetail.java: Recompile with -Xlint:deprecation for details.
+[INFO] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/tools/queries/WhereBuilder.java: /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/tools/queries/WhereBuilder.java uses unchecked or unsafe operations.
+[INFO] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/tools/queries/WhereBuilder.java: Recompile with -Xlint:unchecked for details.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[13,56] package com.abelium.inatrace.db.entities.fieldinspection does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[340,17] cannot find symbol
+  symbol:   class FieldInspection
+  location: class com.abelium.inatrace.db.entities.stockorder.StockOrder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[348,58] cannot find symbol
+  symbol:   class ShrimpFlavorDefect
+  location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1148,16] cannot find symbol
+  symbol:   class FieldInspection
+  location: class com.abelium.inatrace.db.entities.stockorder.StockOrder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1152,40] cannot find symbol
+  symbol:   class FieldInspection
+  location: class com.abelium.inatrace.db.entities.stockorder.StockOrder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1164,57] cannot find symbol
+  symbol:   class ShrimpFlavorDefect
+  location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1168,82] cannot find symbol
+  symbol:   class ShrimpFlavorDefect
+  location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[17,55] package com.abelium.inatrace.components.fieldinspection does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[18,50] package com.abelium.inatrace.components.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[19,49] cannot find symbol
+  symbol:   class ShrimpFlavorDefect
+  location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[41,56] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[42,56] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[110,19] cannot find symbol
+  symbol:   class FieldInspectionService
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[112,19] cannot find symbol
+  symbol:   class LaboratoryAnalysisService
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[123,36] cannot find symbol
+  symbol:   class FieldInspectionService
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[124,36] cannot find symbol
+  symbol:   class LaboratoryAnalysisService
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[3,56] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[4,56] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[38,44] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[211,50] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[445,38] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[16,56] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[17,56] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[25,51] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[26,70] package com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[28,55] package com.abelium.inatrace.db.repositories.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[61,19] cannot find symbol
+  symbol:   class LaboratoryAnalysisRepository
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[68,35] cannot find symbol
+  symbol:   class LaboratoryAnalysisRepository
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/mappers/StockOrderMapper.java:[19,51] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/mappers/StockOrderMapper.java:[35,86] cannot find symbol
+  symbol:   class LaboratoryAnalysis
+  location: class com.abelium.inatrace.components.stockorder.mappers.StockOrderMapper
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[172,32] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[176,33] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[180,37] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[182,39] cannot find symbol
+  symbol:   method getTargetStockOrder()
+  location: variable b of type java.lang.Object
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[193,21] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[261,64] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[263,80] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[307,64] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[309,80] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[1191,13] cannot find symbol
+  symbol:   class ShrimpFlavorDefect
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[1191,98] cannot find symbol
+  symbol:   class ShrimpFlavorDefect
+  location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[100,18] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[107,18] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[290,18] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[297,18] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[452,22] cannot find symbol
+  symbol:   variable ProcessingClassificationBatchDetail
+  location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[92,26] cannot find symbol
+  symbol:   class LaboratoryAnalysis
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[94,29] cannot find symbol
+  symbol:   class LaboratoryAnalysis
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[629,20] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[633,17] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[636,9] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[659,20] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[661,17] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[664,9] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[705,14] cannot find symbol
+  symbol:   class LaboratoryAnalysis
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[707,17] cannot find symbol
+  symbol:   class LaboratoryAnalysis
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[711,9] cannot find symbol
+  symbol:   class LaboratoryAnalysis
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[718,28] cannot find symbol
+  symbol:   class LaboratoryAnalysis
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[721,38] cannot find symbol
+  symbol:   variable AnalysisType
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[779,20] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[782,17] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[785,9] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[786,14] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[795,25] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[817,17] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[817,66] cannot find symbol
+  symbol:   class ProcessingClassificationBatchDetail
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[892,20] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[895,17] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[898,14] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[900,13] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[949,9] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[949,59] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[958,13] cannot find symbol
+  symbol:   class ProcessingClassificationBatch
+  location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[INFO] 73 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.263 s
+[INFO] Finished at: 2026-04-01T11:26:49-05:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project cacao-backend: Compilation failure: Compilation failure: 
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[13,56] package com.abelium.inatrace.db.entities.fieldinspection does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[340,17] cannot find symbol
+[ERROR]   symbol:   class FieldInspection
+[ERROR]   location: class com.abelium.inatrace.db.entities.stockorder.StockOrder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[348,58] cannot find symbol
+[ERROR]   symbol:   class ShrimpFlavorDefect
+[ERROR]   location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1148,16] cannot find symbol
+[ERROR]   symbol:   class FieldInspection
+[ERROR]   location: class com.abelium.inatrace.db.entities.stockorder.StockOrder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1152,40] cannot find symbol
+[ERROR]   symbol:   class FieldInspection
+[ERROR]   location: class com.abelium.inatrace.db.entities.stockorder.StockOrder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1164,57] cannot find symbol
+[ERROR]   symbol:   class ShrimpFlavorDefect
+[ERROR]   location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/db/entities/stockorder/StockOrder.java:[1168,82] cannot find symbol
+[ERROR]   symbol:   class ShrimpFlavorDefect
+[ERROR]   location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[17,55] package com.abelium.inatrace.components.fieldinspection does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[18,50] package com.abelium.inatrace.components.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[19,49] cannot find symbol
+[ERROR]   symbol:   class ShrimpFlavorDefect
+[ERROR]   location: package com.abelium.inatrace.db.entities.codebook
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[41,56] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[42,56] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[110,19] cannot find symbol
+[ERROR]   symbol:   class FieldInspectionService
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[112,19] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysisService
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[123,36] cannot find symbol
+[ERROR]   symbol:   class FieldInspectionService
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[124,36] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysisService
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[3,56] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[4,56] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[38,44] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[211,50] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[445,38] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[16,56] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[17,56] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: package com.abelium.inatrace.db.entities.processingorder
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[25,51] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[26,70] package com.abelium.inatrace.db.entities.laboratory.LaboratoryAnalysis does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[28,55] package com.abelium.inatrace.db.repositories.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[61,19] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysisRepository
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[68,35] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysisRepository
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/mappers/StockOrderMapper.java:[19,51] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/mappers/StockOrderMapper.java:[35,86] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysis
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.mappers.StockOrderMapper
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[172,32] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[176,33] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[180,37] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[182,39] cannot find symbol
+[ERROR]   symbol:   method getTargetStockOrder()
+[ERROR]   location: variable b of type java.lang.Object
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[193,21] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[261,64] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[263,80] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[307,64] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[309,80] package com.abelium.inatrace.db.entities.laboratory does not exist
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[1191,13] cannot find symbol
+[ERROR]   symbol:   class ShrimpFlavorDefect
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/stockorder/StockOrderService.java:[1191,98] cannot find symbol
+[ERROR]   symbol:   class ShrimpFlavorDefect
+[ERROR]   location: class com.abelium.inatrace.components.stockorder.StockOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[100,18] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[107,18] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[290,18] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[297,18] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ClassificationExcelService.java:[452,22] cannot find symbol
+[ERROR]   symbol:   variable ProcessingClassificationBatchDetail
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ClassificationExcelService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[92,26] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysis
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[94,29] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysis
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[629,20] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[633,17] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[636,9] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[659,20] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[661,17] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[664,9] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[705,14] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysis
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[707,17] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysis
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[711,9] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysis
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[718,28] cannot find symbol
+[ERROR]   symbol:   class LaboratoryAnalysis
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[721,38] cannot find symbol
+[ERROR]   symbol:   variable AnalysisType
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[779,20] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[782,17] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[785,9] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[786,14] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[795,25] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[817,17] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[817,66] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatchDetail
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[892,20] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[895,17] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[898,14] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[900,13] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[949,9] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[949,59] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] /Users/alvarogeovani/proyectos/giz/backend/src/main/java/com/abelium/inatrace/components/processingorder/ProcessingOrderService.java:[958,13] cannot find symbol
+[ERROR]   symbol:   class ProcessingClassificationBatch
+[ERROR]   location: class com.abelium.inatrace.components.processingorder.ProcessingOrderService
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
