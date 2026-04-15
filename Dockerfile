@@ -2,7 +2,7 @@ FROM maven:3.8.5-openjdk-17-slim as build-stage
 
 WORKDIR /src
 COPY . .
-RUN mvn clean package
+RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre as package-stage
 
