@@ -502,6 +502,16 @@ pipeline {
                   fi
                 done
                 
+                # Fuerza de variables de postgresql para evitar conflictos con credenciales legacy de MySQL
+                if [ "${FORTALEZA_ENV}" = "test" ]; then
+                  echo "🔧 Forzando variables Postgres Staging (Copia de configuración local)..."
+                  
+                  if grep -q "^DB_VOLUME=" .env; then sed -i "s|^DB_VOLUME=.*|DB_VOLUME=inatrace-postgres-vol|g" .env; else printf '\nDB_VOLUME=inatrace-postgres-vol' >> .env; fi
+                  if grep -q "^DATABASE_NAME=" .env; then sed -i "s|^DATABASE_NAME=.*|DATABASE_NAME=inatrace_fortaleza_stage|g" .env; else printf '\nDATABASE_NAME=inatrace_fortaleza_stage' >> .env; fi
+                  if grep -q "^DATASOURCE_USERNAME=" .env; then sed -i "s|^DATASOURCE_USERNAME=.*|DATASOURCE_USERNAME=inatrace|g" .env; else printf '\nDATASOURCE_USERNAME=inatrace' >> .env; fi
+                  if grep -q "^DATASOURCE_PASSWORD=" .env; then sed -i "s|^DATASOURCE_PASSWORD=.*|DATASOURCE_PASSWORD=inatrace|g" .env; else printf '\nDATASOURCE_PASSWORD=inatrace' >> .env; fi
+                fi
+                
                 echo "✅ Validación de variables completada"
               '''
             }
