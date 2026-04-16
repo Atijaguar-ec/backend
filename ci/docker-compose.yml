@@ -15,6 +15,41 @@ services:
       - backend
     restart: always
 
+  inatrace-keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: inatrace-kc-test-fortaleza
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://inatrace-postgres:5432/inatrace_keycloak
+      KC_DB_USERNAME: ${DATASOURCE_USERNAME}
+      KC_DB_PASSWORD: ${DB_ROOT_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_FEATURES: organization
+      KC_HTTP_PORT: 8080
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HTTP_ENABLED: 'true'
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-testinatrace.espam.edu.ec}
+      KC_PROXY_HEADERS: xforwarded
+    volumes:
+      - ../scripts/keycloak/keycloak-theme/inatrace:/opt/keycloak/themes/inatrace
+    ports:
+      - '8083:8080'
+    networks:
+      - backend
+    depends_on:
+      - inatrace-postgres
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:8080/auth/realms/master -o /dev/null || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+
   inatrace-backend:
     image: ${IMAGE_NAME}:${TAG}
     container_name: inatrace-be
