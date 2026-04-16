@@ -28,6 +28,13 @@ services:
       - INATRACE_DOCUMENTS_ROOT=${DOCUMENTS_ROOT}
       - INATRACE_REQUESTLOG_TOKEN=${REQUESTLOG_TOKEN}
       - INATRACE_EXCHANGERATE_APIKEY=${EXCHANGERATE_APIKEY}
+      - SERVER_PORT=8080
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health | grep -E '200|401' > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
     volumes:
       - ${FILE_STORAGE_ROOT_VOL}:${FILE_STORAGE_ROOT}
       - ${IMPORT_PATH_VOL}:${IMPORT_PATH}
