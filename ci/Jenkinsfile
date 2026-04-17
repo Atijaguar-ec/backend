@@ -533,7 +533,9 @@ pipeline {
                   grep -q "^EXCHANGERATE_ENABLED=" .env || printf '\nEXCHANGERATE_ENABLED=false' >> .env
 
                   echo "🗂️ Creando directorios de almacenamiento en host..."
-                  mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents || true
+                  sudo mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents 2>/dev/null || \
+                  mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents 2>/dev/null || \
+                  echo "⚠️ No se pudieron crear los directorios — deben existir previamente en el servidor"
                 fi
                 
                 echo "✅ Validación de variables completada"
@@ -625,20 +627,22 @@ EOSSH
                 docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
                   docker network create inatrace-backend-network
 
-                echo "📥 Descargando última imagen..."
+                echo "📥 Descargando ultima imagen..."
                 docker compose pull || true
 
                 echo "🛑 Deteniendo backend previo..."
-                docker compose stop inatrace-backend >/dev/null 2>&1 || true
+                docker compose stop inatrace-backend > /dev/null 2>&1 || true
 
-                echo "🗑️ Eliminando backend previo..."
-                docker compose rm -f inatrace-backend >/dev/null 2>&1 || true
+                echo "🗑️ Eliminando backend previo (compose + nombre fijo)..."
+                docker compose rm -f inatrace-backend > /dev/null 2>&1 || true
+                # Eliminar por nombre fijo del docker-compose.yml (container_name: inatrace-be)
+                docker rm -f inatrace-be > /dev/null 2>&1 || true
 
                 if [ -f .env ]; then
                   echo "🧹 Limpiando contenedor backend definido en .env (si existe)..."
                   CONTAINER_NAME_BE=$(grep '^CONTAINER_NAME_BE=' .env | head -1 | cut -d= -f2-)
-                  if [ -n "${CONTAINER_NAME_BE}" ]; then
-                    docker rm -f "${CONTAINER_NAME_BE}" >/dev/null 2>&1 || true
+                  if [ -n "${CONTAINER_NAME_BE}" ] && [ "${CONTAINER_NAME_BE}" != "inatrace-be" ]; then
+                    docker rm -f "${CONTAINER_NAME_BE}" > /dev/null 2>&1 || true
                   fi
                 fi
 
