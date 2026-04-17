@@ -6,15 +6,16 @@
 # - Production: inatrace.empacadoradufer.com/api
 #
 # Triggers:
-# - staging branch → deploy to staging
-# - main branch → deploy to production
+# - dufer-v* tag → deploy to production
+# - workflow_dispatch → manual deploy to staging or production
+# NOTE: push to staging branch does NOT trigger auto-deploy (use workflow_dispatch instead)
 # ============================================================================
 
 name: 🦐 Backend DUFER
 
 on:
   push:
-    branches: [staging, main]
+    branches: [main]
     tags:
       - "dufer-v*"
     paths:

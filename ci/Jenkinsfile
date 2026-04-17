@@ -627,7 +627,7 @@ EOSSH
                 fi
 
                 echo "🔄 Desplegando servicios localmente..."
-                docker compose up -d --remove-orphans --force-recreate inatrace-backend
+                docker compose up -d --no-deps --remove-orphans --force-recreate inatrace-backend
 
                 echo "📊 Estado inicial de contenedores:"
                 docker compose ps
