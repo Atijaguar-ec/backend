@@ -518,6 +518,22 @@ pipeline {
                   if grep -q "^DATASOURCE_PASSWORD=" .env; then sed -i "s|^DATASOURCE_PASSWORD=.*|DATASOURCE_PASSWORD=inatrace|g" .env; else printf '\nDATASOURCE_PASSWORD=inatrace' >> .env; fi
                   if grep -q "^DB_ROOT_PASSWORD=" .env; then sed -i "s|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=inatrace|g" .env; else printf '\nDB_ROOT_PASSWORD=inatrace' >> .env; fi
                   if grep -q "^SPRING_PROFILES_ACTIVE=" .env; then sed -i "s|^SPRING_PROFILES_ACTIVE=.*|SPRING_PROFILES_ACTIVE=staging|g" .env; else printf '\nSPRING_PROFILES_ACTIVE=staging' >> .env; fi
+
+                  # Rutas de volumenes — DEBEN ser rutas absolutas para que Docker no falle con ':'
+                  if grep -q "^FILE_STORAGE_ROOT=" .env; then sed -i "s|^FILE_STORAGE_ROOT=.*|FILE_STORAGE_ROOT=/opt/inatrace/uploads|g" .env; else printf '\nFILE_STORAGE_ROOT=/opt/inatrace/uploads' >> .env; fi
+                  if grep -q "^FILE_STORAGE_ROOT_VOL=" .env; then sed -i "s|^FILE_STORAGE_ROOT_VOL=.*|FILE_STORAGE_ROOT_VOL=/opt/inatrace/uploads|g" .env; else printf '\nFILE_STORAGE_ROOT_VOL=/opt/inatrace/uploads' >> .env; fi
+                  if grep -q "^IMPORT_PATH=" .env; then sed -i "s|^IMPORT_PATH=.*|IMPORT_PATH=/opt/inatrace/import|g" .env; else printf '\nIMPORT_PATH=/opt/inatrace/import' >> .env; fi
+                  if grep -q "^IMPORT_PATH_VOL=" .env; then sed -i "s|^IMPORT_PATH_VOL=.*|IMPORT_PATH_VOL=/opt/inatrace/import|g" .env; else printf '\nIMPORT_PATH_VOL=/opt/inatrace/import' >> .env; fi
+                  if grep -q "^DOCUMENTS_ROOT=" .env; then sed -i "s|^DOCUMENTS_ROOT=.*|DOCUMENTS_ROOT=/opt/inatrace/documents|g" .env; else printf '\nDOCUMENTS_ROOT=/opt/inatrace/documents' >> .env; fi
+                  if grep -q "^DOCUMENTS_ROOT_VOL=" .env; then sed -i "s|^DOCUMENTS_ROOT_VOL=.*|DOCUMENTS_ROOT_VOL=/opt/inatrace/documents|g" .env; else printf '\nDOCUMENTS_ROOT_VOL=/opt/inatrace/documents' >> .env; fi
+
+                  # Variables opcionales con defaults seguros para evitar warnings de Docker Compose
+                  grep -q "^REQUESTLOG_TOKEN=." .env || printf '\nREQUESTLOG_TOKEN=disabled' >> .env
+                  grep -q "^EXCHANGERATE_APIKEY=." .env || printf '\nEXCHANGERATE_APIKEY=disabled' >> .env
+                  grep -q "^EXCHANGERATE_ENABLED=" .env || printf '\nEXCHANGERATE_ENABLED=false' >> .env
+
+                  echo "🗂️ Creando directorios de almacenamiento en host..."
+                  mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents || true
                 fi
                 
                 echo "✅ Validación de variables completada"
