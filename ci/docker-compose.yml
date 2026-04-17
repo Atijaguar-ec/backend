@@ -35,7 +35,7 @@ services:
       KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-testinatrace.espam.edu.ec}
       KC_PROXY_HEADERS: xforwarded
     volumes:
-      - ../scripts/keycloak/keycloak-theme/inatrace:/opt/keycloak/themes/inatrace
+      - /opt/inatrace/keycloak-theme/inatrace:/opt/keycloak/themes/inatrace
     ports:
       - '8083:8080'
     networks:

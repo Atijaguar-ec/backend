@@ -536,6 +536,20 @@ pipeline {
                   sudo mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents 2>/dev/null || \
                   mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents 2>/dev/null || \
                   echo "⚠️ No se pudieron crear los directorios — deben existir previamente en el servidor"
+
+                  echo "🗂️ Sincronizando tema Keycloak a /opt/inatrace/keycloak-theme/inatrace..."
+                  # Usamos un contenedor Docker temporal para copiar como root y evitar restricciones de permisos del host
+                  THEME_SRC="$(pwd)/../scripts/keycloak/keycloak-theme/inatrace"
+                  if [ -d "${THEME_SRC}" ] && [ "$(ls -A ${THEME_SRC})" ]; then
+                    docker run --rm \
+                      -v "${THEME_SRC}":/src:ro \
+                      -v /opt/inatrace/keycloak-theme/inatrace:/dst \
+                      alpine:3 sh -c "mkdir -p /dst && cp -r /src/. /dst/ && chmod -R 755 /dst" \
+                      && echo "✅ Tema Keycloak sincronizado a /opt/inatrace/keycloak-theme/inatrace" \
+                      || echo "⚠️ No se pudo sincronizar el tema (verifica que /opt/inatrace/keycloak-theme/ exista)"
+                  else
+                    echo "⚠️ Carpeta de tema Keycloak vacía o inexistente en el workspace: ${THEME_SRC}"
+                  fi
                 fi
                 
                 echo "✅ Validación de variables completada"
