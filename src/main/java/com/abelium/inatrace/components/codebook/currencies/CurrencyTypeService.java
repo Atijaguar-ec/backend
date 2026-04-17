@@ -34,6 +34,9 @@ public class CurrencyTypeService extends BaseService {
     @Value("${INAtrace.exchangerate.apiKey}")
     private String apiKey;
 
+    @Value("${INAtrace.exchangerate.enabled:true}")
+    private boolean exchangerateEnabled;
+
     public List<ApiCurrencyType> getCurrencyTypeList() {
         List<CurrencyType> currencyTypeList = em.createNamedQuery("CurrencyType.getAllCurrencyTypes", CurrencyType.class).getResultList();
         return CurrencyTypeMapper.toApiCurrencyTypeList(currencyTypeList);
@@ -64,8 +67,13 @@ public class CurrencyTypeService extends BaseService {
     @Scheduled(cron = "0 1 0 * * *")
     @EventListener(ApplicationReadyEvent.class)
     public void updateCurrencies() {
-        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("your_api_key_here")) {
-            System.out.println("WARN: Exchange rates API key is not configured. Skipping currency update on startup.");
+        if (!exchangerateEnabled) {
+            System.out.println("INFO: Exchange rate synchronization is disabled by configuration (INATrace.exchangerate.enabled=false).");
+            return;
+        }
+
+        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("your_api_key_here") || apiKey.equals("dummy-test-key") || apiKey.equalsIgnoreCase("disabled")) {
+            System.out.println("WARN: Exchange rates API key is not configured (" + apiKey + "). Skipping currency update on startup.");
             return;
         }
 

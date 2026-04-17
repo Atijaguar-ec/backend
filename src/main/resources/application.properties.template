@@ -132,6 +132,7 @@ INATrace.maxmindDB.path =
 INATrace.requestLog.token =
 
 # Exchange rate API key
+INAtrace.exchangerate.enabled = true
 INAtrace.exchangerate.apiKey =
 
 # Beyco integration OAuth2 data

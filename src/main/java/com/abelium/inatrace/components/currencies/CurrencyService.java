@@ -32,6 +32,9 @@ public class CurrencyService extends BaseService {
     @Value("${INAtrace.exchangerate.apiKey}")
     private String apiKey;
 
+    @Value("${INAtrace.exchangerate.enabled:true}")
+    private boolean exchangerateEnabled;
+
     public BigDecimal convertFromEur(String to, BigDecimal value) {
         return value.multiply(em.createNamedQuery("CurrencyPair.latestRate", BigDecimal.class).setParameter(CURRENCY, to).getResultList().get(0));
     }
@@ -96,6 +99,16 @@ public class CurrencyService extends BaseService {
     }
 
     public void fetchRates(Date date) {
+
+        if (!exchangerateEnabled) {
+            System.out.println("INFO: Exchange rate synchronization is disabled by configuration (INATrace.exchangerate.enabled=false).");
+            return;
+        }
+
+        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("your_api_key_here") || apiKey.equals("dummy-test-key") || apiKey.equalsIgnoreCase("disabled")) {
+            System.out.println("WARN: Exchange rates API key is not configured (" + apiKey + "). Skipping rate fetch for date.");
+            return;
+        }
 
         String isoDate = DateTimeFormatter.ISO_LOCAL_DATE.format(date.toInstant().atZone(ZoneId.of("GMT")));
         WebClient webClient = WebClient.create("http://api.exchangeratesapi.io/v1/" + isoDate + "?access_key=" + apiKey + "&base=EUR");
