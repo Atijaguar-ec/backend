@@ -43,7 +43,7 @@ services:
     depends_on:
       - inatrace-postgres
     healthcheck:
-      test: ['CMD-SHELL', 'curl -sf http://localhost:8080/auth/realms/master -o /dev/null || exit 1']
+      test: ['CMD-SHELL', 'bash -c "exec 3<>/dev/tcp/127.0.0.1/8080" || exit 1']
       interval: 30s
       timeout: 10s
       retries: 5

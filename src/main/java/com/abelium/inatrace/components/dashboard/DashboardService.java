@@ -85,15 +85,15 @@ public class DashboardService extends BaseService {
         // Prepare groupby expression by year/month/week
         switch (aggregationType) {
             case YEAR:
-                aggregationExpressions.add(cb.function("YEAR", Integer.class, root.get("productionDate")));
+                aggregationExpressions.add(cb.function("YEAR", Integer.class, root.get("productionDate")).as(Integer.class));
                 break;
             case MONTH:
-                aggregationExpressions.add(cb.function("MONTH", Integer.class, root.get("productionDate")));
-                aggregationExpressions.add(cb.function("YEAR", Integer.class, root.get("productionDate")));
+                aggregationExpressions.add(cb.function("MONTH", Integer.class, root.get("productionDate")).as(Integer.class));
+                aggregationExpressions.add(cb.function("YEAR", Integer.class, root.get("productionDate")).as(Integer.class));
                 break;
             case WEEK:
-                aggregationExpressions.add(cb.function("WEEK", Integer.class, root.get("productionDate")));
-                aggregationExpressions.add(cb.function("YEAR", Integer.class, root.get("productionDate")));
+                aggregationExpressions.add(cb.function("WEEK", Integer.class, root.get("productionDate")).as(Integer.class));
+                aggregationExpressions.add(cb.function("YEAR", Integer.class, root.get("productionDate")).as(Integer.class));
                 break;
             case DAY:
             default:
@@ -201,19 +201,19 @@ public class DashboardService extends BaseService {
         switch (apiProcessingPerformanceRequest.getAggregationType()) {
             case YEAR:
                 aggregationInputExpressions.add(cb.function("YEAR", Integer.class,
-                        transactionProcessingOrderJoin.get("processingDate")));
+                        transactionProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 break;
             case MONTH:
                 aggregationInputExpressions.add(cb.function("MONTH", Integer.class,
-                        transactionProcessingOrderJoin.get("processingDate")));
+                        transactionProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 aggregationInputExpressions.add(cb.function("YEAR", Integer.class,
-                        transactionProcessingOrderJoin.get("processingDate")));
+                        transactionProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 break;
             case WEEK:
                 aggregationInputExpressions.add(cb.function("WEEK", Integer.class,
-                        transactionProcessingOrderJoin.get("processingDate")));
+                        transactionProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 aggregationInputExpressions.add(cb.function("YEAR", Integer.class,
-                        transactionProcessingOrderJoin.get("processingDate")));
+                        transactionProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 break;
             case DAY:
             default:
@@ -302,19 +302,19 @@ public class DashboardService extends BaseService {
         switch (apiProcessingPerformanceRequest.getAggregationType()) {
             case YEAR:
                 aggregationOutputExpressions.add(cb.function("YEAR", Integer.class,
-                        stockOrderProcessingOrderJoin.get("processingDate")));
+                        stockOrderProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 break;
             case MONTH:
                 aggregationOutputExpressions.add(cb.function("MONTH", Integer.class,
-                        stockOrderProcessingOrderJoin.get("processingDate")));
+                        stockOrderProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 aggregationOutputExpressions.add(cb.function("YEAR", Integer.class,
-                        stockOrderProcessingOrderJoin.get("processingDate")));
+                        stockOrderProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 break;
             case WEEK:
                 aggregationOutputExpressions.add(cb.function("WEEK", Integer.class,
-                        stockOrderProcessingOrderJoin.get("processingDate")));
+                        stockOrderProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 aggregationOutputExpressions.add(cb.function("YEAR", Integer.class,
-                        stockOrderProcessingOrderJoin.get("processingDate")));
+                        stockOrderProcessingOrderJoin.get("processingDate")).as(Integer.class));
                 break;
             case DAY:
             default:
@@ -471,7 +471,8 @@ public class DashboardService extends BaseService {
             return BigDecimal.ONE;
         }
 
-        return semiProduct.getMeasurementUnitType().getWeight();
+        BigDecimal weight = semiProduct.getMeasurementUnitType().getWeight();
+        return weight != null ? weight : BigDecimal.ONE;
     }
 
     private BigDecimal calculateInputNormalisationQuotient(Long idProcessingAction) throws ApiException {
@@ -483,6 +484,9 @@ public class DashboardService extends BaseService {
             return BigDecimal.ONE;
         }
         BigDecimal inputWeight = processingAction.getInputSemiProduct().getMeasurementUnitType().getWeight();
+        if (inputWeight == null) {
+            inputWeight = BigDecimal.ONE;
+        }
 
         BigDecimal outputWeight = BigDecimal.ONE;
 
@@ -490,7 +494,10 @@ public class DashboardService extends BaseService {
 
             if (processingAction.getOutputFinalProduct() != null &&
                     processingAction.getOutputFinalProduct().getMeasurementUnitType() != null) {
-                outputWeight = processingAction.getOutputFinalProduct().getMeasurementUnitType().getWeight();
+                BigDecimal outW = processingAction.getOutputFinalProduct().getMeasurementUnitType().getWeight();
+                if (outW != null) {
+                    outputWeight = outW;
+                }
             }
         } else {
 
@@ -501,8 +508,11 @@ public class DashboardService extends BaseService {
                     processingAction.getOutputSemiProducts().stream().toList().get(0).getOutputSemiProduct() != null &&
                     processingAction.getOutputSemiProducts().stream().toList().get(0).getOutputSemiProduct().getMeasurementUnitType() !=
                             null) {
-                outputWeight = processingAction.getOutputSemiProducts().stream().toList().get(0).getOutputSemiProduct()
+                BigDecimal outW = processingAction.getOutputSemiProducts().stream().toList().get(0).getOutputSemiProduct()
                         .getMeasurementUnitType().getWeight();
+                if (outW != null) {
+                    outputWeight = outW;
+                }
             }
         }
 
