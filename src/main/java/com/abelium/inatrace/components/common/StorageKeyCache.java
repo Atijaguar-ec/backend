@@ -31,7 +31,7 @@ public class StorageKeyCache {
 
 	public static String get(String tempKey, Long userId) {
 		CacheValue value = cache.getIfPresent(tempKey);
-		return (value != null && (value.userId == null || value.userId.equals(userId))) ? value.dbStorageKey : null;
+		return (value != null && (userId == null || value.userId == null || value.userId.equals(userId))) ? value.dbStorageKey : null;
 	}
 	
 }
