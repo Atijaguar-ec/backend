@@ -28,4 +28,20 @@ public class ProductLabelCompanyDocument implements Serializable {
     public void setCompanyDocumentId(Long companyDocumentId) {
         this.companyDocumentId = companyDocumentId;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ProductLabelCompanyDocument that = (ProductLabelCompanyDocument) o;
+        if (productLabelId != null ? !productLabelId.equals(that.productLabelId) : that.productLabelId != null) return false;
+        return companyDocumentId != null ? companyDocumentId.equals(that.companyDocumentId) : that.companyDocumentId == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = productLabelId != null ? productLabelId.hashCode() : 0;
+        result = 31 * result + (companyDocumentId != null ? companyDocumentId.hashCode() : 0);
+        return result;
+    }
 }
