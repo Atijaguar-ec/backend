@@ -191,6 +191,13 @@
 	        <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
 	    </dependency>
 
+		<!-- Keycloak Admin REST Client -->
+		<dependency>
+			<groupId>org.keycloak</groupId>
+			<artifactId>keycloak-admin-client</artifactId>
+			<version>26.0.0</version>
+		</dependency>
+
 	    <!-- Legacy JWT token (for UserService password resets while migrating) -->
         <dependency>
             <groupId>com.auth0</groupId>
