@@ -86,9 +86,13 @@ public class UserCustomerImportService extends BaseService {
         // company product types (first two)
         List<ApiProductType> companyProductTypes = readCompanyProductTypes(companyId, language);
 
+        if (companyProductTypes.isEmpty()) {
+            throw new ApiException(ApiStatus.ERROR, "Company has no product types configured.");
+        }
+
         // if only first product type is given in Excel,
         // then take only the first element from company product types list
-        if (!hasSecondProductType) {
+        if (!hasSecondProductType && companyProductTypes.size() > 1) {
             companyProductTypes = companyProductTypes.subList(0, 1);
         }
 
@@ -154,7 +158,7 @@ public class UserCustomerImportService extends BaseService {
                 apiPlant1Information.setNumberOfPlants(getNumericInteger(row.getCell(23)));
                 apiUserCustomer.getFarm().getFarmPlantInformationList().add(apiPlant1Information);
 
-                if (hasSecondProductType && companyProductTypes.get(1) != null) {
+                if (hasSecondProductType && companyProductTypes.size() > 1 && companyProductTypes.get(1) != null) {
                     ApiFarmPlantInformation apiPlant2Information = new ApiFarmPlantInformation();
                     apiPlant2Information.setProductType(companyProductTypes.get(1));
                     apiPlant2Information.setPlantCultivatedArea(getNumericBigDecimal(row.getCell(24)));
