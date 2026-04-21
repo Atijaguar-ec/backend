@@ -87,7 +87,7 @@ public class UserCustomerImportService extends BaseService {
         List<ApiProductType> companyProductTypes = readCompanyProductTypes(companyId, language);
 
         if (companyProductTypes.isEmpty()) {
-            throw new ApiException(ApiStatus.ERROR, "Company has no product types configured.");
+            throw new ApiException(ApiStatus.VALIDATION_ERROR, "Company has no product types configured.");
         }
 
         // if only first product type is given in Excel,
