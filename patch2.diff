@@ -1,0 +1,12 @@
+--- src/main/java/com/abelium/inatrace/components/company/UserCustomerImportService.java
++++ src/main/java/com/abelium/inatrace/components/company/UserCustomerImportService.java
+@@ -236,6 +236,9 @@
+         int rowIndex = 4;
+ 
+         Row row = xssfSheet.getRow(rowIndex);
++        if (row == null) {
++            return false;
++        }
+ 
+         // check for 25th cell if second product type is specified with title
+         int colIndex = 24;
