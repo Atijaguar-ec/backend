@@ -154,5 +154,5 @@ INATrace.agstack.loginBaseURL =
 inatrace.keycloak.admin.server-url = http://localhost:8080
 inatrace.keycloak.admin.realm = inatrace
 inatrace.keycloak.admin.client-id = inatrace-backend
-inatrace.keycloak.admin.client-secret =
+inatrace.keycloak.admin.client-secret = backend-secret-123
 
