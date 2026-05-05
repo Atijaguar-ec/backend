@@ -178,17 +178,19 @@ public class ProcessingOrderService extends BaseService {
         // - Company ID
         // - Source StockOrder ID
         // - TransactionStatus
-        boolean areTransactionsValid = apiProcessingOrder.getInputTransactions()
-                .stream()
-                .allMatch(it -> it.getCompany() != null
-                        && it.getCompany().getId() != null
-                        && it.getSourceStockOrder() != null
-                        && it.getSourceStockOrder().getId() != null
-                        && it.getStatus() != null
-                );
-
-        if (!areTransactionsValid) {
-            throw new ApiException(ApiStatus.VALIDATION_ERROR, "At least one of the provided transactions is not valid!");
+        for (var it : apiProcessingOrder.getInputTransactions()) {
+            if (it.getCompany() == null || it.getCompany().getId() == null) {
+                logger.warn("Validation failed: Transaction is missing Company ID");
+                throw new ApiException(ApiStatus.VALIDATION_ERROR, "Transaction is missing Company ID!");
+            }
+            if (it.getSourceStockOrder() == null || it.getSourceStockOrder().getId() == null) {
+                logger.warn("Validation failed: Transaction is missing Source StockOrder ID");
+                throw new ApiException(ApiStatus.VALIDATION_ERROR, "Transaction is missing Source StockOrder ID!");
+            }
+            if (it.getStatus() == null) {
+                logger.warn("Validation failed: Transaction is missing Status");
+                throw new ApiException(ApiStatus.VALIDATION_ERROR, "Transaction is missing Status!");
+            }
         }
 
         // Delete target StockOrder and input Transactions that are not present in the request
