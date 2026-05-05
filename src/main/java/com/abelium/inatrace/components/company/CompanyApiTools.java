@@ -168,7 +168,11 @@ public class CompanyApiTools {
 			if (ct == null) ct = companyQueries.createAndPersistCompanyTranslation(c, language);
 			updateCompanyTranslatables(userId, ct, ac);
 		}
-		c.setLogo(commonEngine.fetchDocument(userId, ac.logo));
+		if (ac.logo != null && c.getLogo() != null && ac.logo.id != null && ac.logo.id.equals(c.getLogo().getId())) {
+			// keep the same logo document without fetching (bypasses tempKey validation if unchanged)
+		} else {
+			c.setLogo(commonEngine.fetchDocument(userId, ac.logo));
+		}
 		c.setHeadquarters(commonApiTools.toAddress(ac.headquarters));
 		c.setEmail(ac.email);
 		c.setPhone(ac.phone);
@@ -251,7 +255,12 @@ public class CompanyApiTools {
 					cd.setQuote(acd.quote);
 					cd.setDescription(acd.description);
 					cd.setLink(acd.link);
-					cd.setDocument(commonEngine.fetchDocument(userId, acd.document));
+
+					if (acd.document != null && cd.getDocument() != null && acd.document.id != null && acd.document.id.equals(cd.getDocument().getId())) {
+						// keep the same document without fetching (bypasses tempKey validation if unchanged)
+					} else {
+						cd.setDocument(commonEngine.fetchDocument(userId, acd.document));
+					}
 				} else {
 					// Mark for removal otherwise
 					toRemove.add(cd.getId());
@@ -270,8 +279,36 @@ public class CompanyApiTools {
 		}
 
 		if (ac.certifications != null) {
-			c.getCertifications().clear();
-			c.getCertifications().addAll(ListTools.mapThrowable(ac.certifications, acc -> toCompanyCertification(userId, cc, cct, acc)));
+			Set<Long> toRemoveCert = new HashSet<>();
+
+			for (CompanyCertification cert : c.getCertifications()) {
+				Optional<ApiCertification> optApiCert = ac.certifications.stream().filter(apiCert -> cert.getId().equals(apiCert.id)).findFirst();
+				
+				if (optApiCert.isPresent()) {
+					ApiCertification apiCert = optApiCert.get();
+					cert.setCompany(cc);
+					cert.setCompanyTranslation(cct);
+					cert.setType(apiCert.type);
+					cert.setDescription(apiCert.description);
+					cert.setValidity(apiCert.validity);
+					
+					if (apiCert.certificate != null && cert.getCertificate() != null && apiCert.certificate.id != null && apiCert.certificate.id.equals(cert.getCertificate().getId())) {
+						// keep the same certificate document without fetching
+					} else {
+						cert.setCertificate(commonEngine.fetchDocument(userId, apiCert.certificate));
+					}
+				} else {
+					toRemoveCert.add(cert.getId());
+				}
+			}
+
+			c.getCertifications().removeIf(cert -> toRemoveCert.contains(cert.getId()));
+
+			for (ApiCertification apiCert : ac.certifications) {
+				if (apiCert.id == null) {
+					c.getCertifications().add(toCompanyCertification(userId, cc, cct, apiCert));
+				}
+			}
 		}
 	}
 
