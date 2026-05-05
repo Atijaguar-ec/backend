@@ -1,106 +1,73 @@
-# Design: Shrimp Chain Backend
+# Design: Shrimp Chain Backend (ms-shrimp)
 
 ## Technical Approach
 
-El diseño backend sigue una estrategia de implementación en 4 fases incrementales (como definido en proposal v3). 
-El objetivo es aislar la complejidad del procesamiento de camarón en un microservicio Spring Boot 3 independiente (`ShrimpTraceabilityService`), pero validar el flujo inicial en la Fase 1 usando el modelo de datos genérico existente del Core INATrace (`ValueChain`, `ProcessingAction`, `StockOrder`). Keycloak se introduce en Fase 2 para centralizar la autenticación, convirtiendo al Core y al nuevo microservicio en Resource Servers de OAuth2. El enrutamiento se manejará vía proxy inverso Nginx.
+El diseño backend ha evolucionado de un modelo de parche en el Core a una arquitectura de **Microservicios (Strangler Fig Pattern)** y **Aislamiento Total (Polyrepo)**. 
+El microservicio independiente `ms-shrimp` (repositorio aislado) gestiona toda la lógica transaccional de la empacadora (recepción, clasificación, sufijos, mermas), utilizando el esquema PostgreSQL `shrimp.*`.
+La autenticación está centralizada en Keycloak (OIDC/OAuth2), donde el Core y el nuevo microservicio operan como "Resource Servers".
+
+## Key Business Rules (Domain Logic)
+
+Según el análisis del Product Owner, la arquitectura modela 4 reglas de negocio críticas:
+
+1. **Lote Base Único:** La trazabilidad no mezcla productos. El número generado en la recepción (ej. `250215`) es el ancla jerárquica para todo el flujo.
+2. **Transformación Cíclica (Rechazo de Entero a Cola):** El producto "Entero" rechazado estéticamente se descabeza manualmente y reingresa a la clasificadora como "Cola". El sistema debe documentar este bucle y la merma justificada (shrinkage) de las cabezas.
+3. **Gestión de Derivaciones (Sufijos):** El lote base se extiende alfanuméricamente según su destino final para preservar la trazabilidad ininterrumpida:
+   - Bloque: Sin sufijo (Lote base puro)
+   - IQF: Sufijo `-2`
+   - Valor Agregado: Sufijo `-3`
+   - Salmuera: Sufijo `-4`
+4. **Liquidación Escalonada Multimodal:** El motor de conciliación debe soportar conversiones entre mediciones continuas (Libras en Gavetas) y mediciones discretas (Cajetas, Cartones Máster).
 
 ## Architecture Decisions
 
-| Decision | Choice | Alternatives Considered | Rationale |
-|----------|--------|--------------------------|-----------|
-| **Capa de Enrutamiento** | Nginx Reverse Proxy | Spring Cloud Gateway | Nginx ya está configurado en el stack Docker de UI. Para solo 2 servicios backend, SCG añade complejidad innecesaria. |
-| **Integración de Auth** | Spring Boot OAuth2 Resource Server | Filtros JWT Custom | Spring Security soporta validación JWT contra JWKS de Keycloak nativamente sin código custom. |
-| **Separación de Datos** | Database-per-Service (shrimp_trace) | Tablas en BD Core INATrace | Permite evolución independiente del esquema de camarón y evita cuellos de botella en la DB heredada. |
-| **Modelo Sincronización** | REST API Calls al Core | Bus de Eventos (Kafka) | Las entidades Core (Companies, Facilities) cambian poco. Consultas REST con caché local son suficientes y mucho más simples de operar. |
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Estrategia de Repositorio** | Polyrepo (`ms-shrimp` fuera del Core) | Aislamiento total. El CI/CD del Core y sus ramas no son contaminados por el microservicio. Escalabilidad independiente de equipos. |
+| **Separación de Datos (Database-per-Service)** | Esquema aislado (`shrimp.*`) | Evita cuellos de botella en la DB heredada (MySQL) del Core. Permite el uso de PostgreSQL con restricciones JSONB y FK puras de la industria camaronera. |
+| **Integración de Auth** | Spring Boot OAuth2 Resource Server | Delega la verificación JWT directamente a Keycloak mediante JWKS. |
+| **Modelo Sincronización** | Referencias "Suaves" y llamadas REST | Las entidades Core (Facilities, StockOrders) se guardan solo por ID (`stock_order_id`). |
+
+## Entity Data Model (JPA Entities)
+
+Mapeo directo con las tablas especificadas en `shrimp_schema_spec.md`:
+
+| Entity | Relación | Key Fields |
+|--------|----------|------------|
+| `ReceptionExt` | Root Entity (Asociada a `StockOrder` del Core) | `stockOrderId`, `internalLotBase` (UK), `shrimpType` (ENTERO/COLA), `totalWeightLbs` |
+| `Classification` | N:1 con `ReceptionExt` | `roundNumber` (Control de Ciclos de Rechazo) |
+| `ClassificationDetail` | N:1 con `Classification` | `shrimpSize`, `weightLbs` |
+| `ProductiveDestination`| N:1 con `ClassificationDetail` | `destinationType` (IQF, BLOQUE, VALOR_AGREGADO), `suffix`, `allocatedLbs` |
+| `ProcessingLot` | N:1 con `ProductiveDestination` | `outputMasters`, `shrinkageLbs`, `shrinkageReason` (Liquidación por Área) |
+| `ColdStorageSlot` | Entidad Maestro | `chamberName`, `slotCode`, `capacityMasters` |
+| `ColdStorageMovement` | Historial | `processingLotId`, `slotId`, `quantityMasters`, `movementType` |
 
 ## Data Flow
 
 ```ascii
 [Client: shrimpMfe]
         │
-        ▼ (Bearer JWT)
-   [Nginx Proxy]
+        ▼ (Bearer JWT from Keycloak)
+   [API Gateway / Nginx Proxy]
         │
    ┌────┴─────────────────────────────┐
    ▼ /api/core/**                     ▼ /api/shrimp/**
-[Core INATrace]               [ShrimpTraceabilityService]
+[Core INATrace]                   [ms-shrimp]
    │    │                             │    │
    │    └─ GET /facilities (Sync) ────┘    │
    │                                       │
    ▼                                       ▼
-[PostgreSQL]                          [PostgreSQL]
-(db: inatrace)                        (db: shrimp_trace)
-```
-
-## Entity Data Model (ShrimpTraceabilityService)
-
-| Entity | Primary Key | Foreign Keys (Core) | Key Fields |
-|--------|-------------|---------------------|------------|
-| `ShrimpLot` | `id` (UUID) | `companyId`, `facilityId` | `lotNumber` (String, UK), `receptionDate`, `totalWeightLbs`, `shrimpType` (ENTERO/COLA) |
-| `ShrimpBatch` | `id` (UUID) | - | `lotId` (FK), `suffix` (-2/-3/-4), `destination` (Enum), `status` (Enum) |
-| `ClassificationRecord` | `id` (UUID) | - | `lotId` (FK), `round` (Int), `sourceType` (Enum), `shrimpSize`, `pieceCount`, `weightLbs`, `machineId` |
-| `RejectionCycle` | `id` (UUID) | - | `originalLotId` (FK), `rejectedLbs`, `headLbs`, `recoveredColaLbs` |
-| `SettlementReport` | `id` (UUID) | - | `lotId` (FK), `area` (Enum), `inputLbs`, `outputMasters`, `shrinkageLbs`, `shrinkageReason` (Enum) |
-| `ChamberInventory` | `id` (UUID) | `chamberFacilityId` | `lotId` (FK), `suffix`, `marca`, `talla`, `presentacion`, `masterCount` |
-
-## File Changes (Fase 1 - Core Config)
-
-| File | Action | Description |
-|------|--------|-------------|
-| `db/migration/VXX__insert_shrimp_value_chain.sql` | Create | Inserta configuración base en BD Core (ValueChains, SemiProducts, Actions) para validar flujo en Fase 1. |
-
-## File Changes (Fase 3 - Microservicio)
-
-El nuevo microservicio `shrimp-traceability-service` seguirá arquitectura hexagonal / capas estándar de Spring Boot:
-
-| Path | Description |
-|------|-------------|
-| `src/main/java/.../domain/model/` | Entidades JPA (`ShrimpLot`, `ShrimpBatch`, etc.) |
-| `src/main/java/.../domain/repository/` | Spring Data JPA Repositories |
-| `src/main/java/.../application/service/` | Casos de uso (`LotClassificationService`, `BatchDestinationService`) |
-| `src/main/java/.../infrastructure/web/` | RestControllers (`LotController`, `SettlementController`) |
-| `src/main/java/.../infrastructure/client/` | FeignClients o RestTemplate para llamar al Core INATrace |
-| `src/main/resources/application.yml` | Config DB, OAuth2 Resource Server (Keycloak url) |
-| `pom.xml` | Deps: `spring-boot-starter-web`, `data-jpa`, `oauth2-resource-server`, `postgresql` |
-
-## API Contracts (Shrimp Service)
-
-```yaml
-POST /api/shrimp/lots
-body:
-  totalWeightLbs: numeric
-  receptionDate: date-time
-  shrimpType: ENTERO | COLA
-  facilityId: uuid
-response:
-  lotNumber: string (e.g., "250121")
-
-POST /api/shrimp/lots/{lotNumber}/classify
-body:
-  round: integer
-  sourceType: ENTERO | COLA_REINGRESO
-  machineId: string
-  records:
-    - shrimpSize: string
-      pieceCount: integer
-      weightLbs: numeric
+[MySQL (Core)]                        [PostgreSQL]
+(db: inatrace)                        (schema: shrimp)
 ```
 
 ## Migration / Rollout
 
-La migración será **incremental por fases**:
-1.  **Fase 1 (Zero Code Backend):** Setup de datos en el Core mediante script SQL. Permite empezar el FE.
-2.  **Fase 2 (Auth):** Despliegue de Keycloak. Migración de usuarios. Rollback: restaurar config JWT interna en el Core.
-3.  **Fase 3 (Microservicio):** Despliegue de `ShrimpTraceabilityService` en paralelo al Core. Proxy Nginx enruta tráfico.
+1.  **Fase 1 (Auth Centralizada):** Configuración de Keycloak (Realm `giz-tenant`, usuario admin).
+2.  **Fase 2 (Modelado):** Creación de Repositories y Entities en `ms-shrimp` bajo BDD/TDD.
+3.  **Fase 3 (Casos de Uso):** Desarrollo del motor de asignación de sufijos y conciliación multimodal.
+4.  **Fase 4 (Presentación):** Actualización de `shrimpMfe` en Angular para consumir `/api/shrimp/`.
 
-## Testing Strategy
-
-| Layer | What to Test | Approach |
-|-------|-------------|----------|
-| Unit | Lógica de negocio de servicios (asignación de sufijos, cálculo de merma) | JUnit 5 + Mockito. Componentes aislados. |
-| Integration | Repositorios JPA y validación JWT | `@DataJpaTest` y `@SpringBootTest` con WebTestClient y Keycloak Testcontainers. |
-| E2E | Flujo completo de lote (Recepción -> Clasificación -> Batches -> Liquidación) | Test automatizado llamando a los endpoints REST en secuencia en un entorno docker-compose de prueba. |
-
-## Open Questions
-- [ ] ¿El microservicio `ShrimpTraceabilityService` residirá en el mismo monorepo Maven que el core (`inatrace-backend`) o en un repositorio git completamente separado? (Recomendado: mismo repositorio, módulo Maven independiente para simplificar CI/CD inicial).
+## Open Questions (Resolved)
+- ~~¿El microservicio `ShrimpTraceabilityService` residirá en el mismo monorepo Maven que el core (`inatrace-backend`) o en un repositorio git completamente separado?~~
+  **Resolución:** Se decidió el Enfoque Polyrepo (Opción A). El microservicio fue extraído al repositorio aislado `/ms-shrimp`.
