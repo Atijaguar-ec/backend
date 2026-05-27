@@ -43,14 +43,16 @@ public class GroupStockOrderService extends BaseService {
             "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
             "SO.isAvailable, " +
             "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, " +
-            "SO.facility.name, CONCAT(SO.producerUserCustomer.name, ' ', SO.producerUserCustomer.surname) " +
+            "F.name, CONCAT(UC.name, ' ', UC.surname) " +
             ") FROM StockOrder SO " +
             "LEFT JOIN SO.processingOrder PO " +
             "LEFT JOIN SO.measurementUnitType MUT " +
             "LEFT JOIN SO.semiProduct SP " +
             "LEFT JOIN SO.finalProduct FP " +
             "LEFT JOIN FP.product P " +
-            "LEFT JOIN SP.semiProductTranslations SPT "
+            "LEFT JOIN SP.semiProductTranslations SPT " +
+            "LEFT JOIN SO.facility F " +
+            "LEFT JOIN SO.producerUserCustomer UC "
         );
 
         // Build WHERE query string for filtering purposes
@@ -74,8 +76,8 @@ public class GroupStockOrderService extends BaseService {
         queryString.append(
                 " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, MUT.label, " +
                 "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name, " +
-                "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, SO.facility.name, " +
-                "SO.producerUserCustomer.name, SO.producerUserCustomer.surname "
+                "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, F.name, " +
+                "UC.name, UC.surname "
         );
 
         // Add ORDER BY query string to sort on requested field and direction
@@ -132,14 +134,16 @@ public class GroupStockOrderService extends BaseService {
             "MUT.label, SO.deliveryTime AS deliveryTime, PO.updateTimestamp AS updateTimestamp, " +
             "SO.isAvailable, " +
             "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, " +
-            "SO.facility.name, CONCAT(SO.producerUserCustomer.name, ' ', SO.producerUserCustomer.surname) " +
+            "F.name, CONCAT(UC.name, ' ', UC.surname) " +
             ") FROM StockOrder SO " +
             "LEFT JOIN SO.processingOrder PO " +
             "LEFT JOIN SO.measurementUnitType MUT " +
             "LEFT JOIN SO.semiProduct SP " +
             "LEFT JOIN SO.finalProduct FP " +
             "LEFT JOIN FP.product P " +
-            "LEFT JOIN SP.semiProductTranslations SPT "
+            "LEFT JOIN SP.semiProductTranslations SPT " +
+            "LEFT JOIN SO.facility F " +
+            "LEFT JOIN SO.producerUserCustomer UC "
         );
 
         queryString.append(" WHERE (SPT.language IS NULL OR SPT.language = :language)");
@@ -156,8 +160,8 @@ public class GroupStockOrderService extends BaseService {
         queryString.append(
                 " GROUP BY SO.productionDate, SO.internalLotNumber, SO.orderType, SPT.name, MUT.label, " +
                 "SO.deliveryTime, PO.updateTimestamp, SO.isAvailable, FP.name, P.name, " +
-                "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, SO.facility.name, " +
-                "SO.producerUserCustomer.name, SO.producerUserCustomer.surname " +
+                "SO.weekNumber, SO.parcelLot, SO.variety, SO.organicCertification, F.name, " +
+                "UC.name, UC.surname " +
                 "ORDER BY SO.productionDate DESC"
         );
 
