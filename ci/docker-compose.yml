@@ -11,6 +11,8 @@ services:
       - POSTGRES_USER=${DATASOURCE_USERNAME}
     volumes:
       - ${DB_VOLUME}:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - backend
     restart: always
