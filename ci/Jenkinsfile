@@ -524,6 +524,18 @@ pipeline {
                   printf '\nBE_HOST_PORT=8082' >> .env
                 fi
 
+                # Configurar KEYCLOAK_HOSTNAME por defecto para producción
+                if ! grep -q "^KEYCLOAK_HOSTNAME=" .env || [ -z "$(grep "^KEYCLOAK_HOSTNAME=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ KEYCLOAK_HOSTNAME no definido, usando fallback para Fortaleza"
+                  printf '\nKEYCLOAK_HOSTNAME=inatrace.espam.edu.ec' >> .env
+                fi
+
+                # Configurar COMPOSE_PROJECT_NAME para evitar colisiones con el frontend
+                if ! grep -q "^COMPOSE_PROJECT_NAME=" .env || [ -z "$(grep "^COMPOSE_PROJECT_NAME=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ COMPOSE_PROJECT_NAME no definido, usando inatrace-backend-fortaleza"
+                  printf '\nCOMPOSE_PROJECT_NAME=inatrace-backend-fortaleza' >> .env
+                fi
+
                 # Advertir sobre variables opcionales (no bloquean)
                 for var in DB_ROOT_PASSWORD DB_VOLUME FILE_STORAGE_ROOT IMPORT_PATH DOCUMENTS_ROOT; do
                   if ! grep -q "^${var}=" .env || [ -z "$(grep "^${var}=" .env | cut -d= -f2-)" ]; then
