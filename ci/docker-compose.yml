@@ -92,6 +92,9 @@ services:
     ports:
       - "${BE_HOST_PORT:-8080}:8080"
     restart: always
+    extra_hosts:
+      - "inatrace.espam.edu.ec:host-gateway"
+      - "testinatrace.espam.edu.ec:host-gateway"
 
 networks:
   backend:
