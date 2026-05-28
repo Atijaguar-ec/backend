@@ -34,7 +34,7 @@ services:
       KC_HOSTNAME_STRICT: 'false'
       KC_HTTP_ENABLED: 'true'
       KC_HTTP_RELATIVE_PATH: /auth
-      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-testinatrace.espam.edu.ec}
+      KC_HOSTNAME: https://${KEYCLOAK_HOSTNAME:-testinatrace.espam.edu.ec}
       KC_PROXY_HEADERS: xforwarded
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: 'true'
       KC_HOSTNAME_STRICT_BACKCHANNEL: 'false'
