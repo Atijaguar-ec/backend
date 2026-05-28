@@ -500,7 +500,7 @@ pipeline {
                 # Configurar Keycloak Issuer URI
                 if ! grep -q "^ISSUER_URI=" .env || [ -z "$(grep "^ISSUER_URI=" .env | cut -d= -f2-)" ]; then
                   echo "ℹ️ ISSUER_URI no definido, usando fallback para Fortaleza"
-                  printf '\nISSUER_URI=https://testinatrace.espam.edu.ec/auth/realms/inatrace' >> .env
+                  printf '\nISSUER_URI=https://inatrace.espam.edu.ec/auth/realms/inatrace_fortaleza' >> .env
                 fi
                 
                 # Asegurar variables de volúmenes (si faltan usar mismos paths locales)

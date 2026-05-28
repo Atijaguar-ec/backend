@@ -26,7 +26,7 @@ services:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://inatrace-postgres:5432/inatrace_keycloak
       KC_DB_USERNAME: ${DATASOURCE_USERNAME}
-      KC_DB_PASSWORD: ${DB_ROOT_PASSWORD}
+      KC_DB_PASSWORD: ${DATASOURCE_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_FEATURES: organization
@@ -69,6 +69,10 @@ services:
       - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${ISSUER_URI}
+      - INATRACE_KEYCLOAK_ADMIN_SERVER_URL=${KEYCLOAK_ADMIN_SERVER_URL:-http://inatrace-kc-test-fortaleza:8080/auth}
+      - INATRACE_KEYCLOAK_ADMIN_REALM=${KEYCLOAK_ADMIN_REALM:-inatrace_fortaleza}
+      - INATRACE_KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-inatrace-backend}
+      - INATRACE_KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-backend-secret-123}
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health | grep -E '200|401' > /dev/null || exit 1"]
       interval: 10s
