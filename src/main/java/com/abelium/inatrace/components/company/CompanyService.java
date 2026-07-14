@@ -51,6 +51,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 import org.torpedoquery.jakarta.jpa.Function;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -1662,18 +1663,27 @@ public class CompanyService extends BaseService {
 		condition = condition.and(userCustomer.getCompany().getId()).eq(companyId);
 		condition = condition.and(userCustomer.getType()).eq(type);
 
-		if (request.getQuery() != null && !request.getQuery().isEmpty()) {
+		if (request.getQuery() != null && !request.getQuery().trim().isEmpty()) {
+			String[] words = request.getQuery().trim().split("\\s+");
 			OnGoingLogicalCondition queryCondition = Torpedo.condition();
 			switch (request.getSearchBy()) {
 				case "BY_NAME":
-					queryCondition = Torpedo.condition(userCustomer.getName()).like().any(request.getQuery());
+					for (String w : words) {
+						queryCondition = queryCondition.and(Torpedo.condition(TorpedoFunction.lower(userCustomer.getName())).like().any(w.toLowerCase()));
+					}
 					break;
 				case "BY_SURNAME":
-					queryCondition = Torpedo.condition(userCustomer.getSurname()).like().any(request.getQuery());
+					for (String w : words) {
+						queryCondition = queryCondition.and(Torpedo.condition(TorpedoFunction.lower(userCustomer.getSurname())).like().any(w.toLowerCase()));
+					}
 					break;
 				case "BY_NAME_AND_SURNAME":
-					queryCondition = Torpedo.condition(userCustomer.getName()).like().any(request.getQuery())
-							.or(Torpedo.condition(userCustomer.getSurname()).like().any(request.getQuery()));
+					for (String w : words) {
+						String lowerWord = w.toLowerCase();
+						OnGoingLogicalCondition wordCondition = Torpedo.condition(TorpedoFunction.lower(userCustomer.getName())).like().any(lowerWord)
+								.or(Torpedo.condition(TorpedoFunction.lower(userCustomer.getSurname())).like().any(lowerWord));
+						queryCondition = queryCondition.and(wordCondition);
+					}
 					break;
 			}
 			condition = condition.and(queryCondition);
