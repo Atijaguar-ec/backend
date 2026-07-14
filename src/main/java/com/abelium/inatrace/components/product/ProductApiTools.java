@@ -441,14 +441,14 @@ public class ProductApiTools {
 	}
 	
 	private void updateSettings(Long userId, ProductSettings ps, ApiProductSettings aps) throws ApiException {
-		ps.setCostBreakdown(aps.costBreakdown);
-		ps.setPricingTransparency(aps.pricingTransparency);
-		ps.setIncomeIncreaseDocument(commonEngine.fetchDocument(userId, aps.incomeIncreaseDocument));
-		ps.setIncomeIncreaseDescription(aps.incomeIncreaseDescription);
-		ps.setLanguage(aps.language);
-		ps.setGdprText(aps.gdprText);
-		ps.setPrivacyPolicyText(aps.privacyPolicyText);
-		ps.setTermsOfUseText(aps.termsOfUseText);
+		if (aps.costBreakdown != null) ps.setCostBreakdown(aps.costBreakdown);
+		if (aps.pricingTransparency != null) ps.setPricingTransparency(aps.pricingTransparency);
+		if (aps.incomeIncreaseDocument != null) ps.setIncomeIncreaseDocument(commonEngine.fetchDocument(userId, aps.incomeIncreaseDocument));
+		if (aps.incomeIncreaseDescription != null) ps.setIncomeIncreaseDescription(aps.incomeIncreaseDescription);
+		if (aps.language != null) ps.setLanguage(aps.language);
+		if (aps.gdprText != null) ps.setGdprText(aps.gdprText);
+		if (aps.privacyPolicyText != null) ps.setPrivacyPolicyText(aps.privacyPolicyText);
+		if (aps.termsOfUseText != null) ps.setTermsOfUseText(aps.termsOfUseText);
 	}
 
 	private void updateBusinessToCustomerSettings(Long userId, BusinessToCustomerSettings b2c, ApiBusinessToCustomerSettings ab2c) throws ApiException {

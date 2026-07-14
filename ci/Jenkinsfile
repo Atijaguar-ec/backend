@@ -178,31 +178,30 @@ pipeline {
         }
         
         script {
-          def mysqlContainer = 'inatrace-mysql-ci'
+          def pgContainer = 'inatrace-postgres-ci'
           sh """
             set -e
-            echo "🧹 Preparando contenedor MySQL temporal..."
-            docker rm -f ${mysqlContainer} >/dev/null 2>&1 || true
-            docker run -d --name ${mysqlContainer} \
-              -e MYSQL_ROOT_PASSWORD=inatrace \
-              -e MYSQL_DATABASE=inatrace \
-              -e MYSQL_USER=inatrace \
-              -e MYSQL_PASSWORD=inatrace \
-              -p 3307:3306 \
-              mysql:8.0.35
+            echo "🧹 Preparando contenedor PostgreSQL temporal..."
+            docker rm -f ${pgContainer} >/dev/null 2>&1 || true
+            docker run -d --name ${pgContainer} \
+              -e POSTGRES_PASSWORD=inatrace \
+              -e POSTGRES_DB=inatrace \
+              -e POSTGRES_USER=inatrace \
+              -p 5432:5432 \
+              postgres:16-alpine
           """
 
           sh '''
             set +e
-            echo "⏳ Esperando disponibilidad de MySQL temporal..."
+            echo "⏳ Esperando disponibilidad de PostgreSQL temporal..."
             for i in $(seq 1 12); do
-              if docker exec inatrace-mysql-ci sh -c "mysqladmin ping -h127.0.0.1 -uroot -pinatrace" >/dev/null 2>&1; then
+              if docker exec inatrace-postgres-ci pg_isready -U inatrace -d inatrace >/dev/null 2>&1; then
                 exit 0
               fi
               echo "Intento ${i}/12..."
               sleep 5
             done
-            echo "❌ MySQL temporal no disponible" >&2
+            echo "❌ PostgreSQL temporal no disponible" >&2
             exit 1
           '''
 
@@ -215,9 +214,12 @@ pipeline {
               fi
 
               echo "📊 Ejecutando Maven verify..."
-              SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3307/inatrace" \
+              SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/inatrace" \
               SPRING_DATASOURCE_USERNAME="inatrace" \
               SPRING_DATASOURCE_PASSWORD="inatrace" \
+              INATRACE_DATABASE_HOSTNAME="127.0.0.1" \
+              INATRACE_DATABASE_PORT="5432" \
+              INATRACE_DATABASE_NAME="inatrace" \
               mvn -B clean verify \
                 -Dspring.profiles.active=test \
                 -Dmaven.test.failure.ignore=false \
@@ -231,7 +233,7 @@ pipeline {
       post {
         always {
           junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-          sh 'docker rm -f inatrace-mysql-ci >/dev/null 2>&1 || true'
+          sh 'docker rm -f inatrace-postgres-ci >/dev/null 2>&1 || true'
         }
         failure {
           echo "❌ Las pruebas fallaron. Abortando despliegue."
@@ -277,13 +279,34 @@ pipeline {
               -t ${IMAGE_REPOSITORY}:${DEPLOY_TAG} \
               .
 
+            # Función de retry para docker push (resiste 502/503 transitorios de ghcr.io)
+            docker_push_retry() {
+              local image="\$1"
+              local max_attempts=3
+              local attempt=1
+              local wait_time=10
+              while [ \$attempt -le \$max_attempts ]; do
+                echo "📤 Push intento \${attempt}/\${max_attempts}: \${image}"
+                if docker push "\${image}"; then
+                  echo "✅ Push exitoso: \${image}"
+                  return 0
+                fi
+                echo "⚠️ Push falló (intento \${attempt}/\${max_attempts}). Reintentando en \${wait_time}s..."
+                sleep \$wait_time
+                wait_time=\$((wait_time * 2))
+                attempt=\$((attempt + 1))
+              done
+              echo "❌ Push falló después de \${max_attempts} intentos: \${image}" >&2
+              return 1
+            }
+
             echo "📤 Publicando imagen con tag: ${DEPLOY_TAG}"
-            docker push ${IMAGE_REPOSITORY}:${DEPLOY_TAG}
+            docker_push_retry ${IMAGE_REPOSITORY}:${DEPLOY_TAG}
 
             if [ "${params.BRANCH}" = "main" ]; then
               echo "🏷️ Etiquetando como latest..."
               docker tag ${IMAGE_REPOSITORY}:${DEPLOY_TAG} ${IMAGE_REPOSITORY}:latest
-              docker push ${IMAGE_REPOSITORY}:latest
+              docker_push_retry ${IMAGE_REPOSITORY}:latest
             else
               echo "ℹ️ Tag latest omitido para ramas no main"
             fi
@@ -477,7 +500,7 @@ pipeline {
                 # Configurar Keycloak Issuer URI
                 if ! grep -q "^ISSUER_URI=" .env || [ -z "$(grep "^ISSUER_URI=" .env | cut -d= -f2-)" ]; then
                   echo "ℹ️ ISSUER_URI no definido, usando fallback para Fortaleza"
-                  printf '\nISSUER_URI=https://testinatrace.espam.edu.ec/auth/realms/inatrace' >> .env
+                  printf '\nISSUER_URI=https://inatrace.espam.edu.ec/auth/realms/inatrace_fortaleza' >> .env
                 fi
                 
                 # Asegurar variables de volúmenes (si faltan usar mismos paths locales)
@@ -499,6 +522,18 @@ pipeline {
                 if ! grep -q "^BE_HOST_PORT=" .env || [ -z "$(grep "^BE_HOST_PORT=" .env | cut -d= -f2-)" ]; then
                   echo "ℹ️ BE_HOST_PORT no definido, usando: 8082"
                   printf '\nBE_HOST_PORT=8082' >> .env
+                fi
+
+                # Configurar KEYCLOAK_HOSTNAME por defecto para producción
+                if ! grep -q "^KEYCLOAK_HOSTNAME=" .env || [ -z "$(grep "^KEYCLOAK_HOSTNAME=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ KEYCLOAK_HOSTNAME no definido, usando fallback para Fortaleza"
+                  printf '\nKEYCLOAK_HOSTNAME=inatrace.espam.edu.ec' >> .env
+                fi
+
+                # Configurar COMPOSE_PROJECT_NAME para evitar colisiones con el frontend
+                if ! grep -q "^COMPOSE_PROJECT_NAME=" .env || [ -z "$(grep "^COMPOSE_PROJECT_NAME=" .env | cut -d= -f2-)" ]; then
+                  echo "ℹ️ COMPOSE_PROJECT_NAME no definido, usando inatrace-backend-fortaleza"
+                  printf '\nCOMPOSE_PROJECT_NAME=inatrace-backend-fortaleza' >> .env
                 fi
 
                 # Advertir sobre variables opcionales (no bloquean)

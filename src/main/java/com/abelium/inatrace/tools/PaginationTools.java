@@ -39,8 +39,20 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            // TorpedoQuery leaks ORDER BY into COUNT — skip broken SQL, estimate from items.
-            count = items.size() + request.offset;
+            // Re-execute the supplier to rebuild the WHERE clause, then count
+            try {
+                count = Torpedo.select(Torpedo.count(proxyObjectSupplier.get())).get(em)
+                        .orElse(0L);
+            } catch (Exception e) {
+                // Fallback: if count query fails, estimate from items
+                // If items.size() < limit, we know we're on the last page
+                if (items.size() < request.limit) {
+                    count = request.offset + items.size();
+                } else {
+                    // Estimate: we don't know the exact count, set a high value to enable pagination
+                    count = request.offset + items.size() + 1;
+                }
+            }
         }
         return new ApiPaginatedList<>(items, count);
     }
@@ -60,8 +72,12 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            // TorpedoQuery leaks ORDER BY into COUNT — skip broken SQL, estimate from items.
-            count = items.size() + request.offset;
+            // Improved fallback count estimation
+            if (items.size() < request.limit) {
+                count = request.offset + items.size();
+            } else {
+                count = request.offset + items.size() + 1;
+            }
         }
         return new ApiPaginatedList<>(items, count);
     }
@@ -78,11 +94,12 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            // TorpedoQuery leaks ORDER BY into COUNT queries, which PostgreSQL rejects.
-            // A try-catch won't work here because Hibernate marks the transaction as
-            // rollback-only before our catch can recover.
-            // Workaround: estimate count from returned items instead of running a broken COUNT.
-            count = items.size() + request.offset;
+            // Improved fallback count estimation
+            if (items.size() < request.limit) {
+                count = request.offset + items.size();
+            } else {
+                count = request.offset + items.size() + 1;
+            }
         }
 
         return new ApiPaginatedList<>(items, count);

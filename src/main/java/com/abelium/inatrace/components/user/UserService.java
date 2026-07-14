@@ -44,6 +44,14 @@ import org.torpedoquery.jakarta.jpa.Function;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
 
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
+import jakarta.ws.rs.core.Response;
+import java.util.Collections;
+
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -80,6 +88,13 @@ public class UserService extends BaseService {
     
     @Autowired
     private TokenService tokenEngine;
+
+    @Autowired
+    private Keycloak keycloakAdminClient;
+
+    @Value("${inatrace.keycloak.admin.realm}")
+    private String keycloakRealm;
+
     
 	@Transactional
 	public User fetchUserByEmail(String email) {
@@ -230,6 +245,38 @@ public class UserService extends BaseService {
         user.setSurname(createUserRequest.surname);
         user.setLanguage(createUserRequest.language);
         em.persist(user);
+
+        // ===================================
+        // Sincronización hacia Keycloak
+        // ===================================
+        try {
+            String defaultPassword = createUserRequest.email.split("@")[0];
+
+            CredentialRepresentation passwordCredential = new CredentialRepresentation();
+            passwordCredential.setTemporary(true);
+            passwordCredential.setType(CredentialRepresentation.PASSWORD);
+            passwordCredential.setValue(defaultPassword);
+
+            UserRepresentation kcUser = new UserRepresentation();
+            kcUser.setUsername(createUserRequest.email);
+            kcUser.setEmail(createUserRequest.email);
+            kcUser.setFirstName(createUserRequest.name);
+            kcUser.setLastName(createUserRequest.surname);
+            kcUser.setEnabled(true);
+            kcUser.setCredentials(Collections.singletonList(passwordCredential));
+
+            UsersResource usersResource = keycloakAdminClient.realm(keycloakRealm).users();
+            Response response = usersResource.create(kcUser);
+
+            if (response.getStatus() != 201) {
+                // Log failed creation but don't crash the local transaction to allow manual sync
+                logger.error("Failed to create user in Keycloak. Status: " + response.getStatus());
+            }
+        } catch (Exception e) {
+            logger.error("Error creating user in Keycloak", e);
+        }
+        // ===================================
+
 
 		// If deployment environment is not 'DEMO', create confirmation email
 		if (!"DEMO".equals(env)) {

@@ -74,7 +74,7 @@ public class Lengths
     
     // contacts
     public static final int EMAIL = DEFAULT;
-    public static final int PHONE_NUMBER = 20;
+    public static final int PHONE_NUMBER = 100;
     
     // global settings
     public static final int SERVICE_NAME = 32;

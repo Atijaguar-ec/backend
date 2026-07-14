@@ -14,6 +14,7 @@ import com.abelium.inatrace.db.entities.common.Document;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.company.CompanyDocument;
 import com.abelium.inatrace.db.entities.company.CompanyUser;
+import com.abelium.inatrace.db.entities.process.Process;
 import com.abelium.inatrace.db.entities.product.*;
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.security.utils.PermissionsUtil;
@@ -168,6 +169,22 @@ public class ProductService extends BaseService {
 			p.setSettings(new ProductSettings());
 			em.persist(p.getSettings());
 		}
+		if (p.getProcess() == null) {
+			p.setProcess(new Process());
+			em.persist(p.getProcess());
+		}
+		if (p.getResponsibility() == null) {
+			p.setResponsibility(new Responsibility());
+			em.persist(p.getResponsibility());
+		}
+		if (p.getSustainability() == null) {
+			p.setSustainability(new Sustainability());
+			em.persist(p.getSustainability());
+		}
+		if (p.getBusinessToCustomerSettings() == null) {
+			p.setBusinessToCustomerSettings(new BusinessToCustomerSettings());
+			em.persist(p.getBusinessToCustomerSettings());
+		}
 
         if (p.getJourney() == null) {
             p.setJourney(new ProductJourney());
@@ -180,9 +197,19 @@ public class ProductService extends BaseService {
 	}
 
 	private void removeProductLabelCompanyDocumentsForRemovedCompanyAssociations(Product p) {
-		em.createQuery("DELETE FROM ProductLabelCompanyDocument plcd WHERE plcd.productLabelId IN :plIds AND plcd.companyDocumentId NOT IN :cdIds")
-				.setParameter("plIds", p.getLabels().stream().map(ProductLabel::getId).collect(Collectors.toList()))
-				.setParameter("cdIds", p.getAssociatedCompanies().stream().flatMap(productCompany -> productCompany.getCompany().getDocuments().stream().map(CompanyDocument::getId)).collect(Collectors.toList())).executeUpdate();
+		List<Long> plIds = p.getLabels().stream().map(ProductLabel::getId).collect(Collectors.toList());
+		if (plIds.isEmpty()) return;
+
+		List<Long> cdIds = p.getAssociatedCompanies().stream().flatMap(productCompany -> productCompany.getCompany().getDocuments().stream().map(CompanyDocument::getId)).collect(Collectors.toList());
+		
+		if (cdIds.isEmpty()) {
+			em.createQuery("DELETE FROM ProductLabelCompanyDocument plcd WHERE plcd.productLabelId IN :plIds")
+					.setParameter("plIds", plIds).executeUpdate();
+		} else {
+			em.createQuery("DELETE FROM ProductLabelCompanyDocument plcd WHERE plcd.productLabelId IN :plIds AND plcd.companyDocumentId NOT IN :cdIds")
+					.setParameter("plIds", plIds)
+					.setParameter("cdIds", cdIds).executeUpdate();
+		}
 	}
 
     @Transactional

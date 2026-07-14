@@ -1,0 +1,13 @@
+--- src/main/java/com/abelium/inatrace/components/company/UserCustomerImportService.java
++++ src/main/java/com/abelium/inatrace/components/company/UserCustomerImportService.java
+@@ -91,6 +91,10 @@
+             throw new ApiException(ApiStatus.VALIDATION_ERROR, "Company has no product types configured.");
+         }
+ 
++        if (hasSecondProductType && companyProductTypes.size() < 2) {
++            throw new ApiException(ApiStatus.VALIDATION_ERROR, "Company only has 1 product type configured, but the import file specifies 2 product types.");
++        }
++
+         // if only first product type is given in Excel,
+         // then take only the first element from company product types list
+         if (!hasSecondProductType && companyProductTypes.size() > 1) {

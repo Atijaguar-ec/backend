@@ -784,6 +784,11 @@ public class CompanyService extends BaseService {
 		for (ApiUserCustomer apiUserCustomer : apiUserCustomers) {
 			for (ApiPlot apiPlot : apiUserCustomer.getPlots()) {
 
+				// Skip plots without coordinates to avoid IndexOutOfBoundsException
+				if (apiPlot.getCoordinates() == null || apiPlot.getCoordinates().isEmpty()) {
+					continue;
+				}
+
 				Feature feature;
 
 				// If less than 3 coordinates we have single Point geometry
