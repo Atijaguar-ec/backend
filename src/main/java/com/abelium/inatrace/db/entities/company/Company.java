@@ -13,6 +13,8 @@ import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.db.entities.value_chain.CompanyValueChain;
 import com.abelium.inatrace.types.CompanyStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.*;
 
@@ -161,6 +163,10 @@ public class Company extends BaseEntity implements CompanyTranslatables {
 
 	@Column
 	private Boolean allowBeycoIntegration;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "configuration", columnDefinition = "jsonb")
+	private Map<String, Object> configuration = new HashMap<>();
 
 	@OneToMany(mappedBy = "company")
 	private Set<ProductCompany> companyRoles;
@@ -347,6 +353,14 @@ public class Company extends BaseEntity implements CompanyTranslatables {
 
 	public void setAllowBeycoIntegration(Boolean allowBeycoIntegration) {
 		this.allowBeycoIntegration = allowBeycoIntegration;
+	}
+
+	public Map<String, Object> getConfiguration() {
+		return configuration;
+	}
+
+	public void setConfiguration(Map<String, Object> configuration) {
+		this.configuration = configuration;
 	}
 
 	public Set<ProductCompany> getCompanyRoles() {

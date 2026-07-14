@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import java.util.Map;
 
 @Validated
 public class ApiCompany extends ApiCompanyBase {
@@ -40,6 +41,9 @@ public class ApiCompany extends ApiCompanyBase {
 	@Schema(description = "Is company allowed to export orders to Beyco platform")
 	@Valid
 	public Boolean allowBeycoIntegration;
+
+	@Schema(description = "Company configuration key-value store")
+	public Map<String, Object> configuration;
 	
 	public ApiDocument getLogo() {
 		return logo;
@@ -95,5 +99,13 @@ public class ApiCompany extends ApiCompanyBase {
 
 	public void setAllowBeycoIntegration(Boolean allowBeycoIntegration) {
 		this.allowBeycoIntegration = allowBeycoIntegration;
+	}
+
+	public Map<String, Object> getConfiguration() {
+		return configuration;
+	}
+
+	public void setConfiguration(Map<String, Object> configuration) {
+		this.configuration = configuration;
 	}
 }

@@ -87,6 +87,7 @@ public class CompanyApiTools {
 		ac.displayPrefferedWayOfPayment = c.getDisplayPrefferedWayOfPayment();
 		ac.purchaseProofDocumentMultipleFarmers = c.getPurchaseProofDocumentMultipleFarmers();
 		ac.allowBeycoIntegration = c.getAllowBeycoIntegration();
+		ac.configuration = c.getConfiguration();
 	}
 	
 	public ApiCompanyGet toApiCompanyGet(Long userId,
@@ -180,6 +181,7 @@ public class CompanyApiTools {
 		c.setDisplayPrefferedWayOfPayment(ac.displayPrefferedWayOfPayment);
 		c.setPurchaseProofDocumentMultipleFarmers(ac.purchaseProofDocumentMultipleFarmers);
 		c.setAllowBeycoIntegration(ac.allowBeycoIntegration);
+		c.setConfiguration(ac.configuration);
 	}
 
 	public void updateCompanyValueChains(ApiCompany apiCompany, Company company) throws ApiException {
