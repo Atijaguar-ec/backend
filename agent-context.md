@@ -1,8 +1,15 @@
-# Backend Agent Context — INATrace Cacao (Fortaleza del Valle)
+# Backend Agent Context — INATrace Cacao (Fortaleza del Valle / UNOCACE)
 
 > **Propósito:** Este archivo documenta las decisiones arquitectónicas, convenciones y reglas
 > de este backend. Cualquier agente de IA o desarrollador que trabaje aquí **DEBE** leer este
 > archivo antes de hacer cambios. Su objetivo es **evitar regresiones**.
+>
+> Este documento cubre lo **común** a ambas empresas (stack, convenciones de
+> naming, reglas de migraciones). Para infraestructura y despliegue específicos
+> de cada una, ver:
+> - `backend/scripts/fortaleza/agent-context.md` (Jenkins, servidores ESPAM/CEDIA)
+> - `backend/scripts/unocace/agent-context.md` (GitHub Actions, servidor 95.217.182.220)
+> - `ina-docs/despliegue/matriz-fortaleza-unocace.md` (qué difiere entre ambas)
 
 ---
 
@@ -25,7 +32,7 @@
 | **Lenguaje** | Java | 17 |
 | **Framework** | Spring Boot | 3.3.3 |
 | **Persistencia** | Hibernate / JPA | 6.x (Jakarta EE) |
-| **Base de datos** | PostgreSQL | 14+ |
+| **Base de datos** | PostgreSQL | 16 (verificado en ambos servidores: `postgres:16.10` Fortaleza, `postgres:16-alpine` UNOCACE) |
 | **Dialecto** | `CustomPostgreSQLDialect` | Registra funciones `MONTH`, `YEAR`, `WEEK` |
 | **Migraciones** | Flyway | `flyway-database-postgresql` |
 | **Autenticación** | Keycloak (OAuth2 Resource Server) | — |
@@ -199,6 +206,17 @@ La exportación Excel genera columnas adicionales para estos campos.
 10. **NO reintroducir `CompanyProcessingAction`** en esta fase.
     Fue evaluada y excluida del alcance de la versión premium Cacao.
     El sistema usa directamente la entidad `ProcessingAction` original.
+
+11. **NO usar `CACAO` como valor de variable de entorno.** El valor interno
+    correcto es `COCOA` (`INATRACE_PRODUCT_TYPE`, `PRIMARY_PRODUCT_TYPE`).
+    `CACAO`/"Cacao" es únicamente texto de interfaz para el usuario final.
+    Verificado 2026-07-28: `INATRACE_PRODUCT_TYPE` no lo lee ningún código del
+    backend (dead config), y en frontend `normalizeProductType()` solo baja a
+    minúsculas sin traducir sinónimos — un valor `CACAO` no rompe el nombre
+    mostrado (cae al `default:` del switch) pero sí rompe comparaciones exactas
+    como `isProductType('COCOA')` y la resolución de íconos. Ver
+    `ina-docs/despliegue/matriz-fortaleza-unocace.md` sección 3 para el detalle
+    completo y los archivos que hoy tienen el valor incorrecto.
 
 ---
 

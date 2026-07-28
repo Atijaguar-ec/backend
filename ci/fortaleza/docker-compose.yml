@@ -1,5 +1,14 @@
 version: '3.8'
 
+# ============================================================================
+# INATrace — Fortaleza del Valle (Staging + Producción, ESPAM/CEDIA)
+# Verificado contra servidores reales el 2026-07-28:
+#   - Staging: 190.15.143.254 (contenedores: inatrace-postgres, inatrace-be,
+#     inatrace-kc-test-fortaleza, inatrace-frontend)
+#   - Producción: 10.10.102.26 (mismos nombres de contenedor)
+# Usado por backend/ci/Jenkinsfile (pipeline exclusivo de Fortaleza).
+# ============================================================================
+
 services:
 
   inatrace-postgres:
@@ -11,8 +20,10 @@ services:
       - POSTGRES_USER=${DATASOURCE_USERNAME}
     volumes:
       - ${DB_VOLUME}:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # NOTA: el contenedor real en staging/prod NO publica el puerto 5432 al
+    # host (verificado con `docker ps`/`ss -tlnp`). Solo es alcanzable dentro
+    # de la red Docker `backend`. No agregar `ports:` aquí sin verificar antes
+    # que el firewall del host realmente lo bloquea (Docker puede saltarse UFW).
     networks:
       - backend
     restart: always
@@ -53,7 +64,6 @@ services:
       retries: 5
       start_period: 60s
 
-
   inatrace-backend:
     image: ${IMAGE_NAME}:${TAG}
     container_name: inatrace-be
@@ -72,6 +82,12 @@ services:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${ISSUER_URI}
       - INATRACE_KEYCLOAK_ADMIN_SERVER_URL=${KEYCLOAK_ADMIN_SERVER_URL:-http://inatrace-kc-test-fortaleza:8080/auth}
+      # ⚠️ Verificado 2026-07-28: los realms reales son "master", "inatrace" y
+      # "fortaleza" (ISSUER_URI usa .../realms/fortaleza). NO existe un realm
+      # llamado "inatrace_fortaleza" — este default histórico está desalineado
+      # con lo que corre en producción. Revisar si la integración de Admin API
+      # (creación de usuarios/organizaciones) depende de este valor antes de
+      # cambiarlo; documentado para no perder el hallazgo.
       - INATRACE_KEYCLOAK_ADMIN_REALM=${KEYCLOAK_ADMIN_REALM:-inatrace_fortaleza}
       - INATRACE_KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-inatrace-backend}
       - INATRACE_KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-backend-secret-123}
@@ -100,6 +116,3 @@ networks:
   backend:
     name: inatrace-backend-network
     external: true
-
-volumes:
-  inatrace-postgres-vol:

@@ -1,0 +1,114 @@
+# ============================================================================
+# INATrace — UNOCACE (Staging, servidor 95.217.182.220)
+# Capturado desde /opt/inatrace-test/docker-compose.yml el 2026-07-28
+# (Fase 0/1 de saneamiento: puertos internos ligados a 127.0.0.1 y
+# credenciales movidas a .env fuera de git — ver unocace.env.example).
+#
+# Diferencias intencionales vs. backend/ci/fortaleza/docker-compose.yml:
+#   - Build local (`build: .` con Dockerfile de un solo COPY app.jar) en vez
+#     de pull de imagen GHCR. Ver Fase 3 (pendiente) para decidir si se migra
+#     a imagen versionada.
+#   - Red Docker propia: inatrace-test-network (Fortaleza usa
+#     inatrace-backend-network, red externa ya creada por Jenkins).
+#   - Puertos publicados solo en 127.0.0.1 (Nginx del host hace el proxy
+#     público en 443 -> 127.0.0.1:8082/8083). NUNCA publicar estos puertos en
+#     0.0.0.0: en este servidor Docker inserta sus reglas antes que UFW y el
+#     firewall no los bloquea.
+# ============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: inatrace-pg-test-unocace
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - inatrace_test_unocace_pgdata:/var/lib/postgresql/data
+    networks:
+      - inatrace-test-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: inatrace-kc-test-unocace
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/inatrace_keycloak_unocace
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_FEATURES: organization
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME: https://inatrace.test.unocace.com/auth
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8083:8080"
+    volumes:
+      - ./themes/inatrace:/opt/keycloak/themes/inatrace
+    depends_on:
+      - postgres
+    networks:
+      - inatrace-test-network
+
+  backend:
+    # Camino principal (CI): pull de imagen versionada desde GHCR usando
+    # IMAGE_NAME/TAG en .env. `docker compose pull backend && up -d --force-recreate backend`.
+    # Camino de emergencia (manual): `docker compose build backend` usa este
+    # mismo `build: .` contra el Dockerfile local (COPY de app.jar ya compilado)
+    # cuando GHCR no esté disponible o se necesite un parche rápido en caliente.
+    build: .
+    image: ${IMAGE_NAME:-ghcr.io/atijaguar-ec/backend-inatrace}:${TAG:-local}
+    volumes:
+      - /opt/inatrace/uploads:/app/files
+      - /opt/inatrace/import:/app/import
+      - /opt/inatrace/documents:/app/documents
+    container_name: inatrace-be-test-pg-unocace
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - INATRACE_ENV=TEST
+      - INATRACE_DATABASE_NAME=${POSTGRES_DB}
+      - INATRACE_DATABASE_HOSTNAME=postgres
+      - INATRACE_DATABASE_PORT=5432
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - INATRACE_PRODUCT_TYPE=COCOA
+      - INATRACE_FLYWAY_REPAIR_ON_STARTUP=true
+      - INATRACE_ADMIN_EMAIL=${INATRACE_ADMIN_EMAIL}
+      - INATRACE_ADMIN_PASSWORD=${INATRACE_ADMIN_PASSWORD}
+      - INATRACE_ADMIN_NAME=Administrador
+      - INATRACE_ADMIN_SURNAME=Unocace
+      - INATRACE_ADMIN_COMPANY_NAME=UNOCACE
+      - INATRACE_KEYCLOAK_ADMIN_SERVER_URL=http://keycloak:8080/auth
+      - INATRACE_KEYCLOAK_ADMIN_REALM=unocace
+      - INATRACE_KEYCLOAK_ADMIN_CLIENT_ID=inatrace-backend
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://inatrace.test.unocace.com/auth/realms/unocace
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/auth/realms/unocace/protocol/openid-connect/certs
+      - INATRACE_FILESTORAGE_ROOT=/app/files
+      - INATRACE_IMPORT_PATH=/app/import
+      - INATRACE_DOCUMENTS_ROOT=/app/documents
+    ports:
+      - "127.0.0.1:8082:8080"
+    networks:
+      - inatrace-test-network
+    depends_on:
+      - postgres
+      - keycloak
+
+volumes:
+  inatrace_test_unocace_pgdata:
+
+networks:
+  inatrace-test-network:
+    name: inatrace-test-network
+    driver: bridge

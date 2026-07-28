@@ -67,10 +67,20 @@ pipeline {
     )
     string(
       name: 'PROD_DB_CONTAINER_NAME',
-      defaultValue: 'inatrace-mysql-prod-fortaleza',
-      description: 'Nombre del contenedor MySQL en producción para backups'
+      defaultValue: 'inatrace-postgres',
+      description: 'Nombre del contenedor PostgreSQL en producción para backups (verificado en servidor: inatrace-postgres)'
     )
-    
+    string(
+      name: 'PROD_DB_NAME',
+      defaultValue: 'inatrace_prod_fortaleza',
+      description: 'Nombre de la base de datos PostgreSQL de producción a respaldar'
+    )
+    string(
+      name: 'PROD_DB_USER',
+      defaultValue: 'inatrace_prod_fortaleza',
+      description: 'Usuario PostgreSQL de producción usado para el pg_dump'
+    )
+
   }
 
   environment {
@@ -86,6 +96,9 @@ pipeline {
     HEALTH_CHECK_TIMEOUT = '120'
     HEALTH_CHECK_INTERVAL = '10'
     MAX_RETRIES = '3'
+
+    // Estado real del backup pre-deploy (actualizado por el stage 'Database Backup')
+    DB_BACKUP_STATUS = 'OMITIDO (SKIP_DB_BACKUP=true o rama != main)'
   }
 
 
@@ -149,7 +162,7 @@ pipeline {
             params.PROD_HEALTH_URL_PRIMARY : 
             params.STAGING_HEALTH_URL
           env.PROJECT_DIR = fileExists('backend/pom.xml') ? 'backend' : '.'
-          env.COMPOSE_DIR = fileExists('backend/ci/docker-compose.yml') ? 'backend/ci' : 'ci'
+          env.COMPOSE_DIR = fileExists('backend/ci/fortaleza/docker-compose.yml') ? 'backend/ci/fortaleza' : 'ci/fortaleza'
           
           echo "\n📦 Información del Build :"
           echo "  - Repositorio: ${env.REPO_FULL_NAME}"
@@ -335,36 +348,46 @@ pipeline {
       }
       steps {
         script {
-          echo "\n💾 Realizando backup de base de datos..."
-          sh '''
-            set -e
-            CONTAINER_NAME="inatrace-mysql-prod-fortaleza"
-            if [ -n "${PROD_DB_CONTAINER_NAME:-}" ]; then
+          echo "\n💾 Realizando backup de base de datos PostgreSQL en producción (remoto vía SSH)..."
+          env.DB_BACKUP_STATUS = 'FALLIDO'
+          withCredentials([sshUserPrivateKey(credentialsId: 'usuario-prod-ssh', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+            sh '''
+              set -e
+              SSH_OPTS="-i ${SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+              SSH_TARGET="${SSH_USER}@${PROD_HOST_PRIMARY}"
               CONTAINER_NAME="${PROD_DB_CONTAINER_NAME}"
-            fi
-            BACKUP_DIR="/opt/inatrace/backups"
-            BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S)-pre-deploy.sql.gz"
-            
-            if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-              echo "📦 Creando backup en: ${BACKUP_DIR}/${BACKUP_FILE}"
-              docker exec "${CONTAINER_NAME}" sh -c '
-                mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" \
-                  --single-transaction \
-                  --quick \
-                  --lock-tables=false \
-                  "${MYSQL_DATABASE}" | gzip -9 > "/backups/'"${BACKUP_FILE}"'"
-              '
-              
-              echo "🧹 Limpiando backups antiguos (>14 días)..."
-              docker exec "${CONTAINER_NAME}" sh -c '
-                find /backups -name "backup-*.sql.gz" -mtime +14 -delete
-              '
-              
-              echo "✅ Backup completado: ${BACKUP_FILE}"
-            else
-              echo "⚠️ Contenedor MySQL no encontrado, omitiendo backup"
-            fi
-          '''
+              DB_NAME="${PROD_DB_NAME}"
+              DB_USER="${PROD_DB_USER}"
+              BACKUP_DIR="/opt/inatrace/backups"
+              BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S)-pre-deploy.sql.gz"
+
+              cat <<EOSSH | ssh ${SSH_OPTS} "${SSH_TARGET}" "CONTAINER_NAME='${CONTAINER_NAME}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' BACKUP_DIR='${BACKUP_DIR}' BACKUP_FILE='${BACKUP_FILE}' bash -s"
+set -e
+
+if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
+  echo "❌ Contenedor PostgreSQL '${CONTAINER_NAME}' no encontrado o no está corriendo" >&2
+  exit 1
+fi
+
+mkdir -p "${BACKUP_DIR}"
+echo "📦 Creando backup en: ${BACKUP_DIR}/${BACKUP_FILE}"
+docker exec "${CONTAINER_NAME}" pg_dump -U "${DB_USER}" --clean --if-exists --no-owner --no-acl "${DB_NAME}" \
+  | gzip -9 > "${BACKUP_DIR}/${BACKUP_FILE}"
+
+if [ ! -s "${BACKUP_DIR}/${BACKUP_FILE}" ]; then
+  echo "❌ El archivo de backup quedó vacío o no se creó" >&2
+  exit 1
+fi
+
+echo "✅ Backup verificado: ${BACKUP_DIR}/${BACKUP_FILE} (\$(du -h "${BACKUP_DIR}/${BACKUP_FILE}" | cut -f1))"
+
+echo "🧹 Limpiando backups antiguos (>14 días)..."
+find "${BACKUP_DIR}" -name "backup-*.sql.gz" -mtime +14 -delete
+EOSSH
+            '''
+          }
+          env.DB_BACKUP_STATUS = 'COMPLETADO'
+          echo "✅ Backup de producción confirmado"
         }
       }
     }
@@ -384,8 +407,11 @@ pipeline {
           echo "  Entorno: PRODUCCIÓN (CEDIA)"
           echo "  Commit: ${env.GIT_SHORT_SHA}"
           echo "  Imagen: ${env.IMAGE_REPOSITORY}:${env.DEPLOY_TAG}"
-          echo "  Backup: Completado ✅"
+          echo "  Backup: ${env.DB_BACKUP_STATUS}"
           echo "═══════════════════════════════════════════════════════════════"
+          if (env.DB_BACKUP_STATUS != 'COMPLETADO' && !params.SKIP_DB_BACKUP) {
+            error("Abortando: el backup de base de datos no se completó y SKIP_DB_BACKUP no fue solicitado explícitamente.")
+          }
           
           timeout(time: 24, unit: 'HOURS') {
             input(
@@ -421,12 +447,12 @@ pipeline {
 
                 echo "📝 Verificando docker-compose.yml..."
                 if [ ! -f docker-compose.yml ]; then
-                  if [ -f ../docker-compose.yml ]; then
-                    cp ../docker-compose.yml ./docker-compose.yml
-                  elif [ -f ../../ci/docker-compose.yml ]; then
-                    cp ../../ci/docker-compose.yml ./docker-compose.yml
+                  if [ -f ../fortaleza/docker-compose.yml ]; then
+                    cp ../fortaleza/docker-compose.yml ./docker-compose.yml
+                  elif [ -f ../../ci/fortaleza/docker-compose.yml ]; then
+                    cp ../../ci/fortaleza/docker-compose.yml ./docker-compose.yml
                   else
-                    echo "❌ No se encontró docker-compose.yml en rutas previstas" >&2
+                    echo "❌ No se encontró docker-compose.yml en rutas previstas (backend/ci/fortaleza/)" >&2
                     exit 1
                   fi
                 else
