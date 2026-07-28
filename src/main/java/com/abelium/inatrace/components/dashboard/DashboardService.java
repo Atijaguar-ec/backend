@@ -80,7 +80,7 @@ public class DashboardService extends BaseService {
         CriteriaQuery<Object[]> cq = cb.createQuery(Object[].class);
         Root<StockOrder> root = cq.from(StockOrder.class);
 
-        List<Expression<Integer>> aggregationExpressions = new ArrayList<>();
+        List<Expression> aggregationExpressions = new ArrayList<>();
 
         // Prepare groupby expression by year/month/week
         switch (aggregationType) {
@@ -97,7 +97,7 @@ public class DashboardService extends BaseService {
                 break;
             case DAY:
             default:
-                aggregationExpressions.add(root.get("productionDate"));
+                aggregationExpressions.add(cb.function("DATE", LocalDate.class, root.get("productionDate")).as(LocalDate.class));
                 break;
         }
 
@@ -196,7 +196,7 @@ public class DashboardService extends BaseService {
 
         // Input calculation query
         // Prepare groupby expression by year/month/week
-        List<Expression<Integer>> aggregationInputExpressions = new ArrayList<>();
+        List<Expression> aggregationInputExpressions = new ArrayList<>();
 
         switch (apiProcessingPerformanceRequest.getAggregationType()) {
             case YEAR:
@@ -217,7 +217,7 @@ public class DashboardService extends BaseService {
                 break;
             case DAY:
             default:
-                aggregationInputExpressions.add(transactionProcessingOrderJoin.get("processingDate"));
+                aggregationInputExpressions.add(cb.function("DATE", LocalDate.class, transactionProcessingOrderJoin.get("processingDate")).as(LocalDate.class));
                 break;
         }
 
@@ -297,7 +297,7 @@ public class DashboardService extends BaseService {
                 "processingAction");
 
         // Prepare groupby expression by year/month/week
-        List<Expression<Integer>> aggregationOutputExpressions = new ArrayList<>();
+        List<Expression> aggregationOutputExpressions = new ArrayList<>();
 
         switch (apiProcessingPerformanceRequest.getAggregationType()) {
             case YEAR:
@@ -318,7 +318,7 @@ public class DashboardService extends BaseService {
                 break;
             case DAY:
             default:
-                aggregationOutputExpressions.add(stockOrderProcessingOrderJoin.get("processingDate"));
+                aggregationOutputExpressions.add(cb.function("DATE", LocalDate.class, stockOrderProcessingOrderJoin.get("processingDate")).as(LocalDate.class));
                 break;
         }
 

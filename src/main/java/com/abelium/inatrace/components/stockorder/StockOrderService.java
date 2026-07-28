@@ -1010,10 +1010,28 @@ public class StockOrderService extends BaseService {
         entity.setDamagedPriceDeduction(apiStockOrder.getDamagedPriceDeduction());
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setCurrency(apiStockOrder.getCurrency());
-        entity.setWeekNumber(apiStockOrder.getWeekNumber());
+        if (entity.getProductionDate() != null) {
+            int isoWeek = entity.getProductionDate().get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear());
+            entity.setWeekNumber(isoWeek);
+        } else {
+            entity.setWeekNumber(apiStockOrder.getWeekNumber());
+        }
         entity.setParcelLot(apiStockOrder.getParcelLot());
         entity.setVariety(apiStockOrder.getVariety());
-        entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
+        if ("CCN51".equalsIgnoreCase(apiStockOrder.getVariety())) {
+            entity.setOrganic(true);
+            if (apiStockOrder.getOrganicCertification() != null) {
+                entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
+            } else {
+                entity.setOrganicCertification("Transición / Fairtrade / SPP");
+            }
+        } else if (Boolean.FALSE.equals(apiStockOrder.getOrganic())) {
+            entity.setOrganicCertification(apiStockOrder.getOrganicCertification() != null
+                    ? apiStockOrder.getOrganicCertification()
+                    : "Transición / Fairtrade / SPP");
+        } else {
+            entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
+        }
         entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
         entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
         entity.setNetQuantity(apiStockOrder.getNetQuantity());
