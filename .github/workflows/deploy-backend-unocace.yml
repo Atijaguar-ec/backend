@@ -6,14 +6,14 @@
 # apuntaba a /opt/inatrace/backend (ruta muerta desde abril), asumía un
 # contenedor MySQL inexistente y esperaba un service "backend" que no
 # coincidía con el compose real. La infraestructura real es PostgreSQL 16 +
-# Keycloak 26 (ver backend/ci/unocace/docker-compose.yml).
+# Keycloak 26 (ver ci/unocace/docker-compose.yml).
 #
 # Triggers:
 # - push a `staging`               → deploy automático, camino GHCR (imagen)
 # - workflow_dispatch              → manual, elegir delivery_method:
 #     - image    (default): build+push a GHCR, servidor hace pull
 #     - jar_scp  (emergencia): compila jar, lo sube por scp, build local en
-#       el servidor con backend/ci/unocace/Dockerfile (sin depender de GHCR)
+#       el servidor con ci/unocace/Dockerfile (sin depender de GHCR)
 #
 # No se sobreescribe /opt/inatrace-test/.env completo: solo se actualizan
 # las líneas IMAGE_NAME/TAG. Los secretos de Postgres/Keycloak/admin ya
@@ -30,7 +30,7 @@ on:
       - "src/**"
       - "pom.xml"
       - "Dockerfile"
-      - "backend/ci/unocace/**"
+      - "ci/unocace/**"
       - ".github/workflows/deploy-backend-unocace.yml"
   workflow_dispatch:
     inputs:
@@ -191,9 +191,9 @@ jobs:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
-          source: "backend/ci/unocace/docker-compose.yml,backend/ci/unocace/Dockerfile"
+          source: "ci/unocace/docker-compose.yml,ci/unocace/Dockerfile"
           target: "${{ env.REMOTE_DIR }}/"
-          strip_components: 3
+          strip_components: 2
 
       - name: 📝 Actualizar IMAGE_NAME/TAG en .env existente (sin tocar secretos ya rotados)
         uses: appleboy/ssh-action@v1.0.0
@@ -279,9 +279,9 @@ jobs:
           host: ${{ secrets.TEST_UNOCACE_HOST }}
           username: ${{ secrets.TEST_UNOCACE_USER }}
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
-          source: "backend/ci/unocace/docker-compose.yml,backend/ci/unocace/Dockerfile"
+          source: "ci/unocace/docker-compose.yml,ci/unocace/Dockerfile"
           target: "${{ env.REMOTE_DIR }}/"
-          strip_components: 3
+          strip_components: 2
 
       - name: 📤 Upload app.jar
         uses: appleboy/scp-action@v0.1.7
