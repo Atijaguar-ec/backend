@@ -1,5 +1,6 @@
 package com.abelium.inatrace.components.codebook.certification_type;
 
+import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.api.ApiPaginatedList;
 import com.abelium.inatrace.api.ApiPaginatedRequest;
 import com.abelium.inatrace.api.errors.ApiException;
@@ -70,7 +71,7 @@ public class CertificationTypeService extends BaseService {
     }
 
     @Transactional
-    public ApiCertificationType createOrUpdateCertificationType(ApiCertificationType apiDTO) throws ApiException {
+    public ApiBaseEntity createOrUpdateCertificationType(ApiCertificationType apiDTO) throws ApiException {
         
         if (apiDTO.getCode() == null || apiDTO.getName() == null || apiDTO.getCategory() == null || apiDTO.getStatus() == null) {
             throw new ApiException(ApiStatus.INVALID_REQUEST, "Required fields are missing");
@@ -115,7 +116,7 @@ public class CertificationTypeService extends BaseService {
             em.persist(entity);
         }
 
-        return CertificationTypeMapper.toApiCertificationType(entity, Language.EN);
+        return new ApiBaseEntity(entity);
     }
 
     @Transactional

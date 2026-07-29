@@ -1,7 +1,10 @@
 package com.abelium.inatrace.components.codebook.certification_type;
 
+import com.abelium.inatrace.api.ApiBaseEntity;
+import com.abelium.inatrace.api.ApiDefaultResponse;
 import com.abelium.inatrace.api.ApiPaginatedRequest;
 import com.abelium.inatrace.api.ApiPaginatedResponse;
+import com.abelium.inatrace.api.ApiResponse;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.codebook.certification_type.api.ApiCertificationType;
 import com.abelium.inatrace.types.Language;
@@ -49,13 +52,14 @@ public class CertificationTypeController {
 
     @PutMapping
     @Operation(summary = "Create or update certification type")
-    public ApiCertificationType createOrUpdate(@RequestBody ApiCertificationType apiDTO) throws ApiException {
-        return service.createOrUpdateCertificationType(apiDTO);
+    public ApiResponse<ApiBaseEntity> createOrUpdate(@RequestBody ApiCertificationType apiDTO) throws ApiException {
+        return new ApiResponse<>(service.createOrUpdateCertificationType(apiDTO));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete certification type")
-    public void delete(@PathVariable Long id) throws ApiException {
+    public ApiDefaultResponse delete(@PathVariable Long id) throws ApiException {
         service.deleteCertificationType(id);
+        return new ApiDefaultResponse();
     }
 }
