@@ -47,7 +47,7 @@ public class CertificationTypeController {
         return service.getCertificationType(id, language);
     }
 
-    @PostMapping
+    @PutMapping
     @Operation(summary = "Create or update certification type")
     public ApiCertificationType createOrUpdate(@RequestBody ApiCertificationType apiDTO) throws ApiException {
         return service.createOrUpdateCertificationType(apiDTO);
