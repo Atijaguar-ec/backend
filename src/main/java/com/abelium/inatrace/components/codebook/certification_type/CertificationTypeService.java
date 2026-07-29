@@ -33,8 +33,11 @@ public class CertificationTypeService extends BaseService {
     }
 
     public ApiPaginatedList<ApiCertificationType> getCertificationTypeList(ApiPaginatedRequest request, Language language) {
+        // Mapper completo (con translations): el modal de edición recibe la fila de esta
+        // lista directamente como typeElement, sin un fetch por id aparte (mismo patrón
+        // que ProductTypeService.getProductTypes -> toApiProductTypeDetailed).
         return PaginationTools.createPaginatedResponse(em, request, () -> certificationTypeQueryObject(request),
-                entity -> CertificationTypeMapper.toApiCertificationTypeBase(entity, language));
+                entity -> CertificationTypeMapper.toApiCertificationType(entity, language));
     }
 
     private CertificationType certificationTypeQueryObject(ApiPaginatedRequest request) {
