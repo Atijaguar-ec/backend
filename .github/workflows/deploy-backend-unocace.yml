@@ -126,7 +126,7 @@ jobs:
     name: 🏗️ Build & Push GHCR
     runs-on: ubuntu-latest
     needs: [build-jar]
-    if: github.event_name == 'push' || github.event.inputs.delivery_method == 'image'
+    if: github.event_name == 'push' || inputs.delivery_method == 'image'
     permissions:
       contents: read
       packages: write
@@ -169,7 +169,7 @@ jobs:
     name: 🚀 Deploy UNOCACE Staging (imagen GHCR)
     runs-on: ubuntu-latest
     needs: [build-jar, build-image]
-    if: github.event_name == 'push' || github.event.inputs.delivery_method == 'image'
+    if: github.event_name == 'push' || inputs.delivery_method == 'image'
     environment:
       name: unocace-staging
       url: https://inatrace.test.unocace.com
@@ -254,7 +254,7 @@ jobs:
     name: 🚑 Deploy UNOCACE Staging (jar por scp, emergencia)
     runs-on: ubuntu-latest
     needs: [build-jar]
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.delivery_method == 'jar_scp'
+    if: github.event_name == 'workflow_dispatch' && inputs.delivery_method == 'jar_scp'
     environment:
       name: unocace-staging
       url: https://inatrace.test.unocace.com
