@@ -31,13 +31,15 @@ public class ProductTypeMapper {
 
         ProductTypeTranslation translation = entity.getProductTypeTranslations().stream()
                 .filter(productTypeTranslation -> productTypeTranslation.getLanguage().equals(language))
-                .findFirst().orElse(new ProductTypeTranslation());
+                .findFirst().orElse(null);
 
         ApiProductType apiProductType = new ApiProductType();
         apiProductType.setId(entity.getId());
-        apiProductType.setName(translation.getName());
+        apiProductType.setName(translation != null && translation.getName() != null
+                ? translation.getName() : entity.getName());
         apiProductType.setCode(entity.getCode());
-        apiProductType.setDescription(translation.getDescription());
+        apiProductType.setDescription(translation != null && translation.getDescription() != null
+                ? translation.getDescription() : entity.getDescription());
 
         return apiProductType;
     }
