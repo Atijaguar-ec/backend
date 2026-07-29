@@ -1,10 +1,13 @@
 package com.abelium.inatrace.components.codebook.certification_type;
 
+import com.abelium.inatrace.api.ApiPaginatedRequest;
+import com.abelium.inatrace.api.ApiPaginatedResponse;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.codebook.certification_type.api.ApiCertificationType;
 import com.abelium.inatrace.types.Language;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +29,14 @@ public class CertificationTypeController {
     @Operation(summary = "List active certification types")
     public List<ApiCertificationType> listActive(@RequestHeader(value = "Language") Language language) {
         return service.listActiveCertificationTypes(language);
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "Get a paginated list of certification types (admin, includes inactive).")
+    public ApiPaginatedResponse<ApiCertificationType> getCertificationTypeList(
+            @Valid ApiPaginatedRequest request,
+            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) {
+        return new ApiPaginatedResponse<>(service.getCertificationTypeList(request, language));
     }
 
     @GetMapping("/{id}")

@@ -1,16 +1,21 @@
 package com.abelium.inatrace.components.codebook.certification_type;
 
+import com.abelium.inatrace.api.ApiPaginatedList;
+import com.abelium.inatrace.api.ApiPaginatedRequest;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.api.ApiStatus;
 import com.abelium.inatrace.components.codebook.certification_type.api.ApiCertificationType;
 import com.abelium.inatrace.components.codebook.certification_type.api.ApiCertificationTypeTranslation;
 import com.abelium.inatrace.components.common.BaseService;
+import com.abelium.inatrace.tools.PaginationTools;
 import com.abelium.inatrace.tools.Queries;
+import com.abelium.inatrace.tools.QueryTools;
 import com.abelium.inatrace.db.entities.codebook.CertificationType;
 import com.abelium.inatrace.db.entities.codebook.CertificationTypeTranslation;
 import com.abelium.inatrace.types.Language;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.torpedoquery.jakarta.jpa.Torpedo;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,10 +26,39 @@ public class CertificationTypeService extends BaseService {
     public List<ApiCertificationType> listActiveCertificationTypes(Language language) {
         List<CertificationType> entities = em.createNamedQuery("CertificationType.findAllActive", CertificationType.class)
                 .getResultList();
-        
+
         return entities.stream()
                 .map(entity -> CertificationTypeMapper.toApiCertificationTypeBase(entity, language))
                 .collect(Collectors.toList());
+    }
+
+    public ApiPaginatedList<ApiCertificationType> getCertificationTypeList(ApiPaginatedRequest request, Language language) {
+        return PaginationTools.createPaginatedResponse(em, request, () -> certificationTypeQueryObject(request),
+                entity -> CertificationTypeMapper.toApiCertificationTypeBase(entity, language));
+    }
+
+    private CertificationType certificationTypeQueryObject(ApiPaginatedRequest request) {
+
+        CertificationType certificationTypeProxy = Torpedo.from(CertificationType.class);
+
+        switch (request.sortBy) {
+            case "code":
+                QueryTools.orderBy(request.sort, certificationTypeProxy.getCode());
+                break;
+            case "label":
+                QueryTools.orderBy(request.sort, certificationTypeProxy.getName());
+                break;
+            case "category":
+                QueryTools.orderBy(request.sort, certificationTypeProxy.getCategory());
+                break;
+            case "status":
+                QueryTools.orderBy(request.sort, certificationTypeProxy.getStatus());
+                break;
+            default:
+                QueryTools.orderBy(request.sort, certificationTypeProxy.getId());
+        }
+
+        return certificationTypeProxy;
     }
 
     public ApiCertificationType getCertificationType(Long id, Language language) throws ApiException {
