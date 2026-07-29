@@ -97,6 +97,11 @@ public class CertificationTypeService extends BaseService {
 
         if (apiDTO.getTranslations() != null) {
             entity.getTranslations().clear();
+            // Forzar el DELETE (orphanRemoval) antes de insertar las traducciones nuevas:
+            // sin este flush, Hibernate puede ejecutar el INSERT antes que el DELETE en el
+            // mismo flush automático, chocando con el unique constraint
+            // (certification_type_id, language) cuando se reescribe el mismo idioma.
+            em.flush();
             for (ApiCertificationTypeTranslation apiTranslation : apiDTO.getTranslations()) {
                 CertificationTypeTranslation translation = new CertificationTypeTranslation();
                 translation.setLanguage(apiTranslation.getLanguage());
