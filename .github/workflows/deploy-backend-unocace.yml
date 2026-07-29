@@ -194,6 +194,7 @@ jobs:
           source: "ci/unocace/docker-compose.yml,ci/unocace/Dockerfile"
           target: "${{ env.REMOTE_DIR }}/"
           strip_components: 2
+          overwrite: true
 
       - name: 📝 Actualizar IMAGE_NAME/TAG en .env existente (sin tocar secretos ya rotados)
         uses: appleboy/ssh-action@v1.0.0
@@ -282,6 +283,7 @@ jobs:
           source: "ci/unocace/docker-compose.yml,ci/unocace/Dockerfile"
           target: "${{ env.REMOTE_DIR }}/"
           strip_components: 2
+          overwrite: true
 
       - name: 📤 Upload app.jar
         uses: appleboy/scp-action@v0.1.7
@@ -291,6 +293,7 @@ jobs:
           password: ${{ secrets.TEST_UNOCACE_PASSWORD }}
           source: "app.jar"
           target: "${{ env.REMOTE_DIR }}/"
+          overwrite: true
 
       - name: 🚑 Build local y recrear backend (sin GHCR)
         uses: appleboy/ssh-action@v1.0.0
