@@ -220,6 +220,87 @@ La exportación Excel genera columnas adicionales para estos campos.
 
 ---
 
+## 6bis. Patrón CRUD de Catálogos (Codebook) — Checklist Obligatorio
+
+> Aplica a cualquier controller bajo `components/codebook/*` (`FacilityType`,
+> `MeasureUnitType`, `ProductType`, `CertificationType`,
+> `ProcessingEvidenceType`, etc.) y a cualquiera nuevo que se agregue con el
+> mismo patrón. Extraído en vivo el 2026-07-29 tras encadenar 6 bugs distintos
+> al portar la administración de `CertificationType` — cada uno pasaba
+> inadvertido porque el anterior lo enmascaraba (guardaba pero no cerraba el
+> modal, o el modal cerraba pero mostraba datos vacíos, etc.). Revisar esta
+> lista completa **antes** de dar por terminado un catálogo nuevo o portado,
+> no solo hasta que "deje de tirar error".
+
+1. **`createOrUpdate` DEBE devolver `ApiResponse<ApiBaseEntity>`, nunca la
+   entidad completa directa.** El frontend (`type-detail-modal.component.ts`)
+   chequea `res.status === 'OK'` para decidir si cierra el modal y dispara el
+   `saveCallback` (que refresca la lista). Si el endpoint devuelve el DTO
+   pelado, `res.status` no existe (o, peor, coincide por casualidad con un
+   campo de la propia entidad llamado `status`, como el `ACTIVE`/`INACTIVE`
+   de `CertificationType`) y esa condición nunca es `true`: el guardado
+   funciona en la base, pero la UI queda como si nada hubiera pasado.
+   ```java
+   // ❌
+   public ApiCertificationType createOrUpdate(...) { return service...; }
+   // ✅ (patrón real de FacilityTypeController/ProductTypeController)
+   public ApiResponse<ApiBaseEntity> createOrUpdate(...) { return new ApiResponse<>(service...); }
+   ```
+
+2. **`delete` DEBE devolver `ApiDefaultResponse`, nunca `void`.** Mismo
+   motivo: el frontend espera `res.status === 'OK'` antes de refrescar tras
+   borrar.
+
+3. **El método HTTP debe coincidir exactamente con el cliente ya generado en
+   `fe/apps/inatrace-fe/src/api/api/<Tipo>ControllerService.ts`.** No asumas
+   `@PostMapping` para "crear o actualizar" solo porque es lo más intuitivo:
+   la convención real de este cliente (generado por swagger-codegen) es
+   `PUT`. Si el backend mapea `@PostMapping` y el cliente manda `PUT`, da
+   `405 Method Not Allowed`. Revisar el `.service.ts` real antes de decidir.
+
+4. **El listado paginado (`GET .../list`) debe usar el mapper "completo" (con
+   `translations`), no el mapper "Base".** El modal de edición
+   (`type-list.component.ts`'s `edit(type)`) recibe la FILA de esta lista
+   directamente como `typeElement`, sin volver a pedir el detalle por id. Si
+   el mapper de listado omite `translations` (como hace la variante "Base",
+   pensada para dropdowns de solo-lectura), el formulario de edición se ve
+   con la Etiqueta vacía en todos los idiomas aunque el dato exista en la
+   base. Ver `ProductTypeService.getProductTypes` → `toApiProductTypeDetailed`
+   como referencia correcta.
+
+5. **El mapper de traducción debe caer al valor base de la entidad si no hay
+   traducción para el idioma pedido — nunca a un objeto de traducción vacío
+   recién creado.**
+   ```java
+   // ❌ (bug real en ProductTypeMapper hasta 2026-07-29)
+   translation = ....findFirst().orElse(new ProductTypeTranslation());
+   apiDto.setName(translation.getName()); // null si no hay traducción
+   // ✅ (patrón correcto, ya en CertificationTypeMapper)
+   apiDto.setName(translation != null ? translation.getName() : entity.getName());
+   ```
+   En UNOCACE, la mayoría de los registros migrados desde MySQL solo tienen
+   traducción en **español**, ninguna en inglés — este bug se dispara casi
+   siempre, no es un caso límite raro.
+
+6. **`entity.getTranslations().clear()` + repoblar en la misma transacción
+   requiere un `em.flush()` explícito entre medio**, si la colección tiene un
+   unique constraint compuesto (ej. `(entity_id, language)`) con
+   `orphanRemoval = true`. Sin el flush, Hibernate puede ejecutar el INSERT
+   de la traducción nueva antes del DELETE de la vieja en el mismo flush
+   automático, chocando contra el constraint (`duplicate key value violates
+   unique constraint`) al reescribir el mismo idioma que ya existía.
+
+7. **Cuidado con `GROUP BY` en el conteo paginado (Torpedo + `orderBy`) bajo
+   Postgres estricto** — mismo síntoma que el bug de `DashboardService`
+   documentado en la sección de Lógica de Negocio: una query de `COUNT`
+   que hereda un `ORDER BY` de una columna no agregada falla en Postgres
+   aunque fuera tolerado en MySQL. `PaginationTools.createPaginatedResponse`
+   ya tiene un `catch` con fallback de conteo estimado para este caso, pero
+   si ves este error en logs para un catálogo nuevo, vale la pena investigar
+   la causa real en vez de confiar en el fallback silencioso.
+
+---
+
 ## 7. Decisiones Arquitectónicas Documentadas
 
 | Decisión | Razón | Fecha |
