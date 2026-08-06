@@ -82,12 +82,15 @@ services:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${ISSUER_URI}
       - INATRACE_KEYCLOAK_ADMIN_SERVER_URL=${KEYCLOAK_ADMIN_SERVER_URL:-http://inatrace-kc-test-fortaleza:8080/auth}
-      # ⚠️ Verificado 2026-07-28: los realms reales son "master", "inatrace" y
-      # "fortaleza" (ISSUER_URI usa .../realms/fortaleza). NO existe un realm
-      # llamado "inatrace_fortaleza" — este default histórico está desalineado
-      # con lo que corre en producción. Revisar si la integración de Admin API
-      # (creación de usuarios/organizaciones) depende de este valor antes de
-      # cambiarlo; documentado para no perder el hallazgo.
+      # ⚠️ El realm difiere por entorno (verificado 2026-08-06 consultando la
+      # tabla `realm` de cada servidor):
+      #   - staging  190.15.143.254 -> master, inatrace, fortaleza
+      #   - producción 10.10.102.26 -> master, inatrace_fortaleza
+      # Por eso este default `inatrace_fortaleza` es CORRECTO para producción
+      # (el .env de prod no define KEYCLOAK_ADMIN_REALM y usa el default) y
+      # equivocado para staging, donde el .env sí debe definirlo como
+      # `fortaleza`. Una nota anterior aquí afirmaba lo contrario: era una
+      # verificación hecha solo contra staging. No unificar sin migrar el realm.
       - INATRACE_KEYCLOAK_ADMIN_REALM=${KEYCLOAK_ADMIN_REALM:-inatrace_fortaleza}
       - INATRACE_KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-inatrace-backend}
       - INATRACE_KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-backend-secret-123}
