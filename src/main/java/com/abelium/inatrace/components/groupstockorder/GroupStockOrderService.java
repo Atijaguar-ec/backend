@@ -21,11 +21,41 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @Lazy
 
 @Service
 public class GroupStockOrderService extends BaseService {
+
+    /**
+     * Columnas por las que el cliente puede ordenar, mapeadas a su expresión JPQL calificada.
+     *
+     * PostgreSQL rechaza con SQLState 42803 cualquier ORDER BY sobre una columna que no esté
+     * en el GROUP BY (MySQL lo toleraba). Cada valor de este mapa DEBE aparecer literalmente
+     * en el GROUP BY de {@code getGroupedStockOrderList}, o ser una función de agregación.
+     *
+     * Ojo con 'updateTimestamp': sin calificar, JPQL lo resuelve contra la entidad raíz
+     * (StockOrder hereda updateTimestamp de TimestampEntity) y no contra PO, que es el que
+     * está agrupado. Ese era el origen del error en la pantalla de Entregas.
+     */
+    private static final Map<String, String> SORTABLE_COLUMNS = Map.ofEntries(
+            Map.entry("date", "SO.productionDate"),
+            Map.entry("productionDate", "SO.productionDate"),
+            Map.entry("identifier", "SO.internalLotNumber"),
+            Map.entry("orderType", "SO.orderType"),
+            Map.entry("semiProduct", "SPT.name"),
+            Map.entry("unit", "MUT.label"),
+            Map.entry("deliveryTime", "SO.deliveryTime"),
+            Map.entry("updateTimestamp", "PO.updateTimestamp"),
+            Map.entry("isAvailable", "SO.isAvailable"),
+            Map.entry("sacNumber", "COUNT(SO.sacNumber)"),
+            Map.entry("quantity", "SUM(SO.totalQuantity)")
+    );
+
+    /** Usado cuando sortBy viene vacío o con un valor no reconocido (el default global es "id",
+     *  que tampoco está agrupado y por eso rompía). */
+    private static final String DEFAULT_SORT_COLUMN = "SO.productionDate";
 
     public ApiPaginatedList<ApiGroupStockOrder> getGroupedStockOrderList(
             ApiPaginatedRequest request,
@@ -80,9 +110,11 @@ public class GroupStockOrderService extends BaseService {
                 "UC.name, UC.surname "
         );
 
-        // Add ORDER BY query string to sort on requested field and direction
+        // Add ORDER BY query string to sort on requested field and direction.
+        // Se resuelve contra SORTABLE_COLUMNS en vez de concatenar request.sortBy directamente:
+        // garantiza que la columna esté agrupada (PostgreSQL 42803) y evita inyección de JPQL.
         queryString.append("ORDER BY ");
-        queryString.append(request.sortBy);
+        queryString.append(SORTABLE_COLUMNS.getOrDefault(request.sortBy, DEFAULT_SORT_COLUMN));
         queryString.append(" ");
         queryString.append(request.sort.toString());
 
