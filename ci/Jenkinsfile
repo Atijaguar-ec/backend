@@ -97,8 +97,10 @@ pipeline {
     HEALTH_CHECK_INTERVAL = '10'
     MAX_RETRIES = '3'
 
-    // Estado real del backup pre-deploy (actualizado por el stage 'Database Backup')
-    DB_BACKUP_STATUS = 'OMITIDO (SKIP_DB_BACKUP=true o rama != main)'
+    // NO declarar DB_BACKUP_STATUS aquí: el bloque environment{} se reinyecta
+    // en cada stage y sobrescribiría el valor que el stage 'Database Backup'
+    // asigna en runtime, haciendo que la guarda de aprobación aborte siempre.
+    // Se inicializa en el stage de preparación (env.DB_BACKUP_STATUS).
   }
 
 
@@ -163,6 +165,10 @@ pipeline {
             params.STAGING_HEALTH_URL
           env.PROJECT_DIR = fileExists('backend/pom.xml') ? 'backend' : '.'
           env.COMPOSE_DIR = fileExists('backend/ci/fortaleza/docker-compose.yml') ? 'backend/ci/fortaleza' : 'ci/fortaleza'
+          // Estado real del backup pre-deploy. Se inicializa acá (no en el
+          // bloque environment{}) para que el stage 'Database Backup' pueda
+          // sobrescribirlo y la guarda de aprobación lea el valor real.
+          env.DB_BACKUP_STATUS = 'OMITIDO (SKIP_DB_BACKUP=true o rama != main)'
           
           echo "\n📦 Información del Build :"
           echo "  - Repositorio: ${env.REPO_FULL_NAME}"
@@ -361,7 +367,11 @@ pipeline {
               BACKUP_DIR="/opt/inatrace/backups"
               BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S)-pre-deploy.sql.gz"
 
-              cat <<EOSSH | ssh ${SSH_OPTS} "${SSH_TARGET}" "CONTAINER_NAME='${CONTAINER_NAME}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' BACKUP_DIR='${BACKUP_DIR}' BACKUP_FILE='${BACKUP_FILE}' bash -s"
+              # Delimitador entrecomillado: TODO se expande en el servidor remoto,
+              # que ya recibe las variables por el entorno del ssh. Sin comillar,
+              # el $(du ...) de la verificación se ejecutaba en el agente Jenkins
+              # (donde el archivo no existe) y ensuciaba el log con un error.
+              cat <<'EOSSH' | ssh ${SSH_OPTS} "${SSH_TARGET}" "CONTAINER_NAME='${CONTAINER_NAME}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' BACKUP_DIR='${BACKUP_DIR}' BACKUP_FILE='${BACKUP_FILE}' bash -s"
 set -e
 
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
@@ -379,7 +389,7 @@ if [ ! -s "${BACKUP_DIR}/${BACKUP_FILE}" ]; then
   exit 1
 fi
 
-echo "✅ Backup verificado: ${BACKUP_DIR}/${BACKUP_FILE} (\$(du -h "${BACKUP_DIR}/${BACKUP_FILE}" | cut -f1))"
+echo "✅ Backup verificado: ${BACKUP_DIR}/${BACKUP_FILE} ($(du -h "${BACKUP_DIR}/${BACKUP_FILE}" | cut -f1))"
 
 echo "🧹 Limpiando backups antiguos (>14 días)..."
 find "${BACKUP_DIR}" -name "backup-*.sql.gz" -mtime +14 -delete
