@@ -371,3 +371,154 @@ Antes de hacer commit de cualquier cambio en el backend, verificar:
 - [ ] ¿Se actualizaron los Mappers correspondientes?
 - [ ] ¿Se actualizó este archivo `agent-context.md` si se agregaron campos/tablas?
 - [ ] ¿El proyecto compila con `mvn clean compile`?
+
+---
+
+## 11. Despliegue a Producción Fortaleza — Trampas Verificadas en Vivo
+
+> Extraído el **2026-08-06/07** durante el primer despliegue real a producción
+> (`gizpro`, `10.10.102.26` interno / `190.15.143.192` público) tras la
+> migración a PostgreSQL 16 + Keycloak 26. Todo lo de abajo fue **verificado
+> contra los servidores**, no inferido leyendo archivos. Varias afirmaciones
+> aquí **contradicen** versiones anteriores de la documentación: cuando eso
+> pasa, gana lo que está acá.
+
+### 11.1 Los dos entornos de Fortaleza NO son intercambiables
+
+| | Staging `190.15.143.254` | Producción `10.10.102.26` |
+|---|---|---|
+| Usuario SSH | `giz` | `administrador` |
+| Base de datos app | `inatrace_fortaleza_stage` | `inatrace_prod_fortaleza` |
+| Usuario de BD | `inatrace` | `inatrace_prod_fortaleza` |
+| **Realm de Keycloak** | **`fortaleza`** | **`inatrace_fortaleza`** |
+| `DB_VOLUME` | `/opt/inatrace/postgresql_data_test` | `/opt/inatrace/postgresql_data` |
+| Almacenamiento de archivos | `/opt/inatrace/uploads` | `/opt/inatrace/file_storage` |
+| Cómo despliega el Jenkinsfile | local al agente, solo `inatrace-backend` | remoto vía SSH, **todos** los servicios |
+
+**Nunca copies configuración de un entorno al otro sin traducir estos valores.**
+El realm en particular ha causado documentación equivocada dos veces: el
+default `INATRACE_KEYCLOAK_ADMIN_REALM=${KEYCLOAK_ADMIN_REALM:-inatrace_fortaleza}`
+del compose es **correcto para producción** y equivocado para staging.
+
+### 11.2 El deploy a producción recrea la base de datos
+
+El stage `🚀 Deploy Fortaleza` ejecuta, solo en la rama `main`:
+
+```bash
+docker compose up -d --remove-orphans --force-recreate
+```
+
+**Sin `--no-deps` y sin nombre de servicio** — o sea recrea `inatrace-postgres`,
+`inatrace-keycloak` **y** `inatrace-backend`. Staging en cambio usa
+`--no-deps ... inatrace-backend` y solo toca el backend.
+
+Consecuencia crítica: si `DB_VOLUME` del `.env` no apunta **exactamente** al
+directorio que el contenedor de Postgres usa hoy, el contenedor recreado
+arranca sobre un data dir vacío y **la base de producción queda en blanco sin
+ningún error visible**. Antes de cualquier deploy a `main`, correr:
+
+```bash
+python3 backend/scripts/fortaleza/preflight_prod.py \
+    --ssh administrador@190.15.143.192 -i ~/.ssh/cedia_key --backup
+```
+
+Ese script (solo lectura salvo `--backup`) compara el `DB_VOLUME` del `.env`
+contra el montaje real y aborta con código 1 si difieren. Vive en
+`backend/scripts/`, que **está en `.gitignore` completo** — no aparece en el
+repo; si no lo encontrás, hay que recrearlo.
+
+### 11.3 `environment{}` de Jenkins pisa las asignaciones en runtime
+
+Bug real que impidió el primer deploy a producción (corregido en `cf75f374`):
+`DB_BACKUP_STATUS` estaba declarado en el bloque `environment{}` del
+Jenkinsfile. **Jenkins reinyecta ese bloque en cada stage**, así que la
+asignación `env.DB_BACKUP_STATUS = 'COMPLETADO'` hecha dentro del stage de
+backup quedaba pisada al entrar al stage siguiente, y la guarda de aprobación
+abortaba el despliegue aunque el respaldo se hubiera creado correctamente.
+
+**Regla:** cualquier variable que un stage deba modificar en runtime va
+inicializada en un bloque `script`, **nunca** en `environment{}`.
+
+### 11.4 Heredocs hacia SSH: comillar el delimitador
+
+El stage de backup usaba `cat <<EOSSH` (sin comillar) mientras el de deploy
+usaba `cat <<'EOSSH'` (comillado). Sin comillar, el `$(du -h ...)` de la
+verificación se ejecutaba **en el agente Jenkins** en vez del servidor remoto,
+donde el archivo no existe — ensuciando el log con
+`du: cannot access ... No such file or directory` y mostrando el tamaño vacío.
+
+Ojo con la interacción de Groovy: dentro de `sh '''...'''`, Groovy procesa
+`\$` y lo convierte en `$` **antes** de que el shell lo vea, así que escapar
+con backslash no protege nada. **Siempre comillar el delimitador**
+(`<<'EOSSH'`) y pasar las variables por el entorno del `ssh`:
+
+```groovy
+cat <<'EOSSH' | ssh ${SSH_OPTS} "${TARGET}" "VAR='${VAR}' bash -s"
+```
+
+### 11.5 Los archivos subidos NO se migran con la base de datos
+
+Producción tenía **53 registros en `document`** pero **1 solo archivo** en
+`/opt/inatrace/file_storage`. El endpoint `/api/public/image/{key}` devolvía
+500 con `java.nio.file.NoSuchFileException`. La migración copió las filas de
+la BD pero no el contenido del disco.
+
+Al migrar o clonar un entorno, **el `pg_dump` no alcanza**: hay que copiar
+también el árbol de almacenamiento, respetando que la ruta difiere por entorno
+(ver 11.1). Estructura: `GENERAL/` (documentos) e `IMAGE/` con las variantes
+`SMALL`, `MEDIUM`, `LARGE`, `XLARGE`, `XXLARGE` más el archivo base.
+
+`GENERAL/` en producción pertenece a `root`, así que escribir ahí requiere
+`sudo` (que pide contraseña en ese host); `IMAGE/` pertenece a `administrador`
+y sí es escribible por SSH.
+
+### 11.6 Exposición de puertos: no confiar en el compose ni en UFW
+
+El compose versionado no declara `ports:` para Postgres, pero el contenedor que
+corría en producción **sí publicaba `0.0.0.0:5432`** — se había creado con una
+versión anterior del archivo. Docker inserta sus reglas de iptables **antes**
+que UFW, así que el firewall puede parecer cerrado y el puerto estar abierto a
+Internet igual.
+
+**Verificá siempre con `docker ps --format '{{.Names}}\t{{.Ports}}'` en el
+servidor, no leyendo el compose.** El deploy del 2026-08-07 cerró esa
+exposición al recrear el contenedor.
+
+### 11.7 🐛 ABIERTO: consultas con `GROUP BY` que funcionaban en MySQL
+
+En producción se disparan continuamente, en cada carga de la pantalla de
+Entregas:
+
+```
+SQLState: 42803
+ERROR: column "so1_0.productiondate" must appear in the GROUP BY clause or be used in an aggregate function
+ERROR: column "so1_0.updatetimestamp" must appear in the GROUP BY clause or be used in an aggregate function
+```
+
+MySQL tolera columnas no agregadas en `GROUP BY`; **PostgreSQL es estricto y
+las rechaza**. Ya hubo un arreglo previo de esta misma familia (`f422aaf7`,
+agregación del Dashboard).
+
+Estado: **sin resolver**. Candidatos revisados:
+`components/groupstockorder/GroupStockOrderService.java` (su `SELECT` y su
+`GROUP BY` sí coinciden, así que la sospecha principal es el `ORDER BY`
+dinámico construido con `request.sortBy`, que puede referenciar una columna
+ausente del `GROUP BY`) y `components/dashboard/DashboardService.java`.
+
+Al investigarlo: **no asumas que el `SELECT` es el culpable**; revisá el
+`ORDER BY` armado dinámicamente y confirmá contra el SQL real que emite
+Hibernate, no contra el JPQL del código.
+
+### 11.8 Infraestructura del agente Jenkins
+
+Jenkins corre en el servidor de **staging** (`190.15.143.254`), no en uno
+dedicado. Dos jobs: `Deploy-Backend` y `Deploy-Frontend`, ambos manuales con
+parámetro `BRANCH` (`staging` o `main`) — no hay trigger automático por push.
+
+Presiones observadas el 2026-08-07: `/var` al 86% (≈10 GB solo de build cache
+de Docker) y swap al 76%. Un reinicio del servicio Jenkins durante un build de
+Angular mató el `docker build` con `context canceled`; el pipeline lo reporta
+como fallo del despliegue, pero **no es un problema del código**. Antes de
+culpar a un cambio, revisá si hubo `Resuming build ... after Jenkins restart`
+en el log.
+
