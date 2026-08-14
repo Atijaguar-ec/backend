@@ -425,7 +425,8 @@ public class CompanyService extends BaseService {
 						plotsSheet,
 						dateCellStyle,
 						farmersSheetRowNum,
-						plotsSheetRowNum);
+						plotsSheetRowNum,
+						language);
 				farmersSheetRowNum++;
 				if (nextPlotsSheetRowNum > plotsSheetRowNum) {
 					plotsSheetRowNum = nextPlotsSheetRowNum;
@@ -562,6 +563,15 @@ public class CompanyService extends BaseService {
 		plotsHeaderRow.createCell(8, CellType.STRING).setCellValue(TranslateTools.getTranslatedValue(
 				messageSource, "export.plots.column.dateOfTransitionToOrganic.label", language
 		));
+		plotsHeaderRow.createCell(9, CellType.STRING).setCellValue(TranslateTools.getTranslatedValue(
+				messageSource, "export.plots.column.productionEstimate.label", language
+		));
+		plotsHeaderRow.createCell(10, CellType.STRING).setCellValue(TranslateTools.getTranslatedValue(
+				messageSource, "export.plots.column.certificationType.label", language
+		));
+		plotsHeaderRow.createCell(11, CellType.STRING).setCellValue(TranslateTools.getTranslatedValue(
+				messageSource, "export.plots.column.cocoaVariety.label", language
+		));
 	}
 
 	private int fillFarmersExcelData(ApiUserCustomer apiUserCustomer,
@@ -569,7 +579,8 @@ public class CompanyService extends BaseService {
 	                                 XSSFSheet plotsSheet,
 	                                 CellStyle dateCellStyle,
 	                                 int farmersSheetRowNum,
-	                                 int plotsSheetRowNum) {
+	                                 int plotsSheetRowNum,
+	                                 Language language) {
 
 		Row farmerRow = farmersSheet.createRow(farmersSheetRowNum);
 
@@ -772,6 +783,33 @@ public class CompanyService extends BaseService {
 			plotRow.createCell(8, CellType.NUMERIC).setCellValue(apiPlot.getOrganicStartOfTransition());
 			plotRow.getCell(8).setCellStyle(dateCellStyle);
 			// plotsSheet.autoSizeColumn(8);
+
+			// Create production estimate column
+			plotRow.createCell(9, CellType.NUMERIC);
+			if (apiPlot.getProductionEstimate() != null) {
+				plotRow.getCell(9).setCellValue(apiPlot.getProductionEstimate().doubleValue());
+			}
+
+			// Create certification type column. These fields are optional, so unlike the
+			// farmer's gender above they have to be null-guarded before being translated.
+			plotRow.createCell(10, CellType.STRING);
+			if (apiPlot.getCertificationType() != null) {
+				plotRow.getCell(10).setCellValue(TranslateTools.getTranslatedValue(
+						messageSource,
+						"export.plots.column.certificationType.value." + apiPlot.getCertificationType().toString(),
+						language
+				));
+			}
+
+			// Create cocoa variety column
+			plotRow.createCell(11, CellType.STRING);
+			if (apiPlot.getCocoaVariety() != null) {
+				plotRow.getCell(11).setCellValue(TranslateTools.getTranslatedValue(
+						messageSource,
+						"export.plots.column.cocoaVariety.value." + apiPlot.getCocoaVariety().toString(),
+						language
+				));
+			}
 		}
 
 		return plotsSheetRowNum;
