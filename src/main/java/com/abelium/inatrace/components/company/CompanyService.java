@@ -530,6 +530,9 @@ public class CompanyService extends BaseService {
 		farmersHeaderRow.createCell(28, CellType.STRING).setCellValue(TranslateTools.getTranslatedValue(
 				messageSource, "export.farmers.column.additionalInformation.label", language
 		));
+		farmersHeaderRow.createCell(29, CellType.STRING).setCellValue(TranslateTools.getTranslatedValue(
+				messageSource, "export.farmers.column.status.label", language
+		));
 	}
 
 	private void preparePlotsSheetHeader(XSSFSheet plotsSheet, Language language) {
@@ -733,6 +736,16 @@ public class CompanyService extends BaseService {
 			// farmersSheet.autoSizeColumn(28);
 		}
 
+		// Create status column. Null means the farmer predates the status feature and is
+		// treated as ACTIVE everywhere else, so the export says the same thing.
+		farmerRow.createCell(29, CellType.STRING).setCellValue(TranslateTools.getTranslatedValue(
+				messageSource,
+				"export.farmers.column.status.value." + (apiUserCustomer.getStatus() != null
+						? apiUserCustomer.getStatus().toString()
+						: UserCustomerStatus.ACTIVE.toString()),
+				language
+		));
+
 		// Fill farmer's plots data
 		for (ApiPlot apiPlot : apiUserCustomer.getPlots()) {
 
@@ -879,14 +892,21 @@ public class CompanyService extends BaseService {
 		userCustomer.setFarmerCompanyInternalId(apiUserCustomer.getFarmerCompanyInternalId());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
-		// A new user customer joins the organization as ACTIVE unless stated otherwise
+		// A new user customer joins the organization as ACTIVE unless stated otherwise.
+		// The audit trail records status CHANGES, so a plain ACTIVE creation leaves it
+		// empty: that farmer never had its status changed, same reasoning the migration
+		// applies to pre-existing rows. It also keeps the bulk Excel import - which
+		// creates every farmer as ACTIVE, one addUserCustomer call per row - from
+		// fetching the acting User once per row for nothing.
 		userCustomer.setStatus(apiUserCustomer.getStatus() != null
 				? apiUserCustomer.getStatus()
 				: UserCustomerStatus.ACTIVE);
-		userCustomer.setStatusReason(
-				userCustomer.getStatus() == UserCustomerStatus.ACTIVE ? null : apiUserCustomer.getStatusReason());
-		userCustomer.setStatusUpdateTimestamp(Instant.now());
-		userCustomer.setStatusUpdatedBy(userQueries.fetchUser(user.getUserId()));
+
+		if (userCustomer.getStatus() != UserCustomerStatus.ACTIVE) {
+			userCustomer.setStatusReason(apiUserCustomer.getStatusReason());
+			userCustomer.setStatusUpdateTimestamp(Instant.now());
+			userCustomer.setStatusUpdatedBy(userQueries.fetchUser(user.getUserId()));
+		}
 		userCustomer.setEmail(apiUserCustomer.getEmail());
 		userCustomer.setName(apiUserCustomer.getName());
 		userCustomer.setSurname(apiUserCustomer.getSurname());
