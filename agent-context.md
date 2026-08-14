@@ -163,8 +163,19 @@ Reglas del estado (2026-08-14):
 | Campo | Tipo | Propósito |
 |---|---|---|
 | `productionEstimate` | `BigDecimal` → `numeric(38,2)` | Estimación de producción (2 decimales) |
-| `certificationType` | `PlotCertificationType` enum | Catálogo cerrado de 4 valores. Usa `Lengths.DEFAULT`, **no** `Lengths.ENUM` (ver §13) |
+| `certificationType` | **FK a `CertificationType`** | Tipo de certificación de la parcela |
 | `cocoaVariety` | `CocoaVariety` enum | `ORGANICO` / `CCN51` |
+
+> **No conviertas `certificationType` en un enum.** Se intentó el 2026-08-14 y hubo
+> que revertirlo: apunta al **catálogo administrable** `CertificationType`
+> (Ajustes → Tipos de certificación), que es **el mismo** que alimenta el campo
+> "Tipo de certificación" del formulario de Recepción. Un enum crea un vocabulario
+> paralelo que diverge del catálogo en cuanto alguien renombra un valor en Ajustes.
+> Si faltan valores, se agregan **desde Ajustes**, no tocando código.
+>
+> Ojo con la asimetría existente: Recepción guarda su certificación en
+> `StockOrder.organicCertification` como **el nombre en texto**, no como FK. Es
+> anterior y no se refactorizó; la parcela sí usa FK porque nació sin datos.
 
 ### Tablas Nuevas: `CertificationType` + `CertificationTypeTranslation`
 Catálogo de certificaciones orgánicas y sellos ambientales con soporte i18n.

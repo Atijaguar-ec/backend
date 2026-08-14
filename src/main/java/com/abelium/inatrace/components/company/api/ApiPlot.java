@@ -1,9 +1,9 @@
 package com.abelium.inatrace.components.company.api;
 
 import com.abelium.inatrace.api.ApiBaseEntity;
+import com.abelium.inatrace.components.codebook.certification_type.api.ApiCertificationType;
 import com.abelium.inatrace.components.product.api.ApiProductType;
 import com.abelium.inatrace.types.CocoaVariety;
-import com.abelium.inatrace.types.PlotCertificationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.validation.annotation.Validated;
 
@@ -35,8 +35,8 @@ public class ApiPlot extends ApiBaseEntity {
 	@Schema(description = "Production estimate for the plot (two decimal places)")
 	private BigDecimal productionEstimate;
 
-	@Schema(description = "Certification scheme of the plot")
-	private PlotCertificationType certificationType;
+	@Schema(description = "Certification scheme of the plot, from the administrable certification type codebook")
+	private ApiCertificationType certificationType;
 
 	@Schema(description = "Cocoa variety grown on the plot (ORGANICO = 1, CCN51 = 2)")
 	private CocoaVariety cocoaVariety;
@@ -109,11 +109,11 @@ public class ApiPlot extends ApiBaseEntity {
 		this.productionEstimate = productionEstimate;
 	}
 
-	public PlotCertificationType getCertificationType() {
+	public ApiCertificationType getCertificationType() {
 		return certificationType;
 	}
 
-	public void setCertificationType(PlotCertificationType certificationType) {
+	public void setCertificationType(ApiCertificationType certificationType) {
 		this.certificationType = certificationType;
 	}
 

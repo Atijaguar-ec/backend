@@ -5,7 +5,8 @@ import jakarta.persistence.EntityManager;
 import org.springframework.core.env.Environment;
 
 /**
- * Adds production estimate, certification type and cocoa variety to the farmer plot.
+ * Adds production estimate, certification type (FK al catálogo administrable) y cocoa
+ * variety a la parcela del agricultor.
  *
  * All three columns are nullable: existing plots simply don't have this data yet, and
  * a NOT NULL column would be rejected by Postgres against a populated table - the exact
@@ -36,13 +37,21 @@ public class V2026_08_14_16_00__Add_Plot_Production_Fields implements JpaMigrati
             em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN productionestimate NUMERIC(38,2)").executeUpdate();
         }
 
-        if (!columnExists(em, tableName, "certificationtype")) {
-            // VARCHAR(255): the longest constant is 49 chars, past the usual 40 char enum column
-            em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN certificationtype VARCHAR(255)").executeUpdate();
-        }
-
         if (!columnExists(em, tableName, "cocoavariety")) {
             em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN cocoavariety VARCHAR(40)").executeUpdate();
+        }
+
+        // El tipo de certificación de la parcela referencia el catálogo administrable
+        // (mismo que usa Recepción), no un enum del código. Una versión anterior de esta
+        // misma migración, desplegada solo en staging el 2026-08-14, creó una columna
+        // 'certificationtype' VARCHAR con un enum propio; se elimina si existe. Es seguro:
+        // se verificó que ninguna parcela llegó a tener valor en ella.
+        if (columnExists(em, tableName, "certificationtype")) {
+            em.createNativeQuery("ALTER TABLE " + tableName + " DROP COLUMN certificationtype").executeUpdate();
+        }
+
+        if (!columnExists(em, tableName, "certificationtype_id")) {
+            em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN certificationtype_id BIGINT").executeUpdate();
         }
     }
 

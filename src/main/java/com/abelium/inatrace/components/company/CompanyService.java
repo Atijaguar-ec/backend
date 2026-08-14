@@ -18,6 +18,8 @@ import com.abelium.inatrace.components.product.api.ApiProductType;
 import com.abelium.inatrace.components.user.UserQueries;
 import com.abelium.inatrace.components.value_chain.ValueChainMapper;
 import com.abelium.inatrace.components.value_chain.api.ApiValueChain;
+import com.abelium.inatrace.components.codebook.certification_type.api.ApiCertificationType;
+import com.abelium.inatrace.db.entities.codebook.CertificationType;
 import com.abelium.inatrace.db.entities.codebook.ProductType;
 import com.abelium.inatrace.db.entities.common.*;
 import com.abelium.inatrace.db.entities.company.Company;
@@ -805,13 +807,12 @@ public class CompanyService extends BaseService {
 
 			// Create certification type column. These fields are optional, so unlike the
 			// farmer's gender above they have to be null-guarded before being translated.
+			// El nombre ya viene traducido por CertificationTypeMapper según el idioma
+			// pedido, así que no pasa por messageSource: los valores los define el
+			// catálogo administrable, no un enum del código.
 			plotRow.createCell(10, CellType.STRING);
 			if (apiPlot.getCertificationType() != null) {
-				plotRow.getCell(10).setCellValue(TranslateTools.getTranslatedValue(
-						messageSource,
-						"export.plots.column.certificationType.value." + apiPlot.getCertificationType().toString(),
-						language
-				));
+				plotRow.getCell(10).setCellValue(apiPlot.getCertificationType().getName());
 			}
 
 			// Create cocoa variety column
@@ -1026,7 +1027,7 @@ public class CompanyService extends BaseService {
 				plot.setUnit(apiPlot.getUnit());
 				plot.setSize(apiPlot.getSize());
 				plot.setProductionEstimate(apiPlot.getProductionEstimate());
-				plot.setCertificationType(apiPlot.getCertificationType());
+				plot.setCertificationType(fetchPlotCertificationType(apiPlot.getCertificationType()));
 				plot.setCocoaVariety(apiPlot.getCocoaVariety());
 				plot.setOrganicStartOfTransition(apiPlot.getOrganicStartOfTransition());
 				plot.setFarmer(userCustomer);
@@ -1195,7 +1196,7 @@ public class CompanyService extends BaseService {
 			plot.setNumberOfPlants(apiPlot.getNumberOfPlants());
 			plot.setSize(apiPlot.getSize());
 			plot.setProductionEstimate(apiPlot.getProductionEstimate());
-			plot.setCertificationType(apiPlot.getCertificationType());
+			plot.setCertificationType(fetchPlotCertificationType(apiPlot.getCertificationType()));
 			plot.setCocoaVariety(apiPlot.getCocoaVariety());
 			plot.setLastUpdated(new Date());
 			plot.setOrganicStartOfTransition(apiPlot.getOrganicStartOfTransition());
@@ -1657,6 +1658,24 @@ public class CompanyService extends BaseService {
 		}
 
 		return productType;
+	}
+
+	/**
+	 * Resuelve el tipo de certificación de una parcela contra el catálogo administrable
+	 * (el mismo que usa Recepción). Un valor nulo o sin id limpia el campo.
+	 */
+	private CertificationType fetchPlotCertificationType(ApiCertificationType apiCertificationType) throws ApiException {
+
+		if (apiCertificationType == null || apiCertificationType.getId() == null) {
+			return null;
+		}
+
+		CertificationType certificationType = em.find(CertificationType.class, apiCertificationType.getId());
+		if (certificationType == null) {
+			throw new ApiException(ApiStatus.INVALID_REQUEST, "Invalid certification type ID");
+		}
+
+		return certificationType;
 	}
 
 	@Transactional

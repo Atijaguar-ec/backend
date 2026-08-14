@@ -1,5 +1,6 @@
 package com.abelium.inatrace.components.company.mappers;
 
+import com.abelium.inatrace.components.codebook.certification_type.CertificationTypeMapper;
 import com.abelium.inatrace.components.company.api.ApiPlot;
 import com.abelium.inatrace.components.company.api.ApiPlotCoordinate;
 import com.abelium.inatrace.components.product.ProductTypeMapper;
@@ -27,7 +28,8 @@ public class PlotMapper {
 		apiPlot.setSize(plot.getSize());
 		apiPlot.setGeoId(plot.getGeoId());
 		apiPlot.setProductionEstimate(plot.getProductionEstimate());
-		apiPlot.setCertificationType(plot.getCertificationType());
+		apiPlot.setCertificationType(
+				CertificationTypeMapper.toApiCertificationTypeBase(plot.getCertificationType(), language));
 		apiPlot.setCocoaVariety(plot.getCocoaVariety());
 		apiPlot.setOrganicStartOfTransition(plot.getOrganicStartOfTransition());
 		apiPlot.setCoordinates(

@@ -2,9 +2,9 @@ package com.abelium.inatrace.db.entities.common;
 
 import com.abelium.inatrace.api.types.Lengths;
 import com.abelium.inatrace.db.base.BaseEntity;
+import com.abelium.inatrace.db.entities.codebook.CertificationType;
 import com.abelium.inatrace.db.entities.codebook.ProductType;
 import com.abelium.inatrace.types.CocoaVariety;
-import com.abelium.inatrace.types.PlotCertificationType;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -44,12 +44,16 @@ public class Plot extends BaseEntity {
 	private BigDecimal productionEstimate;
 
 	/**
-	 * Certification scheme of the plot. Lengths.DEFAULT rather than Lengths.ENUM:
-	 * the longest constant is 49 characters and would be truncated by a 40 char column.
+	 * Certification scheme of the plot.
+	 *
+	 * Apunta al MISMO catálogo administrable (Ajustes → Tipos de certificación) que
+	 * alimenta el campo "Tipo de certificación" del formulario de Recepción. No es un
+	 * enum: si lo fuera, renombrar un valor en Ajustes dejaría a las parcelas con un
+	 * vocabulario propio y divergente.
 	 */
-	@Enumerated(EnumType.STRING)
-	@Column(length = Lengths.DEFAULT)
-	private PlotCertificationType certificationType;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "certificationtype_id")
+	private CertificationType certificationType;
 
 	@Enumerated(EnumType.STRING)
 	@Column(length = Lengths.ENUM)
@@ -126,11 +130,11 @@ public class Plot extends BaseEntity {
 		this.productionEstimate = productionEstimate;
 	}
 
-	public PlotCertificationType getCertificationType() {
+	public CertificationType getCertificationType() {
 		return certificationType;
 	}
 
-	public void setCertificationType(PlotCertificationType certificationType) {
+	public void setCertificationType(CertificationType certificationType) {
 		this.certificationType = certificationType;
 	}
 
