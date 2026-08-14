@@ -21,6 +21,7 @@ import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.security.utils.PermissionsUtil;
 import com.abelium.inatrace.types.Gender;
 import com.abelium.inatrace.types.Language;
+import com.abelium.inatrace.types.UserCustomerStatus;
 import com.abelium.inatrace.types.UserCustomerType;
 import com.abelium.inatrace.types.UserRole;
 import org.apache.poi.ss.usermodel.Cell;
@@ -126,6 +127,7 @@ public class UserCustomerImportService extends BaseService {
                 ApiUserCustomer apiUserCustomer = new ApiUserCustomer();
                 apiUserCustomer.setCompanyId(companyId);
                 apiUserCustomer.setType(UserCustomerType.FARMER);
+                apiUserCustomer.setStatus(UserCustomerStatus.ACTIVE);
                 apiUserCustomer.setProductTypes(companyProductTypes);
 
                 // ID (company-internal)

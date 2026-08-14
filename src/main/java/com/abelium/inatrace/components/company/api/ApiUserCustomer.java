@@ -7,6 +7,7 @@ import com.abelium.inatrace.components.product.api.ApiBankInformation;
 import com.abelium.inatrace.components.product.api.ApiFarmInformation;
 import com.abelium.inatrace.components.product.api.ApiProductType;
 import com.abelium.inatrace.types.Gender;
+import com.abelium.inatrace.types.UserCustomerStatus;
 import com.abelium.inatrace.types.UserCustomerType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -26,7 +27,10 @@ public class ApiUserCustomer extends ApiBaseEntity {
 	
 	@Schema(description = "Type")
 	public UserCustomerType type;
-	
+
+	@Schema(description = "Status within the organization (ACTIVE, SUSPENDED, RETIRED)")
+	public UserCustomerStatus status;
+
 	@Schema(description = "Name")
 	@Size(max = Lengths.NAME)
 	public String name;
@@ -98,6 +102,14 @@ public class ApiUserCustomer extends ApiBaseEntity {
 
 	public void setType(UserCustomerType type) {
 		this.type = type;
+	}
+
+	public UserCustomerStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(UserCustomerStatus status) {
+		this.status = status;
 	}
 
 	public String getName() {

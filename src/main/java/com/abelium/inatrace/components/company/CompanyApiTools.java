@@ -413,6 +413,7 @@ public class CompanyApiTools {
 		apiUserCustomer.setName(userCustomer.getName());
 		apiUserCustomer.setSurname(userCustomer.getSurname());
 		apiUserCustomer.setType(userCustomer.getType());
+		apiUserCustomer.setStatus(userCustomer.getStatus());
 		apiUserCustomer.setPhone(userCustomer.getPhone());
 		apiUserCustomer.setEmail(userCustomer.getEmail());
 		apiUserCustomer.setGender(userCustomer.getGender());

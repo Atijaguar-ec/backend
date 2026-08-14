@@ -6,6 +6,7 @@ import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.product.Product;
 import com.abelium.inatrace.types.Gender;
 import com.abelium.inatrace.types.PersonType;
+import com.abelium.inatrace.types.UserCustomerStatus;
 import com.abelium.inatrace.types.UserCustomerType;
 import jakarta.persistence.*;
 
@@ -47,7 +48,14 @@ public class UserCustomer extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(length = Lengths.ENUM)
 	private UserCustomerType type;
-	
+
+	/**
+	 * status within the organization (active, suspended, retired)
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(length = Lengths.ENUM, nullable = false)
+	private UserCustomerStatus status = UserCustomerStatus.ACTIVE;
+
 	/**
 	 * name
 	 */
@@ -131,6 +139,14 @@ public class UserCustomer extends BaseEntity {
 
 	public void setType(UserCustomerType type) {
 		this.type = type;
+	}
+
+	public UserCustomerStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(UserCustomerStatus status) {
+		this.status = status;
 	}
 
 	public Company getCompany() {

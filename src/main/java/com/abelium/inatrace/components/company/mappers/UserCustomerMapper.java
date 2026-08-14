@@ -16,6 +16,7 @@ public class UserCustomerMapper {
         apiUserCustomer.setName(entity.getName());
         apiUserCustomer.setSurname(entity.getSurname());
         apiUserCustomer.setType(entity.getType());
+        apiUserCustomer.setStatus(entity.getStatus());
 
         return apiUserCustomer;
     }

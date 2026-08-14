@@ -840,6 +840,10 @@ public class CompanyService extends BaseService {
 		userCustomer.setFarmerCompanyInternalId(apiUserCustomer.getFarmerCompanyInternalId());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
+		// A new user customer joins the organization as ACTIVE unless stated otherwise
+		userCustomer.setStatus(apiUserCustomer.getStatus() != null
+				? apiUserCustomer.getStatus()
+				: UserCustomerStatus.ACTIVE);
 		userCustomer.setEmail(apiUserCustomer.getEmail());
 		userCustomer.setName(apiUserCustomer.getName());
 		userCustomer.setSurname(apiUserCustomer.getSurname());
@@ -999,6 +1003,7 @@ public class CompanyService extends BaseService {
 		userCustomer.setHasSmartphone(apiUserCustomer.getHasSmartphone());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
+		updateUserCustomerStatus(userCustomer, apiUserCustomer.getStatus());
 
 		if (userCustomer.getBank() == null) {
 			userCustomer.setBank(new BankInformation());
@@ -1164,6 +1169,29 @@ public class CompanyService extends BaseService {
 		}
 
 		return companyApiTools.toApiUserCustomer(userCustomer, user.getUserId(), language);
+	}
+
+	/**
+	 * Applies a status change, validating that the transition is allowed.
+	 * A null incoming status leaves the current status untouched, so that clients
+	 * that don't manage the status can still update the rest of the user customer.
+	 */
+	private void updateUserCustomerStatus(UserCustomer userCustomer, UserCustomerStatus newStatus) throws ApiException {
+
+		if (newStatus == null) {
+			return;
+		}
+
+		UserCustomerStatus currentStatus = userCustomer.getStatus() != null
+				? userCustomer.getStatus()
+				: UserCustomerStatus.ACTIVE;
+
+		if (!currentStatus.canTransitionTo(newStatus)) {
+			throw new ApiException(ApiStatus.INVALID_REQUEST,
+					"Invalid status transition: " + currentStatus + " -> " + newStatus);
+		}
+
+		userCustomer.setStatus(newStatus);
 	}
 
 	private void updateUserCustomerProductTypes(ApiUserCustomer apiUserCustomer, UserCustomer userCustomer) throws ApiException {
@@ -1662,6 +1690,15 @@ public class CompanyService extends BaseService {
 
 		condition = condition.and(userCustomer.getCompany().getId()).eq(companyId);
 		condition = condition.and(userCustomer.getType()).eq(type);
+
+		// Status filter. Selectors that pick a producer for a transaction ask for
+		// onlyAvailableForTransactions; the administrative list omits both parameters
+		// so that suspended and retired user customers remain manageable.
+		if (Boolean.TRUE.equals(request.getOnlyAvailableForTransactions())) {
+			condition = condition.and(userCustomer.getStatus()).eq(UserCustomerStatus.ACTIVE);
+		} else if (request.getStatus() != null) {
+			condition = condition.and(userCustomer.getStatus()).eq(request.getStatus());
+		}
 
 		if (request.getQuery() != null && !request.getQuery().trim().isEmpty()) {
 			String[] words = request.getQuery().trim().split("\\s+");
