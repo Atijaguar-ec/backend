@@ -967,6 +967,9 @@ public class CompanyService extends BaseService {
 				plot.setNumberOfPlants(apiPlot.getNumberOfPlants());
 				plot.setUnit(apiPlot.getUnit());
 				plot.setSize(apiPlot.getSize());
+				plot.setProductionEstimate(apiPlot.getProductionEstimate());
+				plot.setCertificationType(apiPlot.getCertificationType());
+				plot.setCocoaVariety(apiPlot.getCocoaVariety());
 				plot.setOrganicStartOfTransition(apiPlot.getOrganicStartOfTransition());
 				plot.setFarmer(userCustomer);
 				plot.setLastUpdated(new Date());
@@ -1133,6 +1136,9 @@ public class CompanyService extends BaseService {
 			plot.setPlotName(apiPlot.getPlotName());
 			plot.setNumberOfPlants(apiPlot.getNumberOfPlants());
 			plot.setSize(apiPlot.getSize());
+			plot.setProductionEstimate(apiPlot.getProductionEstimate());
+			plot.setCertificationType(apiPlot.getCertificationType());
+			plot.setCocoaVariety(apiPlot.getCocoaVariety());
 			plot.setLastUpdated(new Date());
 			plot.setOrganicStartOfTransition(apiPlot.getOrganicStartOfTransition());
 			plot.setUnit(apiPlot.getUnit());

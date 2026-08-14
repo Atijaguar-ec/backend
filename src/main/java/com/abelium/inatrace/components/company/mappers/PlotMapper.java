@@ -26,6 +26,9 @@ public class PlotMapper {
 		apiPlot.setUnit(plot.getUnit());
 		apiPlot.setSize(plot.getSize());
 		apiPlot.setGeoId(plot.getGeoId());
+		apiPlot.setProductionEstimate(plot.getProductionEstimate());
+		apiPlot.setCertificationType(plot.getCertificationType());
+		apiPlot.setCocoaVariety(plot.getCocoaVariety());
 		apiPlot.setOrganicStartOfTransition(plot.getOrganicStartOfTransition());
 		apiPlot.setCoordinates(
 				plot.getCoordinates().stream().map(PlotMapper::toApiPlotCoordinate).collect(Collectors.toList()));

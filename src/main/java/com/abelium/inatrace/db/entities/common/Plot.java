@@ -1,9 +1,13 @@
 package com.abelium.inatrace.db.entities.common;
 
+import com.abelium.inatrace.api.types.Lengths;
 import com.abelium.inatrace.db.base.BaseEntity;
 import com.abelium.inatrace.db.entities.codebook.ProductType;
+import com.abelium.inatrace.types.CocoaVariety;
+import com.abelium.inatrace.types.PlotCertificationType;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -31,6 +35,25 @@ public class Plot extends BaseEntity {
 
 	@Column
 	private String geoId;
+
+	/**
+	 * Production estimate for the plot. A plain @Column on a BigDecimal maps to
+	 * numeric(38,2) here, matching the two decimal places asked for.
+	 */
+	@Column
+	private BigDecimal productionEstimate;
+
+	/**
+	 * Certification scheme of the plot. Lengths.DEFAULT rather than Lengths.ENUM:
+	 * the longest constant is 49 characters and would be truncated by a 40 char column.
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(length = Lengths.DEFAULT)
+	private PlotCertificationType certificationType;
+
+	@Enumerated(EnumType.STRING)
+	@Column(length = Lengths.ENUM)
+	private CocoaVariety cocoaVariety;
 
 	@Column
 	private Date organicStartOfTransition;
@@ -93,6 +116,30 @@ public class Plot extends BaseEntity {
 
 	public void setGeoId(String geoId) {
 		this.geoId = geoId;
+	}
+
+	public BigDecimal getProductionEstimate() {
+		return productionEstimate;
+	}
+
+	public void setProductionEstimate(BigDecimal productionEstimate) {
+		this.productionEstimate = productionEstimate;
+	}
+
+	public PlotCertificationType getCertificationType() {
+		return certificationType;
+	}
+
+	public void setCertificationType(PlotCertificationType certificationType) {
+		this.certificationType = certificationType;
+	}
+
+	public CocoaVariety getCocoaVariety() {
+		return cocoaVariety;
+	}
+
+	public void setCocoaVariety(CocoaVariety cocoaVariety) {
+		this.cocoaVariety = cocoaVariety;
 	}
 
 	public Date getOrganicStartOfTransition() {

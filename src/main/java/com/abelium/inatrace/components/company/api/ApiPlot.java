@@ -2,9 +2,12 @@ package com.abelium.inatrace.components.company.api;
 
 import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.components.product.api.ApiProductType;
+import com.abelium.inatrace.types.CocoaVariety;
+import com.abelium.inatrace.types.PlotCertificationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.validation.annotation.Validated;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -28,6 +31,15 @@ public class ApiPlot extends ApiBaseEntity {
 
 	@Schema(description = "The Geoid of the plot")
 	private String geoId;
+
+	@Schema(description = "Production estimate for the plot (two decimal places)")
+	private BigDecimal productionEstimate;
+
+	@Schema(description = "Certification scheme of the plot")
+	private PlotCertificationType certificationType;
+
+	@Schema(description = "Cocoa variety grown on the plot (ORGANICO = 1, CCN51 = 2)")
+	private CocoaVariety cocoaVariety;
 
 	@Schema(description = "Date of transitioning into organic production")
 	private Date organicStartOfTransition;
@@ -87,6 +99,30 @@ public class ApiPlot extends ApiBaseEntity {
 
 	public void setGeoId(String geoId) {
 		this.geoId = geoId;
+	}
+
+	public BigDecimal getProductionEstimate() {
+		return productionEstimate;
+	}
+
+	public void setProductionEstimate(BigDecimal productionEstimate) {
+		this.productionEstimate = productionEstimate;
+	}
+
+	public PlotCertificationType getCertificationType() {
+		return certificationType;
+	}
+
+	public void setCertificationType(PlotCertificationType certificationType) {
+		this.certificationType = certificationType;
+	}
+
+	public CocoaVariety getCocoaVariety() {
+		return cocoaVariety;
+	}
+
+	public void setCocoaVariety(CocoaVariety cocoaVariety) {
+		this.cocoaVariety = cocoaVariety;
 	}
 
 	public Date getOrganicStartOfTransition() {
