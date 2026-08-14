@@ -145,6 +145,26 @@ Estos campos fueron portados desde `staging` (MySQL) y adaptados a PostgreSQL.
 | `personType` | `PersonType` enum | `NATURAL` / `LEGAL` |
 | `companyName` | `String` | Razón social (persona jurídica) |
 | `legalRepresentative` | `String` | Representante legal |
+| `status` | `UserCustomerStatus` enum | `ACTIVE`/`SUSPENDED`/`RETIRED`. **Nullable a propósito** (ver §12); nulo == `ACTIVE` |
+| `statusReason` | `String(255)` | Motivo del último *cambio* de estado |
+| `statusUpdateTimestamp` | `Instant` | Cuándo cambió el estado |
+| `statusUpdatedBy` | `User` (FK) | Quién lo cambió |
+
+Reglas del estado (2026-08-14):
+- Transiciones válidas: `ACTIVE`↔`SUSPENDED`, ambos → `RETIRED`, y `RETIRED` → `ACTIVE`
+  (el agricultor puede reincorporarse). **No** `RETIRED` → `SUSPENDED`.
+  Validado en `UserCustomerStatus.canTransitionTo()`.
+- La auditoría registra **cambios**, no altas: crear un agricultor `ACTIVE` deja
+  los tres campos de auditoría nulos. Volver a `ACTIVE` **limpia** `statusReason`.
+- `status` nulo entrante en un update **no toca** el estado actual (clientes que
+  no gestionan el campo pueden seguir editando el resto).
+
+### `Plot`
+| Campo | Tipo | Propósito |
+|---|---|---|
+| `productionEstimate` | `BigDecimal` → `numeric(38,2)` | Estimación de producción (2 decimales) |
+| `certificationType` | `PlotCertificationType` enum | Catálogo cerrado de 4 valores. Usa `Lengths.DEFAULT`, **no** `Lengths.ENUM` (ver §13) |
+| `cocoaVariety` | `CocoaVariety` enum | `ORGANICO` / `CCN51` |
 
 ### Tablas Nuevas: `CertificationType` + `CertificationTypeTranslation`
 Catálogo de certificaciones orgánicas y sellos ambientales con soporte i18n.
@@ -371,6 +391,14 @@ Antes de hacer commit de cualquier cambio en el backend, verificar:
 - [ ] ¿Se actualizaron los Mappers correspondientes?
 - [ ] ¿Se actualizó este archivo `agent-context.md` si se agregaron campos/tablas?
 - [ ] ¿El proyecto compila con `mvn clean compile`?
+- [ ] **¿Toda columna nueva sobre una tabla con datos es `nullable`?** (§12 — una
+      columna `NOT NULL` falla en silencio y la app arranca sin ella)
+- [ ] Si la columna es nullable pero el dominio tiene un valor por defecto,
+      ¿se normaliza el nulo **tanto en el getter como en la query SQL**? (§12.3)
+- [ ] Si se agregaron claves i18n, ¿los acentos van como `\uXXXX`? (§13 — los
+      `.properties` son ISO-8859-1)
+- [ ] Tras desplegar: ¿el log **no** tiene `GenerationTarget encountered exception`
+      y la columna **existe** en `information_schema.columns`? (§12.2)
 
 ---
 
@@ -522,3 +550,124 @@ como fallo del despliegue, pero **no es un problema del código**. Antes de
 culpar a un cambio, revisá si hubo `Resuming build ... after Jenkins restart`
 en el log.
 
+
+---
+
+## 12. Migraciones de esquema: `hbm2ddl` gana la carrera a Flyway
+
+> Extraído en vivo el 2026-08-14 tras un **500 en producción-staging de
+> UNOCACE**. Documentado porque el modo de fallo es silencioso: la aplicación
+> arranca sana y el error recién aparece cuando un usuario entra a la pantalla.
+
+### 12.1 La trampa
+
+`application.properties` tiene **dos mecanismos de esquema activos a la vez**:
+
+```properties
+spring.jpa.properties.hibernate.hbm2ddl.auto = update   # línea 60
+spring.flyway.locations = com.abelium.inatrace.db.migrations, ...  # línea 71
+```
+
+El Flyway "custom" de este proyecto (`JpaMigrationStrategy`) recibe un
+`EntityManagerFactory` **ya construido**, y construirlo dispara primero el
+`hbm2ddl.auto=update` de Hibernate. O sea: **Hibernate intenta reconciliar el
+esquema desde el mapeo de la entidad ANTES de que cualquier clase
+`JpaMigration` llegue a ejecutarse.**
+
+Consecuencia concreta, verificada en vivo: se agregó
+
+```java
+@Column(length = Lengths.ENUM, nullable = false)   // ❌
+private UserCustomerStatus status = UserCustomerStatus.ACTIVE;
+```
+
+Hibernate generó `alter table usercustomer add column status varchar(40) not null`,
+Postgres lo **rechazó** porque la tabla ya tenía 979 filas (no se puede agregar
+`NOT NULL` sin default a una tabla poblada), Hibernate **solo lo registró como
+`WARN` y siguió arrancando**, y la columna nunca se creó. La app quedó healthy;
+el `500` recién apareció al abrir la pantalla de Agricultores:
+
+```
+ERROR: column uc1_0.status does not exist
+```
+
+### 12.2 Reglas
+
+1. **Toda columna nueva sobre una tabla con datos va `nullable`.** Sin
+   excepciones. Si conceptualmente no admite nulos, normalizá el nulo en el
+   getter de la entidad y en las queries (ver 12.3), no en el DDL.
+2. **Un `WARN` de `GenerationTarget encountered exception` en el arranque es un
+   fallo de esquema**, no ruido. Verificalo así tras cualquier despliegue que
+   agregue columnas:
+   ```bash
+   docker logs <contenedor-be> 2>&1 | grep -i "GenerationTarget encountered exception"
+   ```
+3. **No confíes en que tu `JpaMigration` corrió.** Verificá contra la BD real:
+   ```sql
+   SELECT column_name FROM information_schema.columns WHERE table_name = 'x';
+   ```
+
+### 12.3 El nulo tiene que normalizarse en DOS lugares, no en uno
+
+Si una columna queda nullable pero el dominio dice "nulo == valor por defecto",
+hay **dos caminos independientes** que leen ese dato y ambos necesitan la regla:
+
+- **En memoria** — el getter de la entidad:
+  ```java
+  public UserCustomerStatus getStatus() {
+      return status != null ? status : UserCustomerStatus.ACTIVE;
+  }
+  ```
+- **En SQL** — Torpedo consulta la **columna cruda**; el default del getter no
+  llega ahí. Ver `CompanyService.userCustomerStatusCondition()`:
+  ```java
+  equalsWanted.or(Torpedo.condition(userCustomer.getStatus()).isNull())
+  ```
+
+Olvidar el segundo hace que **todos los registros previos a la feature
+desaparezcan en silencio** de cualquier pantalla que filtre por ese campo.
+
+### 12.4 El resolver custom de Flyway puede no estar corriendo nunca
+
+En UNOCACE staging, `schema_version` tiene **solo la fila `<< Flyway Baseline >>`**:
+ninguna clase `JpaMigration` se ejecutó jamás ahí, ni siquiera las de julio. Las
+columnas existen únicamente porque son nullable y las creó `hbm2ddl`.
+
+**Implicación práctica:** escribí las migraciones `JpaMigration` de todos modos
+(son el registro de intención y sirven en instalaciones limpias), pero **el
+diseño no puede depender de que corran**. Por eso la regla 12.2.1 y la
+normalización de 12.3 no son redundancia: son el mecanismo real.
+
+---
+
+## 13. Encoding de los bundles i18n (`.properties`)
+
+> Extraído el 2026-08-14. Casi se despliega texto con mojibake.
+
+`messages_{en,es,de,rw}.properties` son **ISO-8859-1**, y
+`ResourceBundleMessageSource` (ver `CustomLanguageConfiguration`) los lee como
+tal — no define `setDefaultEncoding`.
+
+**Escribir acentos como UTF-8 directo produce mojibake** (`Estimación` →
+`EstimaciÃ³n`). Los acentos van como escapes `\uXXXX`, que es el estilo de las
+claves preexistentes:
+
+```properties
+export.plots.column.productionEstimate.label=Estimación de producción
+```
+
+Verificación (emula el lector de `java.util.Properties`):
+
+```bash
+python3 -c "
+props={}
+for line in open('src/main/resources/i18n/messages_es.properties', encoding='iso-8859-1'):
+    if '=' in line and not line.startswith('#'):
+        k,v=line.rstrip('\n').split('=',1)
+        props[k]=v.encode('latin-1','backslashreplace').decode('unicode_escape')
+print(props['export.plots.column.productionEstimate.label'])"
+```
+
+Cuidado adicional: un enum cuyo nombre supere **40 caracteres** no entra en
+`Lengths.ENUM`. `PlotCertificationType.ORGANICO_UE_NOP_BIOSUISSE_NATURLAND_FAIRTRADE_SPP`
+tiene 49 y usa `Lengths.DEFAULT` — si se declara con `Lengths.ENUM` se trunca.
