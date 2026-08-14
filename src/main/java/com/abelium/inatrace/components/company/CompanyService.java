@@ -1192,9 +1192,8 @@ public class CompanyService extends BaseService {
 			return;
 		}
 
-		UserCustomerStatus currentStatus = userCustomer.getStatus() != null
-				? userCustomer.getStatus()
-				: UserCustomerStatus.ACTIVE;
+		// UserCustomer.getStatus() already normalizes a null column to ACTIVE
+		UserCustomerStatus currentStatus = userCustomer.getStatus();
 
 		// Same status: allow correcting the reason text, but leave the audit stamp of the
 		// actual change alone - editing a typo is not a new status change.
@@ -1707,6 +1706,25 @@ public class CompanyService extends BaseService {
 		company.setStatus(CompanyStatus.DEACTIVATED);
 	}
 
+	/**
+	 * Status filter for the UserCustomer listing query. The status column is nullable
+	 * at the DB level (see UserCustomer.status), so a filter for ACTIVE must also match
+	 * a null column - otherwise every user customer that predates this feature, or that
+	 * was created while the column was mid-rollout, would silently vanish from every
+	 * screen that lists or offers producers. Filters for SUSPENDED/RETIRED don't need
+	 * that allowance: a null column is never anything but active.
+	 */
+	private OnGoingLogicalCondition userCustomerStatusCondition(UserCustomer userCustomer, UserCustomerStatus wanted) {
+
+		OnGoingLogicalCondition equalsWanted = Torpedo.condition(userCustomer.getStatus()).eq(wanted);
+
+		if (wanted != UserCustomerStatus.ACTIVE) {
+			return equalsWanted;
+		}
+
+		return equalsWanted.or(Torpedo.condition(userCustomer.getStatus()).isNull());
+	}
+
 	private UserCustomer userCustomerListQueryObject(Long companyId, UserCustomerType type, ApiListFarmersRequest request) {
 		UserCustomer userCustomer = Torpedo.from(UserCustomer.class);
 
@@ -1719,9 +1737,9 @@ public class CompanyService extends BaseService {
 		// onlyAvailableForTransactions; the administrative list omits both parameters
 		// so that suspended and retired user customers remain manageable.
 		if (Boolean.TRUE.equals(request.getOnlyAvailableForTransactions())) {
-			condition = condition.and(userCustomer.getStatus()).eq(UserCustomerStatus.ACTIVE);
+			condition = condition.and(userCustomerStatusCondition(userCustomer, UserCustomerStatus.ACTIVE));
 		} else if (request.getStatus() != null) {
-			condition = condition.and(userCustomer.getStatus()).eq(request.getStatus());
+			condition = condition.and(userCustomerStatusCondition(userCustomer, request.getStatus()));
 		}
 
 		if (request.getQuery() != null && !request.getQuery().trim().isEmpty()) {

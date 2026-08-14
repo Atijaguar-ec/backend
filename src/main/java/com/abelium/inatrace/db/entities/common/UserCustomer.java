@@ -51,10 +51,20 @@ public class UserCustomer extends BaseEntity {
 	private UserCustomerType type;
 
 	/**
-	 * status within the organization (active, suspended, retired)
+	 * status within the organization (active, suspended, retired).
+	 *
+	 * Deliberately nullable at the DB level, even though every row is conceptually
+	 * ACTIVE or something else: Hibernate's own hbm2ddl.auto=update runs BEFORE our
+	 * Flyway-based JpaMigration classes (it bootstraps as part of building the
+	 * EntityManagerFactory that the migration step depends on), so a NOT NULL column
+	 * added here would race the backfill and fail outright against a table that
+	 * already has rows - confirmed live on the UNOCACE staging DB. getStatus() below
+	 * treats a null column as ACTIVE, and userCustomerListQueryObject() applies the
+	 * same rule to the SQL filter, so the DB-level nullability never leaks out as a
+	 * behavioral difference.
 	 */
 	@Enumerated(EnumType.STRING)
-	@Column(length = Lengths.ENUM, nullable = false)
+	@Column(length = Lengths.ENUM)
 	private UserCustomerStatus status = UserCustomerStatus.ACTIVE;
 
 	/**
@@ -162,7 +172,7 @@ public class UserCustomer extends BaseEntity {
 	}
 
 	public UserCustomerStatus getStatus() {
-		return status;
+		return status != null ? status : UserCustomerStatus.ACTIVE;
 	}
 
 	public void setStatus(UserCustomerStatus status) {

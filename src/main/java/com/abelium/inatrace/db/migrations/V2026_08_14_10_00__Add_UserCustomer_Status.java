@@ -7,9 +7,18 @@ import org.springframework.core.env.Environment;
 /**
  * Adds the status column to user_customer (ACTIVE / SUSPENDED / RETIRED).
  *
- * Every existing user customer predates the feature and is, by definition, part of the
- * organization, so they are backfilled as ACTIVE. The column is created NOT NULL with a
- * default so that the Hibernate mapping (nullable = false) validates on startup.
+ * The column is deliberately left nullable, matching UserCustomer.status: this JpaMigration
+ * runs through Flyway, and Flyway's JpaMigrationStrategy is constructed with an already-built
+ * EntityManagerFactory - meaning Hibernate's own hbm2ddl.auto=update (see application.properties)
+ * bootstraps and tries to reconcile the schema from the entity mapping BEFORE this class ever
+ * gets a chance to run. A NOT NULL column loses that race against a table that already has
+ * rows: Postgres refuses "ADD COLUMN ... NOT NULL" without a default when rows exist, Hibernate
+ * only logs a warning and carries on, and the column silently never gets created. Confirmed
+ * live against the UNOCACE staging DB. Every existing user customer predates this feature and
+ * is, by definition, part of the organization, so this backfills them as ACTIVE anyway - as
+ * does UserCustomer.getStatus() and the list-query status filter, for the case where this
+ * migration itself doesn't run either (its custom Flyway resolver has never actually executed
+ * on any environment checked so far: schema_version shows only the baseline row).
  */
 public class V2026_08_14_10_00__Add_UserCustomer_Status implements JpaMigration {
 
@@ -31,12 +40,16 @@ public class V2026_08_14_10_00__Add_UserCustomer_Status implements JpaMigration 
         }
 
         if (!columnExists(em, tableName, "status")) {
-            // VARCHAR(40) matches Lengths.ENUM used by the entity mapping
+            // VARCHAR(40) matches Lengths.ENUM used by the entity mapping. No NOT NULL here -
+            // see the class-level note on why that fails against a populated table.
             em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN status VARCHAR(40)").executeUpdate();
-            em.createNativeQuery("UPDATE " + tableName + " SET status = 'ACTIVE' WHERE status IS NULL").executeUpdate();
             em.createNativeQuery("ALTER TABLE " + tableName + " ALTER COLUMN status SET DEFAULT 'ACTIVE'").executeUpdate();
-            em.createNativeQuery("ALTER TABLE " + tableName + " ALTER COLUMN status SET NOT NULL").executeUpdate();
         }
+
+        // Hygiene backfill, independent of whether we just added the column above: leaves
+        // no NULL status behind for anyone querying the DB directly, even though the app
+        // itself already treats a null column as ACTIVE everywhere it matters.
+        em.createNativeQuery("UPDATE " + tableName + " SET status = 'ACTIVE' WHERE status IS NULL").executeUpdate();
 
         // Audit of the last status change. Left NULL for pre-existing rows: nobody
         // changed their status, they were backfilled as ACTIVE by this migration.
