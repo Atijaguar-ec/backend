@@ -414,6 +414,12 @@ public class CompanyApiTools {
 		apiUserCustomer.setSurname(userCustomer.getSurname());
 		apiUserCustomer.setType(userCustomer.getType());
 		apiUserCustomer.setStatus(userCustomer.getStatus());
+		apiUserCustomer.setStatusReason(userCustomer.getStatusReason());
+		apiUserCustomer.setStatusUpdateTimestamp(userCustomer.getStatusUpdateTimestamp());
+		if (userCustomer.getStatusUpdatedBy() != null) {
+			apiUserCustomer.setStatusUpdatedBy(
+					userCustomer.getStatusUpdatedBy().getName() + " " + userCustomer.getStatusUpdatedBy().getSurname());
+		}
 		apiUserCustomer.setPhone(userCustomer.getPhone());
 		apiUserCustomer.setEmail(userCustomer.getEmail());
 		apiUserCustomer.setGender(userCustomer.getGender());

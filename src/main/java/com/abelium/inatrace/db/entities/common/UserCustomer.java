@@ -10,6 +10,7 @@ import com.abelium.inatrace.types.UserCustomerStatus;
 import com.abelium.inatrace.types.UserCustomerType;
 import jakarta.persistence.*;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -55,6 +56,25 @@ public class UserCustomer extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(length = Lengths.ENUM, nullable = false)
 	private UserCustomerStatus status = UserCustomerStatus.ACTIVE;
+
+	/**
+	 * reason given for the last status change (why the farmer was suspended or retired)
+	 */
+	@Column(length = Lengths.DEFAULT)
+	private String statusReason;
+
+	/**
+	 * when the status was last changed
+	 */
+	@Column
+	private Instant statusUpdateTimestamp;
+
+	/**
+	 * user that performed the last status change
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "statusupdatedby_id")
+	private User statusUpdatedBy;
 
 	/**
 	 * name
@@ -147,6 +167,30 @@ public class UserCustomer extends BaseEntity {
 
 	public void setStatus(UserCustomerStatus status) {
 		this.status = status;
+	}
+
+	public String getStatusReason() {
+		return statusReason;
+	}
+
+	public void setStatusReason(String statusReason) {
+		this.statusReason = statusReason;
+	}
+
+	public Instant getStatusUpdateTimestamp() {
+		return statusUpdateTimestamp;
+	}
+
+	public void setStatusUpdateTimestamp(Instant statusUpdateTimestamp) {
+		this.statusUpdateTimestamp = statusUpdateTimestamp;
+	}
+
+	public User getStatusUpdatedBy() {
+		return statusUpdatedBy;
+	}
+
+	public void setStatusUpdatedBy(User statusUpdatedBy) {
+		this.statusUpdatedBy = statusUpdatedBy;
 	}
 
 	public Company getCompany() {

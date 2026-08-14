@@ -55,6 +55,7 @@ import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 import org.torpedoquery.jakarta.jpa.Function;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -844,6 +845,10 @@ public class CompanyService extends BaseService {
 		userCustomer.setStatus(apiUserCustomer.getStatus() != null
 				? apiUserCustomer.getStatus()
 				: UserCustomerStatus.ACTIVE);
+		userCustomer.setStatusReason(
+				userCustomer.getStatus() == UserCustomerStatus.ACTIVE ? null : apiUserCustomer.getStatusReason());
+		userCustomer.setStatusUpdateTimestamp(Instant.now());
+		userCustomer.setStatusUpdatedBy(userQueries.fetchUser(user.getUserId()));
 		userCustomer.setEmail(apiUserCustomer.getEmail());
 		userCustomer.setName(apiUserCustomer.getName());
 		userCustomer.setSurname(apiUserCustomer.getSurname());
@@ -1003,7 +1008,7 @@ public class CompanyService extends BaseService {
 		userCustomer.setHasSmartphone(apiUserCustomer.getHasSmartphone());
 		userCustomer.setGender(apiUserCustomer.getGender());
 		userCustomer.setType(apiUserCustomer.getType());
-		updateUserCustomerStatus(userCustomer, apiUserCustomer.getStatus());
+		updateUserCustomerStatus(userCustomer, apiUserCustomer.getStatus(), apiUserCustomer.getStatusReason(), user);
 
 		if (userCustomer.getBank() == null) {
 			userCustomer.setBank(new BankInformation());
@@ -1172,11 +1177,16 @@ public class CompanyService extends BaseService {
 	}
 
 	/**
-	 * Applies a status change, validating that the transition is allowed.
-	 * A null incoming status leaves the current status untouched, so that clients
-	 * that don't manage the status can still update the rest of the user customer.
+	 * Applies a status change, validating that the transition is allowed and stamping
+	 * who changed it, when and why. A null incoming status leaves the current status
+	 * untouched, so that clients that don't manage the status can still update the rest
+	 * of the user customer. The audit fields are only stamped when the status actually
+	 * changes, so an unrelated edit doesn't rewrite the history of the last change.
 	 */
-	private void updateUserCustomerStatus(UserCustomer userCustomer, UserCustomerStatus newStatus) throws ApiException {
+	private void updateUserCustomerStatus(UserCustomer userCustomer,
+	                                      UserCustomerStatus newStatus,
+	                                      String statusReason,
+	                                      CustomUserDetails user) throws ApiException {
 
 		if (newStatus == null) {
 			return;
@@ -1186,12 +1196,26 @@ public class CompanyService extends BaseService {
 				? userCustomer.getStatus()
 				: UserCustomerStatus.ACTIVE;
 
+		// Same status: allow correcting the reason text, but leave the audit stamp of the
+		// actual change alone - editing a typo is not a new status change.
+		if (currentStatus == newStatus) {
+			if (currentStatus != UserCustomerStatus.ACTIVE) {
+				userCustomer.setStatusReason(statusReason);
+			}
+			return;
+		}
+
 		if (!currentStatus.canTransitionTo(newStatus)) {
 			throw new ApiException(ApiStatus.INVALID_REQUEST,
 					"Invalid status transition: " + currentStatus + " -> " + newStatus);
 		}
 
 		userCustomer.setStatus(newStatus);
+		// The reason explains why the user customer is not active, so going back to
+		// ACTIVE clears it instead of carrying over a stale suspension note.
+		userCustomer.setStatusReason(newStatus == UserCustomerStatus.ACTIVE ? null : statusReason);
+		userCustomer.setStatusUpdateTimestamp(Instant.now());
+		userCustomer.setStatusUpdatedBy(userQueries.fetchUser(user.getUserId()));
 	}
 
 	private void updateUserCustomerProductTypes(ApiUserCustomer apiUserCustomer, UserCustomer userCustomer) throws ApiException {

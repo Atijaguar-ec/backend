@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.validation.annotation.Validated;
 
+import java.time.Instant;
 import java.util.List;
 
 @Validated
@@ -30,6 +31,16 @@ public class ApiUserCustomer extends ApiBaseEntity {
 
 	@Schema(description = "Status within the organization (ACTIVE, SUSPENDED, RETIRED)")
 	public UserCustomerStatus status;
+
+	@Schema(description = "Reason given for the last status change")
+	@Size(max = Lengths.DEFAULT)
+	public String statusReason;
+
+	@Schema(description = "When the status was last changed (read-only)")
+	public Instant statusUpdateTimestamp;
+
+	@Schema(description = "Name of the user that performed the last status change (read-only)")
+	public String statusUpdatedBy;
 
 	@Schema(description = "Name")
 	@Size(max = Lengths.NAME)
@@ -110,6 +121,30 @@ public class ApiUserCustomer extends ApiBaseEntity {
 
 	public void setStatus(UserCustomerStatus status) {
 		this.status = status;
+	}
+
+	public String getStatusReason() {
+		return statusReason;
+	}
+
+	public void setStatusReason(String statusReason) {
+		this.statusReason = statusReason;
+	}
+
+	public Instant getStatusUpdateTimestamp() {
+		return statusUpdateTimestamp;
+	}
+
+	public void setStatusUpdateTimestamp(Instant statusUpdateTimestamp) {
+		this.statusUpdateTimestamp = statusUpdateTimestamp;
+	}
+
+	public String getStatusUpdatedBy() {
+		return statusUpdatedBy;
+	}
+
+	public void setStatusUpdatedBy(String statusUpdatedBy) {
+		this.statusUpdatedBy = statusUpdatedBy;
 	}
 
 	public String getName() {

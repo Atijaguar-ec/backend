@@ -30,20 +30,38 @@ public class V2026_08_14_10_00__Add_UserCustomer_Status implements JpaMigration 
             return;
         }
 
-        Number columnCount = (Number) em.createNativeQuery(
-                "SELECT count(*) FROM information_schema.columns " +
-                "WHERE LOWER(table_name) = LOWER(:tableName) AND LOWER(column_name) = 'status'")
-                .setParameter("tableName", tableName)
-                .getSingleResult();
-
-        if (columnCount != null && columnCount.intValue() > 0) {
-            return;
+        if (!columnExists(em, tableName, "status")) {
+            // VARCHAR(40) matches Lengths.ENUM used by the entity mapping
+            em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN status VARCHAR(40)").executeUpdate();
+            em.createNativeQuery("UPDATE " + tableName + " SET status = 'ACTIVE' WHERE status IS NULL").executeUpdate();
+            em.createNativeQuery("ALTER TABLE " + tableName + " ALTER COLUMN status SET DEFAULT 'ACTIVE'").executeUpdate();
+            em.createNativeQuery("ALTER TABLE " + tableName + " ALTER COLUMN status SET NOT NULL").executeUpdate();
         }
 
-        // VARCHAR(40) matches Lengths.ENUM used by the entity mapping
-        em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN status VARCHAR(40)").executeUpdate();
-        em.createNativeQuery("UPDATE " + tableName + " SET status = 'ACTIVE' WHERE status IS NULL").executeUpdate();
-        em.createNativeQuery("ALTER TABLE " + tableName + " ALTER COLUMN status SET DEFAULT 'ACTIVE'").executeUpdate();
-        em.createNativeQuery("ALTER TABLE " + tableName + " ALTER COLUMN status SET NOT NULL").executeUpdate();
+        // Audit of the last status change. Left NULL for pre-existing rows: nobody
+        // changed their status, they were backfilled as ACTIVE by this migration.
+        if (!columnExists(em, tableName, "statusreason")) {
+            em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN statusreason VARCHAR(255)").executeUpdate();
+        }
+
+        if (!columnExists(em, tableName, "statusupdatetimestamp")) {
+            em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN statusupdatetimestamp TIMESTAMP WITH TIME ZONE").executeUpdate();
+        }
+
+        if (!columnExists(em, tableName, "statusupdatedby_id")) {
+            em.createNativeQuery("ALTER TABLE " + tableName + " ADD COLUMN statusupdatedby_id BIGINT").executeUpdate();
+        }
+    }
+
+    private boolean columnExists(EntityManager em, String tableName, String columnName) {
+
+        Number columnCount = (Number) em.createNativeQuery(
+                "SELECT count(*) FROM information_schema.columns " +
+                "WHERE LOWER(table_name) = LOWER(:tableName) AND LOWER(column_name) = :columnName")
+                .setParameter("tableName", tableName)
+                .setParameter("columnName", columnName)
+                .getSingleResult();
+
+        return columnCount != null && columnCount.intValue() > 0;
     }
 }
