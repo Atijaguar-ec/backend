@@ -180,6 +180,13 @@ Reglas del estado (2026-08-14):
 ### Tablas Nuevas: `CertificationType` + `CertificationTypeTranslation`
 Catálogo de certificaciones orgánicas y sellos ambientales con soporte i18n.
 
+### Tabla Nueva: `PlotDeforestationAnalysis`
+Resultado de los análisis de deforestación de Whisp por parcela (§14). Historial, no
+una fila por parcela: el expediente EUDR tiene que poder mostrar qué decía el análisis
+en la fecha de la compra. **Todas las columnas son nullable** (§12) y el índice
+`idx_plotdeforestationanalysis_plot` lo crea la migración
+`V2026_08_27_10_00__Add_Plot_Deforestation_Analysis`.
+
 ---
 
 ## 5. Lógica de Negocio Crítica
@@ -682,3 +689,97 @@ print(props['export.plots.column.productionEstimate.label'])"
 Cuidado adicional: un enum cuyo nombre supere **40 caracteres** no entra en
 `Lengths.ENUM`. `PlotCertificationType.ORGANICO_UE_NOP_BIOSUISSE_NATURLAND_FAIRTRADE_SPP`
 tiene 49 y usa `Lengths.DEFAULT` — si se declara con `Lengths.ENUM` se trunca.
+
+---
+
+## 14. Integraciones geoespaciales: AgStack + Whisp
+
+> Escrito el **2026-08-27** al conectar Whisp. Lo marcado como *verificado* se probó
+> contra la API pública real ese día, no contra la documentación.
+
+### 14.1 Cómo encajan las dos piezas
+
+```
+Parcela (coordenadas)
+   └─ AgStack  /register-field-boundary  →  geoId  (columna plot.geoid)
+        └─ Whisp  /submit/geo-ids  (o /submit/wkt)  →  token de job
+              └─ Whisp  /status/{token}  →  indicadores EUDR  →  plotdeforestationanalysis
+```
+
+AgStack **no** hace análisis de deforestación: solo registra el polígono y devuelve un
+identificador global (`geoId`). El análisis lo hace Whisp (Open Foris / Forest Data
+Partnership). Antes de 2026-08-27 el backend solo tenía la primera mitad.
+
+> **Ojo: ya existe una segunda vía hacia Whisp, en el frontend.** El popup de cada
+> parcela en el mapa (`shared/map/map.component.ts`) tiene un botón *Open in Whisp* que
+> abre un modal con un `<iframe>` a
+> `https://whisp.earthmap.org/?aoi=WHISP&boundary&geoId=...&layers={JRCForestMask,CocoaETH,OilPalmFDAP}&scripts={WhispSummary}&statisticsOpen=true`.
+> Es **verificación visual**: no guarda nada, no deja fecha ni evidencia, y sólo aparece
+> si la parcela tiene `geoId`. Ese botón es también el consumidor del endpoint
+> `POST /company/userCustomers/{id}/plots/{plotId}/updateGeoID` (botón *Refresh* cuando
+> falta el `geoId`). La integración por API de §14 no lo reemplaza: lo convierte en
+> resultado almacenado y auditable. Verificado el 2026-08-28 leyendo el frontend.
+
+### 14.2 Hechos verificados de la API de Whisp
+
+1. **La cabecera es `x-api-key`**, y la key la emite la app web de Whisp desde la página
+   de cuenta. Los tokens de Keycloak **no** sirven. Verificado: una key inválida
+   responde `401 {"code":"auth_invalid_api_key","message":"Invalid or expired API key."}`.
+2. **`/result-fields/lookup-datasets` devuelve CSV, no JSON**, a diferencia de todos los
+   demás endpoints (que responden el sobre `{code, message, cause, data}`). Verificado:
+   `HTTP 200`, 246 líneas, sin comillas. `WhispClientService.parseCsv()` lo convierte a
+   JSON para que el resto del backend solo vea JSON.
+3. **Un token es un job, no una parcela.** Un envío en lote devuelve un solo token con
+   todas las features dentro. Por eso hoy se envía **una parcela por job**: repartir las
+   features de un lote entre parcelas sin un `externalIdColumn` bien atado es una
+   fuente silenciosa de resultados cruzados.
+4. **Los resultados de Whisp son efímeros** (los snapshots de progreso expiran a los 10
+   minutos). Persistir el resultado no es una optimización: es la única copia.
+5. **Enviar por geo id exige además la cabecera `x-geoid-token`**, que es el token de
+   AgStack. De ahí que `WhispClientService` comparta `AgStackClientTokenManager`.
+6. El análisis es **asíncrono** (`analysisOptions.async = true`): submit encola y
+   devuelve token, `/status/{token}` responde `202` con `percent` mientras corre y `200`
+   con un `FeatureCollection` cuando termina.
+
+### 14.3 Reglas
+
+- **Nunca llamar a Whisp dentro de una transacción.** Un análisis tarda minutos. Por eso
+  `WhispAnalysisService` (orquestación, sin transacción) y `WhispPersistenceService`
+  (`@Transactional`) son **beans distintos**: el proxy de Spring no aplica
+  `@Transactional` a una llamada interna del mismo bean, y así la llamada HTTP queda
+  entre dos transacciones cortas en vez de mantener una conexión abierta.
+- **Los nombres de columna de Whisp cambian entre versiones** (`Ind_1_treecover` pasó a
+  `Ind_01_treecover`). `WhispAnalysisMapper` busca sin distinguir mayúsculas y cae a una
+  regla por substring; lo que no matchea **no se pierde**: el conjunto completo de
+  propiedades queda en `resultjson` y se devuelve al cliente en `results`.
+- **Una caída de Whisp no es un análisis fallido.** Al refrescar un job, si Whisp no
+  responde se deja el estado guardado como está y el motivo viaja solo en esa respuesta.
+  Marcarlo `FAILED` perdería un job que probablemente termine bien.
+- **Toda integración opcional se apaga sola si no está configurada.** `isEnabled()` en
+  ambos clientes; sin credenciales `generatePlotGeoID` devuelve `null` sin intentar el
+  login (antes hacía un login fallido por cada parcela guardada).
+- **Todo `.block()` lleva timeout.** Sin él, el hilo de la petición espera para siempre
+  cuando el servicio externo deja de responder y el pool de Hikari se drena.
+
+### 14.4 Configuración
+
+```properties
+INATrace.whisp.baseURL = https://whisp.openforis.org/api   # instancia pública
+INATrace.whisp.apiKey  =                                    # vacío = integración apagada
+```
+
+Variables de entorno (relaxed binding): `INATRACE_WHISP_APIKEY`, `INATRACE_WHISP_BASEURL`.
+En Fortaleza se pasan desde `ci/fortaleza/docker-compose.yml` (`WHISP_API_KEY`), en el
+workflow de develop desde el secret `DEV_WHISP_API_KEY`.
+
+Diagnóstico sin tocar la base de datos: `GET /whisp/status` dice si hay key, si el
+servicio responde y si se puede enviar por geo id o solo por polígono.
+
+### 14.5 Endpoints
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `POST` | `/whisp/plots/{plotId}/analysis` | Encola el análisis de la parcela |
+| `GET` | `/whisp/plots/{plotId}/analysis` | Último análisis; refresca desde Whisp si el job sigue corriendo |
+| `GET` | `/whisp/schemas` | Catálogo de datasets y campos (los "esquemas de análisis") |
+| `GET` | `/whisp/status` | Configuración y alcanzabilidad de la conexión |

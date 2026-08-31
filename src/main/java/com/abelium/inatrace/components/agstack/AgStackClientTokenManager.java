@@ -5,6 +5,9 @@ import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.agstack.api.ApiLoginErrorResponse;
 import com.abelium.inatrace.components.agstack.api.ApiLoginRequest;
 import com.abelium.inatrace.components.agstack.api.ApiLoginResponse;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,35 +18,84 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.Instant;
 
+/**
+ * Holds the AgStack asset registry access token, refreshing it when it ages out.
+ *
+ * The token is also what Whisp requires in its {@code x-geoid-token} header when an
+ * analysis is submitted by geo id, so this manager is shared by both integrations.
+ */
 @Service
 public class AgStackClientTokenManager {
+
     private static final long TOKEN_REFRESH_SECONDS = 3 * 3600;
 
-    @Value("${INATrace.agstack.email}")
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+
+    private final Logger logger = LoggerFactory.getLogger(AgStackClientTokenManager.class);
+
+    @Value("${INATrace.agstack.email:}")
     private String email;
 
-    @Value("${INATrace.agstack.password}")
+    @Value("${INATrace.agstack.password:}")
     private String password;
 
-    @Value("${INATrace.agstack.loginBaseURL}")
+    @Value("${INATrace.agstack.loginBaseURL:}")
     private String baseURL;
 
-    private String token;
-    private Instant lastUpdated;
+    private volatile String token;
 
+    private volatile Instant lastUpdated;
+
+    /**
+     * Whether the integration has credentials configured. Deployments without AgStack
+     * secrets must not attempt the call: the login would fail on every plot that is
+     * saved and turn a missing optional integration into a stream of errors in the log.
+     */
+    public boolean isEnabled() {
+        return StringUtils.isNotBlank(email) && StringUtils.isNotBlank(password) && StringUtils.isNotBlank(baseURL);
+    }
+
+    /**
+     * @return a valid access token, or {@code null} when the integration is disabled or
+     *         the login failed
+     */
     public String retrieveToken() {
-        Instant now = Instant.now();
 
-        if (shouldRefreshToken(now)) {
-            refreshToken(now);
+        if (!isEnabled()) {
+            return null;
         }
-        return token;
+
+        Instant now = Instant.now();
+        if (!shouldRefreshToken(now)) {
+            return token;
+        }
+
+        // Synchronized so that a burst of plot saves does not fire one login per request.
+        // The state is re-checked inside the lock: whoever waited here now finds a fresh
+        // token and returns it.
+        synchronized (this) {
+            Instant insideLock = Instant.now();
+            if (shouldRefreshToken(insideLock)) {
+                refreshToken(insideLock);
+            }
+            return token;
+        }
     }
 
     private void refreshToken(Instant instant) {
-        this.token = this.login(email, password).getAccessToken();
-        if (token != null) {
+
+        try {
+            ApiLoginResponse response = this.login(email, password);
+            // The API answers 200 with an empty body on some failure modes, so neither
+            // the response nor the token inside it can be dereferenced blindly.
+            if (response == null || StringUtils.isBlank(response.getAccessToken())) {
+                logger.error("AgStack login returned no access token; keeping the previous one");
+                return;
+            }
+            this.token = response.getAccessToken();
             this.lastUpdated = instant;
+        } catch (Exception e) {
+            logger.error("AgStack login failed: {}", e.getMessage());
         }
     }
 
@@ -55,6 +107,7 @@ public class AgStackClientTokenManager {
     }
 
     private ApiLoginResponse login(String username, String password) {
+
         ApiLoginRequest apiLoginRequest = new ApiLoginRequest();
         apiLoginRequest.setEmail(username);
         apiLoginRequest.setPassword(password);
@@ -79,6 +132,8 @@ public class AgStackClientTokenManager {
                                 .bodyToMono(ApiLoginErrorResponse.class)
                                 .flatMap(error -> Mono.error(new ApiException(ApiStatus.INVALID_REQUEST, error.getMessage()))))
                 .bodyToMono(ApiLoginResponse.class)
-                .block();
+                // Without this the calling request thread waits forever when the asset
+                // registry stops answering, and the connection pool drains.
+                .block(REQUEST_TIMEOUT);
     }
 }

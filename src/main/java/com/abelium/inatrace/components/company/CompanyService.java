@@ -1494,9 +1494,13 @@ public class CompanyService extends BaseService {
 			return null;
 		}
 
-		try {
-			fixCoordinatesForApiCall(coordinates);
+		// Deployments without AgStack credentials simply have no geo id; attempting the
+		// call would log one login failure per saved plot.
+		if (!agStackClientService.isEnabled()) {
+			return null;
+		}
 
+		try {
 			ApiRegisterFieldBoundaryResponse response = agStackClientService.registerFieldBoundaryResponse(coordinates);
 			if (!CollectionUtils.isEmpty(response.getMatchedGeoIDs())) {
                 // On errors API returns additional message
@@ -1518,25 +1522,6 @@ public class CompanyService extends BaseService {
 		}
 
 		return null;
-	}
-
-	/**
-	 * If first coordinate is not equal to last, add first coordinate to list, becouse of the geo API
-	 * @param coordinates - coordinates list
-	 */
-	private void fixCoordinatesForApiCall(List<PlotCoordinate> coordinates) {
-		if (coordinates != null && !coordinates.isEmpty() && coordinates.size() > 2) {
-			int lastIndex = coordinates.size() - 1;
-			if (coordinates.get(0).getLatitude() != null && coordinates.get(lastIndex).getLatitude() != null &&
-					coordinates.get(0).getLongitude() != null && coordinates.get(lastIndex).getLongitude() != null) {
-				if (!coordinates.get(0).getLatitude().equals(coordinates.get(lastIndex).getLatitude()) ||
-						!coordinates.get(0).getLongitude().equals(coordinates.get(lastIndex).getLongitude())
-				) {
-					// if coordinates not equal, add first as last
-					coordinates.add(coordinates.get(0));
-				}
-			}
-		}
 	}
 
 	public ApiPaginatedList<ApiCompanyCustomer> listCompanyCustomers(CustomUserDetails authUser, Long companyId, ApiListCustomersRequest request) throws ApiException {

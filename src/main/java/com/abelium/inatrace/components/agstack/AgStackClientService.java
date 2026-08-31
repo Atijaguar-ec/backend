@@ -6,6 +6,8 @@ import com.abelium.inatrace.components.agstack.api.ApiRegisterFieldBoundaryError
 import com.abelium.inatrace.components.agstack.api.ApiRegisterFieldBoundaryRequest;
 import com.abelium.inatrace.components.agstack.api.ApiRegisterFieldBoundaryResponse;
 import com.abelium.inatrace.db.entities.common.PlotCoordinate;
+import com.abelium.inatrace.tools.PlotGeometryTools;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,12 +15,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
 
 @Service
 public class AgStackClientService {
 
-	@Value("${INATrace.agstack.baseURL}")
+	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
+
+	@Value("${INATrace.agstack.baseURL:}")
 	private String baseURL;
 
     private final AgStackClientTokenManager tokenService;
@@ -27,22 +32,29 @@ public class AgStackClientService {
         this.tokenService = tokenService;
     }
 
+	/**
+	 * Whether a geo id can be requested at all: both the boundary endpoint and the login
+	 * credentials have to be configured.
+	 */
+	public boolean isEnabled() {
+		return StringUtils.isNotBlank(baseURL) && tokenService.isEnabled();
+	}
+
 	public ApiRegisterFieldBoundaryResponse registerFieldBoundaryResponse(List<PlotCoordinate> plotCoordinates) throws ApiException {
+
+		if (!isEnabled()) {
+			throw new ApiException(ApiStatus.INVALID_REQUEST, "AgStack integration is not configured");
+		}
+
+		String wkt = PlotGeometryTools.toPolygonWkt(plotCoordinates);
+		if (wkt == null) {
+			throw new ApiException(ApiStatus.INVALID_REQUEST,
+					"The plot does not have enough valid coordinates to form a polygon");
+		}
 
 		ApiRegisterFieldBoundaryRequest request = new ApiRegisterFieldBoundaryRequest();
 		request.setS2Index("8, 13");
-
-		StringBuilder stringBuilder = new StringBuilder();
-
-		for (int i = 0; i < plotCoordinates.size(); i++) {
-			stringBuilder
-					.append(plotCoordinates.get(i).getLongitude()).append(" ")
-					.append(plotCoordinates.get(i).getLatitude());
-			if (i < plotCoordinates.size() - 1) {
-				stringBuilder.append(", ");
-			}
-		}
-		request.setWkt("POLYGON ((" + stringBuilder + "))");
+		request.setWkt(wkt);
 
         String token = this.tokenService.retrieveToken();
         if (token == null) {
@@ -75,7 +87,8 @@ public class AgStackClientService {
                                 .flatMap(error -> Mono.error(new ApiException(ApiStatus.ERROR, error.getError())));
                     }
                 })
-				.block();
+				// Bounded: this call runs inside the transaction that saves the plot.
+				.block(REQUEST_TIMEOUT);
 	}
 
 }
