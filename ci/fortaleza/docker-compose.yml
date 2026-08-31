@@ -78,6 +78,14 @@ services:
       - INATRACE_REQUESTLOG_TOKEN=${REQUESTLOG_TOKEN}
       - INATRACE_EXCHANGERATE_APIKEY=${EXCHANGERATE_APIKEY}
       - INATRACE_EXCHANGERATE_ENABLED=${EXCHANGERATE_ENABLED:-true}
+      # Whisp (analisis de deforestacion). Sin API key la integracion queda
+      # apagada y /whisp/status lo reporta; con AgStack sin configurar las
+      # parcelas se envian como poligono en vez de por geo id.
+      - INATRACE_WHISP_APIKEY=${WHISP_API_KEY:-}
+      - INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-}
+      - INATRACE_AGSTACK_PASSWORD=${AGSTACK_PASSWORD:-}
+      - INATRACE_AGSTACK_BASEURL=${AGSTACK_BASE_URL:-}
+      - INATRACE_AGSTACK_LOGINBASEURL=${AGSTACK_LOGIN_BASE_URL:-}
       - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${ISSUER_URI}

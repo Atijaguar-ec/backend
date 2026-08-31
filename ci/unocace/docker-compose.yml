@@ -97,6 +97,15 @@ services:
       - INATRACE_FILESTORAGE_ROOT=/app/files
       - INATRACE_IMPORT_PATH=/app/import
       - INATRACE_DOCUMENTS_ROOT=/app/documents
+      # Whisp (analisis de deforestacion) y AgStack (geoId). Sin valor en el .env
+      # del servidor la integracion queda apagada y /whisp/status lo reporta.
+      # Este compose enumera variables una por una: agregarlas al .env no basta
+      # si no estan tambien aqui.
+      - INATRACE_WHISP_APIKEY=${WHISP_API_KEY:-}
+      - INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-}
+      - INATRACE_AGSTACK_PASSWORD=${AGSTACK_PASSWORD:-}
+      - INATRACE_AGSTACK_BASEURL=${AGSTACK_BASE_URL:-}
+      - INATRACE_AGSTACK_LOGINBASEURL=${AGSTACK_LOGIN_BASE_URL:-}
     ports:
       - "127.0.0.1:8082:8080"
     networks:
