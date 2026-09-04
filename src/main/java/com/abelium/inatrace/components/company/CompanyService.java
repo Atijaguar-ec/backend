@@ -90,7 +90,7 @@ public class CompanyService extends BaseService {
 
 		OnGoingLogicalCondition condition = Torpedo.condition();
 		if (StringUtils.isNotBlank(request.name)) {
-			condition = condition.and(cProxy.getName()).like().startsWith(request.name);
+			condition = condition.and(Torpedo.condition(TorpedoFunction.lower(cProxy.getName())).like().startsWith(request.name.toLowerCase()));
 		}
 		if (request.status != null) {
 			condition = condition.and(cProxy.getStatus()).eq(request.status);
@@ -124,7 +124,7 @@ public class CompanyService extends BaseService {
 		OnGoingLogicalCondition condition = Torpedo.condition();
 		condition = condition.and(cuProxy.getUser().getId()).eq(userId);
 		if (StringUtils.isNotBlank(request.name)) {
-			condition = condition.and(cProxy.getName()).like().startsWith(request.name);
+			condition = condition.and(Torpedo.condition(TorpedoFunction.lower(cProxy.getName())).like().startsWith(request.name.toLowerCase()));
 		}
 		if (request.status != null) {
 			condition = condition.and(cProxy.getStatus()).eq(request.status);
@@ -1595,7 +1595,7 @@ public class CompanyService extends BaseService {
 		condition = condition.and(companyCustomer.getCompany().getId()).eq(companyId);
 
 		if (request.getQuery() != null) {
-			condition = condition.and(companyCustomer.getName()).like().any(request.getQuery());
+			condition = condition.and(Torpedo.condition(TorpedoFunction.lower(companyCustomer.getName())).like().any(request.getQuery().toLowerCase()));
 		}
 
 		Torpedo.where(condition);

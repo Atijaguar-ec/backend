@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -142,8 +143,9 @@ public class CurrencyTypeService extends BaseService {
         }
 
         if (request.getQuery() != null) {
-            OnGoingLogicalCondition codeLikeQuery = Torpedo.condition(currencyTypeProxy.getCode()).like().any(request.getQuery());
-            OnGoingLogicalCondition labelLikeQuery = Torpedo.condition(currencyTypeProxy.getLabel()).like().any(request.getQuery());
+            String currencyQuery = request.getQuery().toLowerCase();
+            OnGoingLogicalCondition codeLikeQuery = Torpedo.condition(TorpedoFunction.lower(currencyTypeProxy.getCode())).like().any(currencyQuery);
+            OnGoingLogicalCondition labelLikeQuery = Torpedo.condition(TorpedoFunction.lower(currencyTypeProxy.getLabel())).like().any(currencyQuery);
             condition = condition.and(codeLikeQuery.or(labelLikeQuery));
         }
 

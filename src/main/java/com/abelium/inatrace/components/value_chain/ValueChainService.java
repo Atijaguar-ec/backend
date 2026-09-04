@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -83,7 +84,7 @@ public class ValueChainService extends BaseService {
 		OnGoingLogicalCondition condition = Torpedo.condition();
 
 		if (StringUtils.isNotBlank(request.getName())) {
-			condition = condition.and(valueChainProxy.getName()).like().any(request.getName());
+			condition = condition.and(Torpedo.condition(TorpedoFunction.lower(valueChainProxy.getName())).like().any(request.getName().toLowerCase()));
 		}
 		if (request.getValueChainStatus() != null) {
 			condition = condition.and(valueChainProxy.getValueChainStatus()).eq(request.getValueChainStatus());

@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 import java.util.EnumSet;
 
 @Lazy
@@ -31,7 +32,7 @@ public class CommonService extends BaseService {
         Country cProxy = Torpedo.from(Country.class);
 
         if (StringUtils.isNotBlank(request.queryString)) {
-            Torpedo.where(cProxy.getName()).like().startsWith(request.queryString);
+            Torpedo.where(TorpedoFunction.lower(cProxy.getName())).like().startsWith(request.queryString.toLowerCase());
         }
         if (request.sortBy.equals("name")) {
             QueryTools.orderBy(request.sort, cProxy.getName());

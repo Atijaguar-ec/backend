@@ -43,6 +43,7 @@ import org.springframework.stereotype.Service;
 import org.torpedoquery.jakarta.jpa.Function;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UsersResource;
@@ -332,18 +333,19 @@ public class UserService extends BaseService {
         
         OnGoingLogicalCondition condition = Torpedo.condition(); // .Torpedo conditions = new ArrayList<>();
         if (StringUtils.isNotBlank(request.query)) {
-        	OnGoingLogicalCondition queryCondition = 
-    				Torpedo.condition(uProxy.getName()).like().any(request.query).
-        				   or(uProxy.getSurname()).like().any(request.query).
-        				   or(uProxy.getEmail()).like().any(request.query);
+        	String query = request.query.toLowerCase();
+        	OnGoingLogicalCondition queryCondition =
+    				Torpedo.condition(TorpedoFunction.lower(uProxy.getName())).like().any(query).
+        				   or(Torpedo.condition(TorpedoFunction.lower(uProxy.getSurname())).like().any(query)).
+        				   or(Torpedo.condition(TorpedoFunction.lower(uProxy.getEmail())).like().any(query));
         	condition = condition.and(queryCondition);
         	
         } else {
         	if (StringUtils.isNotBlank(request.email)) {
-        		condition = condition.and(uProxy.getEmail()).like().any(request.email);
+        		condition = condition.and(Torpedo.condition(TorpedoFunction.lower(uProxy.getEmail())).like().any(request.email.toLowerCase()));
         	}
         	if (StringUtils.isNotBlank(request.surname)) {
-        		condition = condition.and(uProxy.getSurname()).like().any(request.surname);
+        		condition = condition.and(Torpedo.condition(TorpedoFunction.lower(uProxy.getSurname())).like().any(request.surname.toLowerCase()));
         	}
         }
         if (request.role != null) {
@@ -382,17 +384,18 @@ public class UserService extends BaseService {
 		condition = condition.and(statusCondition);
 
 		if (StringUtils.isNotBlank(request.query)) {
+			String query = request.query.toLowerCase();
 			OnGoingLogicalCondition queryCondition = Torpedo
-					.condition(uProxy.getName()).like().any(request.query)
-					.or(uProxy.getSurname()).like().any(request.query)
-					.or(uProxy.getEmail()).like().any(request.query);
+					.condition(TorpedoFunction.lower(uProxy.getName())).like().any(query)
+					.or(Torpedo.condition(TorpedoFunction.lower(uProxy.getSurname())).like().any(query))
+					.or(Torpedo.condition(TorpedoFunction.lower(uProxy.getEmail())).like().any(query));
 			condition = condition.and(queryCondition);
 		} else {
 			if (StringUtils.isNotBlank(request.email)) {
-				condition = condition.and(uProxy.getEmail()).like().any(request.email);
+				condition = condition.and(Torpedo.condition(TorpedoFunction.lower(uProxy.getEmail())).like().any(request.email.toLowerCase()));
 			}
 			if (StringUtils.isNotBlank(request.surname)) {
-				condition = condition.and(uProxy.getSurname()).like().any(request.surname);
+				condition = condition.and(Torpedo.condition(TorpedoFunction.lower(uProxy.getSurname())).like().any(request.surname.toLowerCase()));
 			}
 		}
 
@@ -424,17 +427,18 @@ public class UserService extends BaseService {
         OnGoingLogicalCondition condition = Torpedo.condition(); // .Torpedo conditions = new ArrayList<>();
         condition = condition.and(cuProxy.getCompany().getId()).in(companyIds); 
         if (StringUtils.isNotBlank(request.query)) {
-        	OnGoingLogicalCondition queryCondition = 
-    				Torpedo.condition(cuProxy.getUser().getName()).like().any(request.query).
-        				   or(cuProxy.getUser().getSurname()).like().any(request.query).
-        				   or(cuProxy.getUser().getEmail()).like().any(request.query);
+        	String query = request.query.toLowerCase();
+        	OnGoingLogicalCondition queryCondition =
+    				Torpedo.condition(TorpedoFunction.lower(cuProxy.getUser().getName())).like().any(query).
+        				   or(Torpedo.condition(TorpedoFunction.lower(cuProxy.getUser().getSurname())).like().any(query)).
+        				   or(Torpedo.condition(TorpedoFunction.lower(cuProxy.getUser().getEmail())).like().any(query));
         	condition = condition.and(queryCondition);
         } else {
         	if (StringUtils.isNotBlank(request.email)) {
-        		condition = condition.and(cuProxy.getUser().getEmail()).like().any(request.email);
+        		condition = condition.and(Torpedo.condition(TorpedoFunction.lower(cuProxy.getUser().getEmail())).like().any(request.email.toLowerCase()));
         	}
         	if (StringUtils.isNotBlank(request.surname)) {
-        		condition = condition.and(cuProxy.getUser().getSurname()).like().any(request.surname);
+        		condition = condition.and(Torpedo.condition(TorpedoFunction.lower(cuProxy.getUser().getSurname())).like().any(request.surname.toLowerCase()));
         	}
         }
         if (request.role != null) {

@@ -38,6 +38,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -68,7 +69,7 @@ public class ProductService extends BaseService {
         
         OnGoingLogicalCondition condition = Torpedo.condition();
         if (StringUtils.isNotBlank(request.name)) {
-            condition = condition.and(pProxy.getName()).like().any(request.name);
+            condition = condition.and(Torpedo.condition(TorpedoFunction.lower(pProxy.getName())).like().any(request.name.toLowerCase()));
         }
         Torpedo.where(condition);
         switch (request.sortBy) {
@@ -97,7 +98,7 @@ public class ProductService extends BaseService {
         Product pProxy = Torpedo.from(Product.class);
         OnGoingLogicalCondition condition = Torpedo.condition(pProxy.getCompany().getId()).in(companyIds).or(pProxy.getId()).in(productIds);
         if (StringUtils.isNotBlank(request.name)) {
-            condition = condition.and(pProxy.getName()).like().any(request.name);
+            condition = condition.and(Torpedo.condition(TorpedoFunction.lower(pProxy.getName())).like().any(request.name.toLowerCase()));
         }
         Document dProxy = Torpedo.leftJoin(pProxy.getPhoto());        
         Torpedo.where(condition);
@@ -497,7 +498,7 @@ public class ProductService extends BaseService {
 
         condition = condition.and(plbProxy.getLabel().getId()).eq(labelId);
         if (StringUtils.isNotBlank(request.number)) {
-            condition = condition.and(plbProxy.getNumber()).like().startsWith(request.number);
+            condition = condition.and(Torpedo.condition(TorpedoFunction.lower(plbProxy.getNumber())).like().startsWith(request.number.toLowerCase()));
         }
         Torpedo.where(condition);
         switch (request.sortBy) {

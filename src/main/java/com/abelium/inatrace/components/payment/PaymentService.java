@@ -38,6 +38,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -251,8 +252,9 @@ public class PaymentService extends BaseService {
 		}
 		if(queryRequest.farmerName != null) { // Search by farmers name (query)
 			condition = condition.and(paymentProxy.getRecipientUserCustomer()).isNotNull();
-			OnGoingLogicalCondition likeName = Torpedo.condition(paymentProxy.getRecipientUserCustomer().getName()).like().any(queryRequest.farmerName);
-			OnGoingLogicalCondition likeSurname = Torpedo.condition(paymentProxy.getRecipientUserCustomer().getSurname()).like().any(queryRequest.farmerName);
+			String farmerQuery = queryRequest.farmerName.toLowerCase();
+			OnGoingLogicalCondition likeName = Torpedo.condition(TorpedoFunction.lower(paymentProxy.getRecipientUserCustomer().getName())).like().any(farmerQuery);
+			OnGoingLogicalCondition likeSurname = Torpedo.condition(TorpedoFunction.lower(paymentProxy.getRecipientUserCustomer().getSurname())).like().any(farmerQuery);
 			condition = condition.and(Torpedo.condition(likeName.or(likeSurname)));
 		}
 		if (queryRequest.farmerId != null) {
