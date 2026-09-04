@@ -694,8 +694,23 @@ tiene 49 y usa `Lengths.DEFAULT` — si se declara con `Lengths.ENUM` se trunca.
 
 ## 14. Integraciones geoespaciales: AgStack + Whisp
 
-> Escrito el **2026-08-27** al conectar Whisp. Lo marcado como *verificado* se probó
-> contra la API pública real ese día, no contra la documentación.
+> Escrito el **2026-08-27** al conectar Whisp; revisado el **2026-08-31**. Lo marcado
+> como *verificado* se probó contra la API pública real, no contra la documentación.
+> Lo marcado como *supuesto* NO se comprobó: tratarlo como pendiente, no como hecho.
+
+| | |
+|---|---|
+| 14.1 | Cómo encajan AgStack y Whisp, y las dos vías hacia Whisp |
+| 14.2 | Hechos verificados de la API de Whisp |
+| 14.3 | Hechos verificados de AgStack — **empezar acá si algo falla** |
+| 14.4 | La cadena completa, verificada en vivo el 2026-08-31 |
+| 14.5 | Reglas de diseño |
+| 14.6 | Configuración por entorno |
+| 14.7 | Endpoints |
+
+**Si el Geo-ID no se genera**, la escalera de diagnóstico está en §14.3 punto 3 y el modo
+de fallo silencioso en §14.5. Guía operativa para humanos:
+`ina-docs/operacion/analisis-deforestacion-whisp.md`.
 
 ### 14.1 Cómo encajan las dos piezas
 
@@ -709,6 +724,12 @@ Parcela (coordenadas)
 AgStack **no** hace análisis de deforestación: solo registra el polígono y devuelve un
 identificador global (`geoId`). El análisis lo hace Whisp (Open Foris / Forest Data
 Partnership). Antes de 2026-08-27 el backend solo tenía la primera mitad.
+
+No busques una implementación de referencia en el proyecto original: los tres repos
+oficiales de INATrace —hoy en la organización `agstack` de GitHub, no en `INATrace`—
+tampoco tienen integración por API con Whisp, pese a que el material de difusión del
+proyecto la anuncia. Verificado el 2026-08-28 sobre `agstack/inatrace-backend`,
+`agstack/inatrace-mobile` y `agstack/inatrace-frontend`.
 
 > **Ojo: ya existe una segunda vía hacia Whisp, en el frontend.** El popup de cada
 > parcela en el mapa (`shared/map/map.component.ts`) tiene un botón *Open in Whisp* que
@@ -735,13 +756,156 @@ Partnership). Antes de 2026-08-27 el backend solo tenía la primera mitad.
    fuente silenciosa de resultados cruzados.
 4. **Los resultados de Whisp son efímeros** (los snapshots de progreso expiran a los 10
    minutos). Persistir el resultado no es una optimización: es la única copia.
-5. **Enviar por geo id exige además la cabecera `x-geoid-token`**, que es el token de
-   AgStack. De ahí que `WhispClientService` comparta `AgStackClientTokenManager`.
+5. **Enviar por geo id exige además la cabecera `x-geoid-token`.** Que ese token sea el
+   de AgStack es un **supuesto, no un hecho verificado**. En contra juega un dato duro:
+   `GET /api/config` (público) declara `"geoidBaseUrl": "https://data.apps.fao.org/geoid"`,
+   o sea que **Whisp resuelve los geo id contra un servicio de la FAO, no contra
+   `api-ar.agstack.org`**. No está garantizado que un identificador registrado en AgStack
+   sea resoluble ahí. Por eso `WhispAnalysisService` degrada a polígono cuando Whisp
+   rechaza el geo id: la geometría es la misma y la parcela no se queda sin analizar.
 6. El análisis es **asíncrono** (`analysisOptions.async = true`): submit encola y
    devuelve token, `/status/{token}` responde `202` con `percent` mientras corre y `200`
    con un `FeatureCollection` cuando termina.
+7. **`GET /api/config` es público y no pide key.** Es el chequeo de alcanzabilidad más
+   barato. Verificado el 2026-08-31, devuelve:
+   `geometryLimitSync 250`, `geometryLimitAsync 5000`, `analysisTimeoutSyncSeconds 60`,
+   `analysisTimeoutAsyncSeconds 600`, `maxRequestBodySizeKb 10240`,
+   `openforisWhispVersion 3.0.0a17`, `geoidBaseUrl https://data.apps.fao.org/geoid`.
+   Los límites de geometrías por job son el techo real de cualquier envío en lote futuro.
+8. **La API distingue dos fallos de credencial**, y conviene no confundirlos al depurar:
+   sin cabecera devuelve `401 auth_missing_api_key` ("API key is required for this
+   request"), con una key que no sirve devuelve `401 auth_invalid_api_key`.
 
-### 14.3 Reglas
+### 14.3 Hechos verificados de AgStack
+
+1. **Las credenciales que emite la web de AgStack NO son las que consume este código.**
+   `user-registry.agstack.org` → "Generate API Key and Client Secret" entrega un par
+   (API Key hexadecimal + Client Secret) que se valida en
+   `GET /verify-api-secret-keys` con las cabeceras `API-KEY` y `CLIENT-SECRET`. Pero
+   `AgStackClientTokenManager` hace `POST {loginBaseURL}/login` con `{email, password}`
+   y espera `access_token`. **Poner la API Key en el `.env` no habilita nada.** Esta
+   confusión costó una sesión entera el 2026-08-30/31.
+2. **El flujo correcto lo dio el soporte de AgStack por correo** (hilo del 1-9 de octubre
+   de 2025, `docs/2026/Gmail-API Keys.pdf`). Son **dos pasos**, y el API Key / Client
+   Secret **no intervienen en ninguno**:
+
+   1. `POST` con `{email, password}` -> devuelve `access_token` y `refresh_token`.
+   2. `POST https://api-ar.agstack.org/register-field-boundary` con
+      `Authorization: Bearer <access_token>` y `{s2_index, wkt}`.
+
+   Se intento exactamente lo contrario --mandar `API-KEY` y `CLIENT-SECRET` como cabeceras
+   a `register-field-boundary`-- y devolvio **401**. Esa es la trampa: la web entrega esas
+   credenciales pero la API de registro no las acepta.
+
+   **El `access_token` del login si caduca** (el ejemplo del soporte trae `exp` a 4 horas)
+   y su `sub` es un UUID de usuario, no el dominio. Por eso queda descartada la idea de
+   usar el Client Secret como Bearer: aunque es un JWT sin caducidad, su `sub` es el
+   dominio y no el UUID que el registro espera. El refresco cada 3 h de
+   `AgStackClientTokenManager` es correcto.
+
+3. **Cual host para el login: `user-registry.agstack.org`, no `api.terrapipe.io`.**
+   El ejemplo del soporte usa `POST https://api.terrapipe.io/` --- la **raiz**, sin path.
+   Pero este codigo hace `POST {loginBaseURL}/login`, y verificado el 2026-08-31:
+
+   | Llamada | Respuesta |
+   |---|---|
+   | `POST https://user-registry.agstack.org/login` | `400 {"message":"Invalid request or missing credentials"}` |
+   | `POST https://api.terrapipe.io/` | `400 {"message":"Invalid request or missing credentials"}` |
+   | `POST https://api.terrapipe.io/login` | **404 Not Found** |
+
+   Los dos primeros son la misma aplicacion con el mismo contrato; en `user-registry` la
+   vista esta montada en `/` **y** en `/login` (ver su `app.py`), en terrapipe solo en `/`.
+   Con `loginBaseURL = https://api.terrapipe.io` este cliente pegaria contra un 404.
+
+   ```properties
+   INATrace.agstack.baseURL      = https://api-ar.agstack.org
+   INATrace.agstack.loginBaseURL = https://user-registry.agstack.org
+   ```
+
+   **Validado en vivo el 2026-08-31** desde el servidor de staging de UNOCACE: los tres
+   hosts (`user-registry.agstack.org/login`, `api.terrapipe.io/` y `api-ar.agstack.org/login`)
+   llegan al mismo servicio de autenticacion y responden identico. La configuracion de
+   arriba es la correcta para este cliente.
+
+   **Escalera de diagnostico del login**, util porque los codigos distinguen la causa:
+
+   | Respuesta | Significa |
+   |---|---|
+   | `400 {"message":"Invalid request or missing credentials"}` | El cuerpo no llego o esta mal formado |
+   | `401 {"message":"Incorrect Password!"}` | El correo existe, la clave no es la buena |
+   | `404` HTML | Host/ruta equivocados (p.ej. `api.terrapipe.io/login`) |
+   | `200` con `access_token` | Correcto |
+
+   Que diga "Incorrect Password!" y no "usuario no encontrado" es informacion: confirma
+   que el correo esta registrado y que el problema es solo la clave.
+
+4. **El asset registry rechaza campos de mas de 1000 acres (~405 ha)**, confirmado por el
+   soporte: fue la causa real del primer fallo reportado, con un WKT de prueba de
+   **30.415 acres**. Devuelve **HTTP 200** (no un error) con
+   `{"Field area (acres)": ..., "message": "Cannot register a field with Area greater than 1000 acres"}`
+   y **sin `Geo Id`**. `generatePlotGeoID` lo registra en el log y devuelve `null`.
+5. **Las tres respuestas de `register-field-boundary`**, confirmadas por el soporte, son
+   justo las que mapea `ApiRegisterFieldBoundaryResponse`: `200` con `"Geo Id"` al
+   registrar; `400` con `"matched geo ids"` si el poligono ya estaba registrado; y `200`
+   con solo `message` si excede el area. El DTO existente es correcto.
+4. **Las dos URLs son hosts distintos, y ni el upstream ni la documentación lo dicen.**
+   El template de `agstack/inatrace-backend` trae las cuatro propiedades vacías, su
+   `ci/.env` versionado no tiene ninguna clave `AGSTACK_*`, y ni el README ni la
+   documentación técnica mencionan un solo dominio. Resuelto el 2026-08-31 probando ambos
+   `/login` con credenciales basura:
+
+   | Host | Respuesta a `POST /login` |
+   |---|---|
+   | `https://user-registry.agstack.org` | `400 {"message":"Invalid request or missing credentials"}` |
+   | `https://api-ar.agstack.org` | sin respuesta (HTTP 000) |
+
+   El primero devuelve JSON con el campo `message`, que es exactamente lo que mapea
+   `ApiLoginErrorResponse` y consume el `.onStatus(BAD_REQUEST, ...)` del cliente. Por lo
+   tanto:
+
+   ```properties
+   INATrace.agstack.baseURL      = https://api-ar.agstack.org        # register-field-boundary
+   INATrace.agstack.loginBaseURL = https://user-registry.agstack.org # login
+   ```
+
+   El host del asset registry está vivo (`/swagger/` responde 200; `/health` no existe).
+   **Pendiente:** que unas credenciales reales sean aceptadas. Lo verificado es la forma
+   de la respuesta, no el login completo.
+5. **El cliente AgStack del upstream es byte-idéntico al de este fork** antes de las
+   correcciones del 2026-08-27 (`diff` sobre `AgStackClientService` y
+   `AgStackClientTokenManager`, rama `main`, push del 2026-08-30). Los seis defectos
+   corregidos en §14.5 **siguen presentes upstream**: no eran una degradación local.
+
+### 14.4 Cadena completa verificada en vivo
+
+**2026-08-31, UNOCACE staging, parcela 616** (agricultor 523, 1,51 ha, 47 vertices):
+AgStack registro el poligono y devolvio
+`b3eb95f47f201e73c8a88cbe46078ae13dd6510cd0767f0bd33c8c310244d0d3`, y el visor de Whisp
+lo resolvio y dibujo la parcela correcta con las capas de palma, JRC y cacao ETH.
+
+Dos cosas que esto zanja:
+
+- **El `geoId` de AgStack SI es resoluble por Whisp**, pese a que `/api/config` declare
+  `geoidBaseUrl` apuntando a la FAO. Ojo al alcance: lo probado es el **visor**
+  (`whisp.earthmap.org`), no el endpoint `/submit/geo-ids` de la API. Siguen siendo dos
+  caminos distintos y el segundo continua sin verificar.
+- **La configuracion de §14.3 punto 3 es la correcta.** Con `baseURL` en
+  `api-ar.agstack.org` y `loginBaseURL` en `user-registry.agstack.org`, el login pasa y
+  el registro devuelve `Geo Id`.
+
+**Lo que hizo falta para llegar aca**, en orden: las cuatro variables en el `.env` del
+servidor (no en el workflow de develop), la contrasena correcta de la cuenta AgStack --la
+primera dio `401 Incorrect Password!`--, recrear el contenedor, y **recargar la pagina**
+por el bug del globo descrito abajo.
+
+**Bug del frontend corregido el 2026-08-31** (`fe`, `map.component.ts`): el HTML del globo
+se arma una sola vez al crear el marcador. Si la parcela no tenia `geoId` en ese momento,
+el boton *Open in Whisp* no se generaba ni se le registraba el listener, y `refreshGeoId`
+solo reemplazaba el boton por el texto del identificador. Resultado: el usuario veia el
+Geo-ID recien creado sin nada que pulsar hasta recargar. Ahora `showGeoIdInPopup()` deja
+el globo igual que si la parcela hubiera llegado con `geoId`.
+
+### 14.5 Reglas
 
 - **Nunca llamar a Whisp dentro de una transacción.** Un análisis tarda minutos. Por eso
   `WhispAnalysisService` (orquestación, sin transacción) y `WhispPersistenceService`
@@ -758,24 +922,48 @@ Partnership). Antes de 2026-08-27 el backend solo tenía la primera mitad.
 - **Toda integración opcional se apaga sola si no está configurada.** `isEnabled()` en
   ambos clientes; sin credenciales `generatePlotGeoID` devuelve `null` sin intentar el
   login (antes hacía un login fallido por cada parcela guardada).
+- **Cuidado: esa misma guarda produce un silencio total en la UI.** Sin AgStack
+  configurado, el botón *Refresh* del mapa llama al backend, recibe `200` con `geoId`
+  nulo, y el frontend hace `if (data.geoId) {...}` **sin rama `else`**: ni error, ni
+  mensaje, ni cambio visual. Y en el log tampoco hay rastro, porque la guarda evita la
+  llamada. Si alguien reporta "el botón no hace nada", ese es el primer sospechoso —
+  verificar con `docker exec <be> env | grep AGSTACK` antes de buscar en el código.
 - **Todo `.block()` lleva timeout.** Sin él, el hilo de la petición espera para siempre
   cuando el servicio externo deja de responder y el pool de Hikari se drena.
 
-### 14.4 Configuración
+### 14.6 Configuración
 
 ```properties
 INATrace.whisp.baseURL = https://whisp.openforis.org/api   # instancia pública
 INATrace.whisp.apiKey  =                                    # vacío = integración apagada
 ```
 
-Variables de entorno (relaxed binding): `INATRACE_WHISP_APIKEY`, `INATRACE_WHISP_BASEURL`.
-En Fortaleza se pasan desde `ci/fortaleza/docker-compose.yml` (`WHISP_API_KEY`), en el
-workflow de develop desde el secret `DEV_WHISP_API_KEY`.
+La aplicación lee `INATRACE_WHISP_APIKEY` / `INATRACE_WHISP_BASEURL` (relaxed binding de
+Spring). Pero **ese no es el nombre que se escribe a mano en ningún lado**: los compose lo
+mapean desde un nombre más corto. La cadena completa es:
+
+| Dónde | Nombre | Quién lo pone |
+|---|---|---|
+| `.env` del servidor | `WHISP_API_KEY`, `AGSTACK_EMAIL`, `AGSTACK_PASSWORD`, ... | a mano |
+| compose | `INATRACE_WHISP_APIKEY=${WHISP_API_KEY:-}` | ya versionado |
+| aplicación | `INATrace.whisp.apiKey` | Spring lo resuelve |
+
+Entornos reales, verificado el 2026-08-31:
+
+- **UNOCACE staging** (`ci/unocace/docker-compose.yml`) — es el que **auto-despliega con
+  push a `staging`**. El pipeline sí sincroniza el compose al servidor, pero **no
+  reescribe el `.env`**: sólo actualiza `IMAGE_NAME` y `TAG`. Los valores se ponen a mano
+  en `/opt/inatrace-test/.env` y se recrea el contenedor.
+- **Fortaleza** (`ci/fortaleza/docker-compose.yml`) — producción, vía Jenkins.
+- **`.github/workflows/deploy-backend-develop.yml` NO cuenta.** Lleva la línea del secret
+  `DEV_WHISP_API_KEY`, pero sólo se dispara con push a `develop`, y GitHub Actions ejecuta
+  la copia del workflow **de la rama pusheada** — donde esa línea no existe. Además
+  `develop` está congelada desde 2025-12-19 y sigue en MySQL. Esa línea nunca se ejecuta.
 
 Diagnóstico sin tocar la base de datos: `GET /whisp/status` dice si hay key, si el
 servicio responde y si se puede enviar por geo id o solo por polígono.
 
-### 14.5 Endpoints
+### 14.7 Endpoints
 
 | Método | Ruta | Qué hace |
 |---|---|---|
