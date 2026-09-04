@@ -309,7 +309,7 @@ public class GroupStockOrderService extends BaseService {
                 if (withWeekColor) {
                     String color = WeekNumberTools.weekColorName(order.getWeekNumber());
                     createCell(row, 18, color != null ? color : "",
-                            color != null ? weekColorStyles.get(color) : dataCellStyle);
+                            weekColorStyles.getOrDefault(color, dataCellStyle));
                 }
             }
             

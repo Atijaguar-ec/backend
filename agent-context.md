@@ -415,6 +415,15 @@ Antes de hacer commit de cualquier cambio en el backend, verificar:
       ¿se normaliza el nulo **tanto en el getter como en la query SQL**? (§12.3)
 - [ ] Si se agregaron claves i18n, ¿los acentos van como `\uXXXX`? (§13 — los
       `.properties` son ISO-8859-1)
+- [ ] **¿Toda búsqueda de texto nueva usa `TorpedoFunction.lower()` en los dos
+      lados?** (§15.3 — en PostgreSQL un `.like()` pelado ignora lo que el
+      usuario escribió en minúscula, sin dar error). Verificar con:
+      `grep -rn "\.like()" src/main/java --include="*.java" | grep -v "TorpedoFunction.lower"`
+- [ ] Si el cambio agrega una opción por empresa, ¿la clave **ausente** reproduce
+      exacto el comportamiento anterior? (§15.1)
+- [ ] Si tocaste el cálculo de la semana, ¿actualizaste también
+      `fe/src/app/shared-services/week-number.util.ts`? (§15.2 — son espejos y el
+      backend es el que persiste)
 - [ ] Tras desplegar: ¿el log **no** tiene `GenerationTarget encountered exception`
       y la columna **existe** en `information_schema.columns`? (§12.2)
 
@@ -971,3 +980,97 @@ servicio responde y si se puede enviar por geo id o solo por polígono.
 | `GET` | `/whisp/plots/{plotId}/analysis` | Último análisis; refresca desde Whisp si el job sigue corriendo |
 | `GET` | `/whisp/schemas` | Catálogo de datasets y campos (los "esquemas de análisis") |
 | `GET` | `/whisp/status` | Configuración y alcanzabilidad de la conexión |
+
+---
+
+## 15. Configuración por empresa, semanas y búsquedas
+
+> Escrito el **2026-09-04**, al implementar los pedidos de Fortaleza. Lo marcado
+> como *verificado* se comprobó con tests o con datos reales ese día.
+
+### 15.1 `company.configuration` es el lugar de las opciones por cliente
+
+Columna **jsonb libre** (`Map<String,Object>` en `Company`, línea ~168). Agregar
+una opción por empresa **no requiere migración ni tocar el modelo de la API**: se
+lee con `company.getConfiguration()` y se administra desde el frontend. El
+espejo, con la lista de claves vigentes, está en `fe/agent-context.md` §14.1.
+
+La regla al agregar la próxima: **el valor ausente tiene que reproducir exacto el
+comportamiento anterior**. Si no, cambiaste el sistema para todas las empresas
+sin querer.
+
+Ojo, conviven dos mecanismos de configuración por cliente y no son lo mismo:
+
+- **`company.configuration`** (este): datos que un administrador cambia desde la
+  aplicación, sin desplegar.
+- **`application-<cliente>.properties`** (perfiles Spring, agregados por otro
+  frente en 2026-09): configuración de despliegue.
+
+Antes de agregar algo, decidí en cuál de los dos vive. No dupliques.
+
+### 15.2 Numeración de semanas: `WeekNumberTools`
+
+Fortaleza no usa ISO-8601: su semana 1 empieza el **primer lunes de enero** y
+corre de lunes a viernes. El esquema sale de `configuration.weekNumberingScheme`;
+sin la clave se usa ISO, que es lo que ve el resto.
+
+- **Este cálculo es el que manda.** `createOrUpdateStockOrder` recalcula la
+  semana y **descarta lo que manda el frontend** cuando hay fecha de producción.
+  Antes de 2026-09-04 imponía ISO siempre, y por eso un arreglo solo en el
+  cliente no se guardaba nunca. `fe/src/app/shared-services/week-number.util.ts`
+  repite el cálculo para mostrarlo: **si cambiás la regla acá, cambiala allá**.
+- **Sábado y domingo devuelven `null`** bajo `FIRST_MONDAY` (no se trabaja). En
+  ese caso se respeta el número que el usuario haya escrito a mano. No lo
+  "arregles" devolviendo un número.
+- Expresar la regla como "primer lunes del año" y no como una fecha ancla
+  guardada es deliberado: se recalcula sola cada enero.
+- `WeekNumberToolsTest` cubre el caso reportado, el límite de fin de año (el 1 de
+  enero de 2027 es la semana 52 de 2026), los fines de semana, el ciclo de
+  colores y el retorno a ISO sin configuración. **Verificado**, y además las dos
+  implementaciones se compararon sobre las 1.827 fechas de 2024 a 2028: cero
+  diferencias.
+
+### 15.3 PostgreSQL distingue mayúsculas en `LIKE` — MySQL no
+
+**La trampa más cara de la migración, y la más fácil de repetir.** MySQL comparaba
+texto ignorando mayúsculas por defecto; PostgreSQL **no**. Todas las búsquedas
+escritas para el motor anterior quedaron rotas en silencio: la tabla no
+encontraba nada escrito en minúscula.
+
+Se corrigieron las **35 búsquedas de los 8 servicios** el 2026-09-04. La forma
+correcta, que ya existía en `CompanyService.getUserCustomersForCompanyAndType`:
+
+```java
+Torpedo.condition(TorpedoFunction.lower(proxy.getName())).like().any(query.toLowerCase())
+```
+
+**Toda búsqueda de texto nueva tiene que ir así.** Un `.like()` sin `lower()`
+compila, corre y devuelve resultados — solo que ignora lo que el usuario escribió
+en minúscula. No hay error que lo delate. Para verificar que no se coló ninguna:
+
+```bash
+grep -rn "\.like()" src/main/java --include="*.java" | grep -v "TorpedoFunction.lower"
+```
+
+**Lo que esto NO cubre: las tildes.** Pasar a minúscula no convierte "efraín" en
+"efrain". Haría falta la extensión `unaccent` de PostgreSQL, que **no está
+instalada** y necesita superusuario y migración. Sigue pendiente de decisión.
+
+### 15.4 Export a Excel: la columna de color va al final
+
+`GroupStockOrderService` agrega "Color de Semana" **al final** cuando la empresa
+tiene `weekColorCodes`, y solo entonces. Dos razones que conviene no deshacer:
+agregarla al final no corre las columnas que ya consume quien usa el archivo, y
+la condición mantiene el export del resto byte a byte igual.
+
+Los estilos de celda se crean **una sola vez fuera del bucle**: POI crea un
+objeto por llamada y Excel tiene un tope de estilos por libro, así que crear uno
+por celda infla el archivo hasta romperlo.
+
+### 15.5 Dos tests fallan de antes y no son tuyos
+
+`INATraceBackendApplicationTests.contextLoads` y `GroupStockOrderServiceTest` son
+`@SpringBootTest`: levantan el contexto completo y **necesitan base de datos
+real**, así que fallan en cualquier máquina sin una. Verificado el 2026-09-04
+corriéndolos sobre el código sin cambios. Los otros 31 tests pasan. Antes de
+culpar a tu cambio por un `mvn test` en rojo, mirá si son solo esos dos.
