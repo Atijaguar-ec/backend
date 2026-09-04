@@ -4,7 +4,10 @@ import com.abelium.inatrace.api.ApiPaginatedList;
 import com.abelium.inatrace.api.ApiPaginatedRequest;
 import com.abelium.inatrace.components.common.BaseService;
 import com.abelium.inatrace.components.groupstockorder.api.ApiGroupStockOrder;
+import com.abelium.inatrace.db.entities.company.Company;
+import com.abelium.inatrace.db.entities.facility.Facility;
 import com.abelium.inatrace.tools.PaginationTools;
+import com.abelium.inatrace.tools.WeekNumberTools;
 import com.abelium.inatrace.types.Language;
 import jakarta.persistence.TypedQuery;
 import org.springframework.context.annotation.Lazy;
@@ -20,6 +23,8 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -143,14 +148,14 @@ public class GroupStockOrderService extends BaseService {
         logger.info("Exporting grouped stock orders to Excel for facility: {}, language: {}", facilityId, language);
         List<ApiGroupStockOrder> orders = fetchGroupedStockOrders(language, facilityId, null);
         logger.info("Found {} grouped orders for facility {}", orders.size(), facilityId);
-        return generateExcelFile(orders, language);
+        return generateExcelFile(orders, language, weekColorCodesEnabledFor(facilityId, null));
     }
 
     public ByteArrayInputStream exportGroupedStockOrdersToExcelByCompany(Long companyId, Language language) throws IOException {
         logger.info("Exporting grouped stock orders to Excel for company: {}, language: {}", companyId, language);
         List<ApiGroupStockOrder> orders = fetchGroupedStockOrders(language, null, companyId);
         logger.info("Found {} grouped orders for company {}", orders.size(), companyId);
-        return generateExcelFile(orders, language);
+        return generateExcelFile(orders, language, weekColorCodesEnabledFor(null, companyId));
     }
 
     private List<ApiGroupStockOrder> fetchGroupedStockOrders(Language language, Long facilityId, Long companyId) {
@@ -214,9 +219,29 @@ public class GroupStockOrderService extends BaseService {
         return result;
     }
 
-    private ByteArrayInputStream generateExcelFile(List<ApiGroupStockOrder> orders, Language language) throws IOException {
+    /**
+     * La empresa que marca sus entregas con el color de la semana (Fortaleza) lo lleva
+     * tambien al Excel: es lo que se usa para cuadrar los sacos con el hilo de bodega.
+     */
+    private boolean weekColorCodesEnabledFor(Long facilityId, Long companyId) {
+
+        Company company = null;
+        if (companyId != null) {
+            company = em.find(Company.class, companyId);
+        } else if (facilityId != null) {
+            Facility facility = em.find(Facility.class, facilityId);
+            company = facility != null ? facility.getCompany() : null;
+        }
+
+        return company != null && WeekNumberTools.weekColorCodesEnabled(company.getConfiguration());
+    }
+
+    private ByteArrayInputStream generateExcelFile(List<ApiGroupStockOrder> orders, Language language,
+                                                  boolean withWeekColor) throws IOException {
         logger.debug("Generating Excel file with {} orders in language {}", orders.size(), language);
-        String[] columns = getColumnHeaders(language);
+        // La columna de color va al final para no correr las que ya consume quien usa
+        // este archivo, y solo aparece si la empresa trabaja con colores de semana.
+        String[] columns = getColumnHeaders(language, withWeekColor);
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet(getSheetName(language));
             Font headerFont = workbook.createFont();
@@ -247,6 +272,12 @@ public class GroupStockOrderService extends BaseService {
             dataCellStyle.setBorderRight(BorderStyle.THIN);
             dataCellStyle.setBorderLeft(BorderStyle.THIN);
             
+            // Un estilo por color, fuera del bucle: crear uno por celda infla el archivo
+            // y Excel tiene un tope de estilos por libro.
+            Map<String, CellStyle> weekColorStyles = withWeekColor
+                    ? createWeekColorStyles(workbook)
+                    : Map.of();
+
             int rowIdx = 1;
             for (ApiGroupStockOrder order : orders) {
                 Row row = sheet.createRow(rowIdx++);
@@ -274,6 +305,12 @@ public class GroupStockOrderService extends BaseService {
                 createCell(row, 15, order.getDeliveryTime() != null ? order.getDeliveryTime().format(dateFormatter) : "", dataCellStyle);
                 createCell(row, 16, order.getUpdateTimestamp() != null ? timestampFormatter.withZone(ZoneId.systemDefault()).format(order.getUpdateTimestamp()) : "", dataCellStyle);
                 createCell(row, 17, formatAvailability(order.getAvailable(), language), dataCellStyle);
+
+                if (withWeekColor) {
+                    String color = WeekNumberTools.weekColorName(order.getWeekNumber());
+                    createCell(row, 18, color != null ? color : "",
+                            color != null ? weekColorStyles.get(color) : dataCellStyle);
+                }
             }
             
             for (int i = 0; i < columns.length; i++) {
@@ -292,7 +329,43 @@ public class GroupStockOrderService extends BaseService {
         cell.setCellStyle(style);
     }
     
-    private String[] getColumnHeaders(Language language) {
+    private Map<String, CellStyle> createWeekColorStyles(Workbook workbook) {
+
+        Map<String, Short> colorIndexes = Map.of(
+                "ROJO", IndexedColors.RED.getIndex(),
+                "AZUL", IndexedColors.BLUE.getIndex(),
+                "BLANCO", IndexedColors.WHITE.getIndex(),
+                "VERDE", IndexedColors.BRIGHT_GREEN.getIndex(),
+                "AMARILLO", IndexedColors.YELLOW.getIndex());
+
+        Map<String, CellStyle> styles = new HashMap<>();
+        colorIndexes.forEach((color, index) -> {
+            CellStyle style = workbook.createCellStyle();
+            style.setBorderBottom(BorderStyle.THIN);
+            style.setBorderTop(BorderStyle.THIN);
+            style.setBorderRight(BorderStyle.THIN);
+            style.setBorderLeft(BorderStyle.THIN);
+            style.setFillForegroundColor(index);
+            style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            styles.put(color, style);
+        });
+
+        return styles;
+    }
+
+    private String[] getColumnHeaders(Language language, boolean withWeekColor) {
+
+        String[] headers = baseColumnHeaders(language);
+        if (!withWeekColor) {
+            return headers;
+        }
+
+        String[] withColor = Arrays.copyOf(headers, headers.length + 1);
+        withColor[headers.length] = language == Language.ES ? "Color de Semana" : "Week Color";
+        return withColor;
+    }
+
+    private String[] baseColumnHeaders(Language language) {
         if (language == Language.ES) {
             return new String[]{
                 "Área",

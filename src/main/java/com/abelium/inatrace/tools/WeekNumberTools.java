@@ -27,7 +27,35 @@ public final class WeekNumberTools {
 
 	public static final String SCHEME_FIRST_MONDAY = "FIRST_MONDAY";
 
+	public static final String COLOR_CONFIG_KEY = "weekColorCodes";
+
+	/**
+	 * Ciclo de colores con que se marca cada saco en bodega. Depende solo del numero de
+	 * semana, por eso cada año vuelve a empezar en ROJO. Espejo de WEEK_COLORS en
+	 * week-number.util.ts.
+	 */
+	private static final String[] WEEK_COLORS = { "ROJO", "AZUL", "BLANCO", "VERDE", "AMARILLO" };
+
 	private WeekNumberTools() {
+	}
+
+	/**
+	 * Si la empresa marca sus entregas con el color de la semana.
+	 */
+	public static boolean weekColorCodesEnabled(Map<String, Object> companyConfiguration) {
+		return companyConfiguration != null && Boolean.TRUE.equals(companyConfiguration.get(COLOR_CONFIG_KEY));
+	}
+
+	/**
+	 * Color que corresponde a la semana, o {@code null} si no hay numero de semana.
+	 */
+	public static String weekColorName(Integer weekNumber) {
+
+		if (weekNumber == null || weekNumber < 1) {
+			return null;
+		}
+
+		return WEEK_COLORS[(weekNumber - 1) % WEEK_COLORS.length];
 	}
 
 	/**

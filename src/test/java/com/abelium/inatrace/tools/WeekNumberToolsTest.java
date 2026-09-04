@@ -7,7 +7,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Las fechas esperadas salen del calendario que entregó Fortaleza, no de la norma ISO.
@@ -66,6 +68,35 @@ class WeekNumberToolsTest {
 		Map<String, Object> fortaleza = new HashMap<>();
 		fortaleza.put(WeekNumberTools.CONFIG_KEY, "FIRST_MONDAY");
 		assertEquals(WeekNumberTools.SCHEME_FIRST_MONDAY, WeekNumberTools.schemeOf(fortaleza));
+	}
+
+	@Test
+	void shouldCycleTheFiveColorsOfTheClientTable() {
+
+		assertEquals("ROJO", WeekNumberTools.weekColorName(1));
+		assertEquals("AZUL", WeekNumberTools.weekColorName(2));
+		assertEquals("BLANCO", WeekNumberTools.weekColorName(3));
+		assertEquals("VERDE", WeekNumberTools.weekColorName(4));
+		assertEquals("AMARILLO", WeekNumberTools.weekColorName(5));
+
+		// El ciclo depende solo del numero, por eso cada año vuelve a empezar en ROJO
+		assertEquals("ROJO", WeekNumberTools.weekColorName(6));
+		assertEquals("BLANCO", WeekNumberTools.weekColorName(48));
+		assertEquals("AZUL", WeekNumberTools.weekColorName(52));
+
+		assertNull(WeekNumberTools.weekColorName(null));
+		assertNull(WeekNumberTools.weekColorName(0));
+	}
+
+	@Test
+	void shouldOnlyUseColorsWhenTheCompanyAsksForThem() {
+
+		assertFalse(WeekNumberTools.weekColorCodesEnabled(null));
+		assertFalse(WeekNumberTools.weekColorCodesEnabled(new HashMap<>()));
+
+		Map<String, Object> fortaleza = new HashMap<>();
+		fortaleza.put(WeekNumberTools.COLOR_CONFIG_KEY, true);
+		assertTrue(WeekNumberTools.weekColorCodesEnabled(fortaleza));
 	}
 
 	@Test
