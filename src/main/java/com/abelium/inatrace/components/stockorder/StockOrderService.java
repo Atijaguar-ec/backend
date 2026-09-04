@@ -47,6 +47,7 @@ import com.abelium.inatrace.tools.PaginationTools;
 import com.abelium.inatrace.tools.Queries;
 import com.abelium.inatrace.tools.QueryTools;
 import com.abelium.inatrace.tools.TranslateTools;
+import com.abelium.inatrace.tools.WeekNumberTools;
 import com.abelium.inatrace.types.Language;
 import com.abelium.inatrace.types.ProcessingActionType;
 import com.abelium.inatrace.types.ProductCompanyType;
@@ -69,6 +70,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.torpedoquery.jakarta.jpa.OnGoingLogicalCondition;
 import org.torpedoquery.jakarta.jpa.Torpedo;
+import org.torpedoquery.jakarta.jpa.TorpedoFunction;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -271,8 +273,9 @@ public class StockOrderService extends BaseService {
 
         // If LOT name is provided filter by LOT prefix or LOT name
         if (StringUtils.isNotBlank(queryRequest.internalLotName)) {
-            OnGoingLogicalCondition likeInternalLotName = Torpedo.condition(stockOrderProxy.getInternalLotNumber()).like().any(queryRequest.internalLotName);
-            OnGoingLogicalCondition likeLotPrefix = Torpedo.condition(stockOrderProxy.getLotPrefix()).like().any(queryRequest.internalLotName);
+            String lotQuery = queryRequest.internalLotName.toLowerCase();
+            OnGoingLogicalCondition likeInternalLotName = Torpedo.condition(TorpedoFunction.lower(stockOrderProxy.getInternalLotNumber())).like().any(lotQuery);
+            OnGoingLogicalCondition likeLotPrefix = Torpedo.condition(TorpedoFunction.lower(stockOrderProxy.getLotPrefix())).like().any(lotQuery);
             condition = condition.and(Torpedo.condition(likeInternalLotName.or(likeLotPrefix)));
         }
 
@@ -295,8 +298,9 @@ public class StockOrderService extends BaseService {
         // Search by farmers name (query)
         if (queryRequest.producerUserCustomerName != null) {
             condition = condition.and(stockOrderProxy.getProducerUserCustomer()).isNotNull();
-            OnGoingLogicalCondition likeName = Torpedo.condition(stockOrderProxy.getProducerUserCustomer().getName()).like().any(queryRequest.producerUserCustomerName);
-            OnGoingLogicalCondition likeSurname = Torpedo.condition(stockOrderProxy.getProducerUserCustomer().getSurname()).like().any(queryRequest.producerUserCustomerName);
+            String farmerQuery = queryRequest.producerUserCustomerName.toLowerCase();
+            OnGoingLogicalCondition likeName = Torpedo.condition(TorpedoFunction.lower(stockOrderProxy.getProducerUserCustomer().getName())).like().any(farmerQuery);
+            OnGoingLogicalCondition likeSurname = Torpedo.condition(TorpedoFunction.lower(stockOrderProxy.getProducerUserCustomer().getSurname())).like().any(farmerQuery);
             condition = condition.and(Torpedo.condition(likeName.or(likeSurname)));
         }
 
@@ -1011,8 +1015,12 @@ public class StockOrderService extends BaseService {
         entity.setDamagedWeightDeduction(apiStockOrder.getDamagedWeightDeduction());
         entity.setCurrency(apiStockOrder.getCurrency());
         if (entity.getProductionDate() != null) {
-            int isoWeek = entity.getProductionDate().get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear());
-            entity.setWeekNumber(isoWeek);
+            String weekScheme = WeekNumberTools.schemeOf(
+                    entity.getCompany() != null ? entity.getCompany().getConfiguration() : null);
+            Integer computedWeek = WeekNumberTools.weekNumber(entity.getProductionDate(), weekScheme);
+            // Con el calendario de Fortaleza el fin de semana no tiene numero de semana:
+            // se respeta el que haya escrito el usuario en vez de imponer un calculo.
+            entity.setWeekNumber(computedWeek != null ? computedWeek : apiStockOrder.getWeekNumber());
         } else {
             entity.setWeekNumber(apiStockOrder.getWeekNumber());
         }
