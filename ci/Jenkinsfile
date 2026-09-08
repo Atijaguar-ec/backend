@@ -136,6 +136,16 @@ pipeline {
     stage('🔧 Inicialización') {
       steps {
         script {
+          // Guarda de producción. Vive acá y no en el stage 'Tests & Quality'
+          // porque ese stage tiene `when { !params.SKIP_TESTS }`: con
+          // SKIP_TESTS=true se salta entero y la guarda que llevaba dentro
+          // nunca llegaba a evaluarse, que era justo el caso que debía impedir.
+          if (params.BRANCH == 'main' && params.SKIP_TESTS) {
+            error("❌ No se permiten despliegues a producción sin pruebas (SKIP_TESTS=true con BRANCH=main)")
+          }
+        }
+
+        script {
           echo "═════════════════════════════════════════════════════════════════"
           echo "  INICIO DE DESPLIEGUE - FORTALEZA DEL VALLE"
           echo "═════════════════════════════════════════════════════════════════"
@@ -191,9 +201,9 @@ pipeline {
       steps {
         script {
           echo "\n🧪 Ejecutando pruebas unitarias e integración..."
-          if (params.BRANCH == 'main' && params.SKIP_TESTS) {
-            error("❌ No se permiten despliegues a producción sin pruebas")
-          }
+          // La guarda de "producción sin pruebas" se evalúa en 'Inicialización':
+          // acá era inalcanzable, porque el `when` de este stage ya lo excluye
+          // cuando SKIP_TESTS=true.
         }
         
         script {
