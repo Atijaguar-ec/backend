@@ -215,17 +215,50 @@ public class ProcessingOrderService extends BaseService {
                             .noneMatch(apiTargetStockOrder -> targetStockOrder.getId().equals(apiTargetStockOrder.getId())))
                     .collect(Collectors.toList());
 
-            // Before deleting, verify that deletion is possible
-            for (StockOrder targetStockOrder : targetStockOrdersToBeDeleted) {
+            if (processingAction.getType() == ProcessingActionType.TRANSFER) {
 
-                // Used quantity cannot be negative: "fulfilledQuantity - availableQuantity >= 0"
-                if (targetStockOrder.getTotalQuantity().subtract(targetStockOrder.getAvailableQuantity())
-                        .compareTo(BigDecimal.ZERO) < 0)
-                    throw new ApiException(ApiStatus.VALIDATION_ERROR, "Target StockOrder with ID '"
-                            + targetStockOrder.getId() + "' cannot be deleted!");
+                // In TRANSFER the target StockOrder is the source StockOrder itself (same ID), so it must never be
+                // deleted here: removing the input Transaction already reverts it
+
+                // Before deleting, verify that deletion is possible
+                for (StockOrder targetStockOrder : targetStockOrdersToBeDeleted) {
+
+                    // Used quantity cannot be negative: "fulfilledQuantity - availableQuantity >= 0"
+                    if (targetStockOrder.getTotalQuantity().subtract(targetStockOrder.getAvailableQuantity())
+                            .compareTo(BigDecimal.ZERO) < 0)
+                        throw new ApiException(ApiStatus.VALIDATION_ERROR, "Target StockOrder with ID '"
+                                + targetStockOrder.getId() + "' cannot be deleted!");
+                }
+
+                entity.getTargetStockOrders().removeAll(targetStockOrdersToBeDeleted);
+
+            } else {
+
+                // The target StockOrders were created by this processing: verify that they are not used
+                // (no quantity consumed, no payments and not referenced as source by any Transaction)
+                for (StockOrder targetStockOrder : targetStockOrdersToBeDeleted) {
+
+                    boolean quantityUsed = targetStockOrder.getTotalQuantity() != null
+                            && targetStockOrder.getAvailableQuantity() != null
+                            && targetStockOrder.getTotalQuantity().compareTo(targetStockOrder.getAvailableQuantity()) > 0;
+
+                    Long sourceTransactions = em.createQuery(
+                                    "SELECT COUNT(t) FROM Transaction t WHERE t.sourceStockOrder.id = :stockOrderId", Long.class)
+                            .setParameter("stockOrderId", targetStockOrder.getId())
+                            .getSingleResult();
+
+                    if (quantityUsed || sourceTransactions > 0 || !targetStockOrder.getPayments().isEmpty())
+                        throw new ApiException(ApiStatus.VALIDATION_ERROR, "Target StockOrder with ID '"
+                                + targetStockOrder.getId() + "' cannot be deleted because it is already used!");
+                }
+
+                // 'targetStockOrders' is mapped by StockOrder.processingOrder (no orphan removal), so removing them
+                // from the collection alone does not delete them: they have to be removed explicitly
+                entity.getTargetStockOrders().removeAll(targetStockOrdersToBeDeleted);
+                for (StockOrder targetStockOrder : targetStockOrdersToBeDeleted) {
+                    em.remove(targetStockOrder);
+                }
             }
-
-            entity.getTargetStockOrders().removeAll(targetStockOrdersToBeDeleted);
         }
 
         // Verify that existing target StockOrders (in other words those with ID) can be updated
