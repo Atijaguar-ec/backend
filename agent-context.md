@@ -193,11 +193,17 @@ en la fecha de la compra. **Todas las columnas son nullable** (§12) y el índic
 
 ### Cálculo de Peso Neto (`StockOrderService`)
 ```
-Net = (Bruto − Tara − PesoDañado) × (Humedad / 100)
+Base              = Bruto − Tara − PesoDañado
+DescuentoHumedad  = Base × Humedad / 100        (2 decimales, HALF_UP)
+Net               = Base − DescuentoHumedad
+cost              = (pricePerUnit − damagedPriceDeduction) × (Net ?? totalQuantity) − finalPriceDiscount
 ```
-- Método: `calculateNetQuantity(grossQuantity, tare, damagedWeightDeduction, moisturePercentage)`
+- Método: `calculateNetQuantity(ApiStockOrder api, StockOrder entity)`.
 - Se calcula automáticamente al guardar un `StockOrder` tipo `PURCHASE_ORDER`.
-- Si `finalPriceDiscount != null`, se resta del costo total: `cost = cost - finalPriceDiscount`
+- `cost` no se redondea en Java: lo redondea la columna `numeric(38,2)` al persistir.
+- ⚠️ Hasta 2026-09-15 este archivo decía `Net = (Bruto − Tara − PesoDañado) × (Humedad / 100)`.
+  Eso es el **descuento**, no el neto. No "corrijas" el código hacia esa fórmula.
+  El orden completo del guardado y lo que exige a los clientes está en §16.
 
 ### Reportes Agrupados (`GroupStockOrderService`)
 Las queries JPQL de agrupación incluyen: `weekNumber`, `parcelLot`, `variety`,
@@ -426,6 +432,9 @@ Antes de hacer commit de cualquier cambio en el backend, verificar:
       backend es el que persiste)
 - [ ] Tras desplegar: ¿el log **no** tiene `GenerationTarget encountered exception`
       y la columna **existe** en `information_schema.columns`? (§12.2)
+- [ ] Si tocaste `createOrUpdateStockOrder`, `updateUserCustomer` o sus permisos,
+      ¿revisaste el contrato de §16? El ERP contable de Fortaleza depende de ese
+      comportamiento exacto: una validación nueva hace fallar compras que hoy pasan.
 
 ---
 
@@ -1074,3 +1083,99 @@ por celda infla el archivo hasta romperlo.
 real**, así que fallan en cualquier máquina sin una. Verificado el 2026-09-04
 corriéndolos sobre el código sin cambios. Los otros 31 tests pasan. Antes de
 culpar a tu cambio por un `mvn test` en rojo, mirá si son solo esos dos.
+
+---
+
+## 16. Contrato de compras y socios para integraciones externas
+
+> Escrito el **2026-09-15**, al revisar el código para la integración con el sistema
+> contable de Fortaleza del Valle. La especificación completa está en el workspace
+> `giz`, en `docs/fv/especificacion_interoperabilidad_contable_inatrace_fortaleza.md`.
+> Todo lo de esta sección se **verificó** en el código ese día, y los datos en la base
+> de staging de Fortaleza (solo lectura).
+
+Un sistema externo (el ERP) va a llamar a estos endpoints con un usuario técnico.
+Lo que sigue es comportamiento del que **depende**. Cambiarlo no es un refactor: es
+un cambio de contrato, y hay que avisar y actualizar la especificación.
+
+### 16.1 Orden real de `createOrUpdateStockOrder` (`PURCHASE_ORDER`)
+
+1. `calculateNetQuantity`: `netQuantity` y `moistureWeightDeduction` (§5).
+2. `calculateQuantities`: **exige `api.totalQuantity` y `api.fulfilledQuantity`
+   no nulos** ("Total quantity cannot be null!", "Fulfilled quantity cannot be
+   null!") **antes** de que nada los calcule. Con ese valor fija `fulfilledQuantity`
+   y, en compras nuevas, `availableQuantity`.
+3. `switch PURCHASE_ORDER`: **recalcula** `totalQuantity = bruto − tara − merma`,
+   pisando lo recibido, y luego `cost`, `balance` y `paid`.
+
+Consecuencias:
+
+- **Los clientes están obligados a enviar `totalQuantity` y `fulfilledQuantity`**,
+  aunque el servidor recalcule el total. El ERP envía ambos con `bruto − tara − merma`.
+- `availableQuantity` sale del `totalQuantity` **del cliente**. La web envía
+  `bruto − tara`, sin merma, así que en sus compras con merma
+  `availableQuantity > totalQuantity` (1 caso en staging). Para saber si una compra
+  ya se procesó, compara `availableQuantity` con `fulfilledQuantity`, no con `totalQuantity`.
+- Si reordenas los pasos para calcular el total antes de validar, el cambio es
+  bienvenido, pero no quites la aceptación de los dos campos: el ERP los seguirá enviando.
+- `measureUnitType` enviado se **ignora**: la unidad sale del semiproducto.
+- La semana se recalcula con `WeekNumberTools` (§15.2), salvo sábado y domingo
+  con `FIRST_MONDAY`, donde se guarda el `weekNumber` recibido.
+- Toda compra con precio queda con `balance = cost` y `paid = 0` si no hay pagos
+  registrados: las 113 compras de Fortaleza en staging aparecen como pendientes.
+
+### 16.2 Lo que la API **no** valida (y los clientes compensan)
+
+| Falta de validación | Dónde | Riesgo |
+| :--- | :--- | :--- |
+| Estado del productor (`SUSPENDED`/`RETIRED`) | `createOrUpdateStockOrder` | Compras a socios bloqueados. Solo la web filtra. |
+| Que `producerUserCustomer` pertenezca a la empresa de la instalación | `fetchEntity(..., UserCustomer.class)` sin chequeo | **Multiempresa CEDIA**: un id equivocado asigna la compra a un socio de otra organización. |
+| Que el semiproducto esté habilitado en la instalación | — | La compra se guarda con un producto que la instalación no maneja. |
+| Unicidad de `identifier` o idempotencia | — | Un reintento duplica compras. El ERP busca su `ERP:{id}` en `comments` antes de reintentar. |
+| Unicidad de `farmerCompanyInternalId` por empresa | `addUserCustomer` | Socios duplicados. |
+
+Agregar cualquiera de estas validaciones es **correcto y deseable** (brechas
+B-03, B-05, B-12 y B-16 de la especificación). Pero cambia el contrato: devuelve el
+mensaje en un `ApiException` claro, avisa al equipo del ERP y actualiza la
+especificación.
+
+### 16.3 `PUT /api/company/userCustomers/edit` — semántica de nulos
+
+- **Lista u objeto nulo** (`plots`, `certifications`, `associations`,
+  `cooperatives`, `bank`, `farm`, `location.address.country`) → `NullPointerException`
+  y **error 500**, sin guardar.
+- **Lista vacía** → **borra** lo que haya: parcelas con su georreferenciación y
+  certificaciones. Un cliente que reutilice el cuerpo del alta (`"plots": []`)
+  borra las parcelas del socio.
+- **`status` nulo → no cambia el estado.** El ERP omite `status` a propósito, para
+  no revertir una suspensión hecha entre su lectura y su escritura. **No cambies la
+  semántica de `status` nulo.**
+
+Si conviertes los nulos en "sin cambios" (brecha B-17), es una mejora compatible.
+Convertir la lista vacía en "sin cambios" **no** lo es: la web la usa para borrar.
+
+### 16.4 Permisos y autenticación
+
+- `DELETE /api/chain/stock-order/{id}` exige **`COMPANY_ADMIN`** o administrador del
+  sistema (`checkUserIfCompanyEnrolledAndAdminOrSystemAdmin`). Tampoco impide
+  borrar compras ya usadas en un proceso.
+- El JWT se resuelve por el claim `email`, con `preferred_username` como respaldo, y
+  el usuario se busca con **`fetchUserByEmail`**. Una cuenta de servicio de Keycloak
+  (`service-account-<cliente>`, sin email) recibe 401, salvo que el cliente tenga un
+  *mapper* que emita el email del usuario técnico.
+
+### 16.5 Columnas que usa el ERP
+
+Verificado con `information_schema` en staging: `cost`, `netquantity` y
+`totalquantity` son `numeric(38,2)`; `comments`, `identifier` y `parcellot` son
+`varchar(255)`.
+
+- `comments` lleva un texto estructurado del ERP:
+  `LC:{estab}-{punto}-{secuencial}|CA:{clave de acceso}|ERP:{id}`. Es la única llave
+  entre la liquidación SRI y la compra. **No lo reutilices** ni lo trunques.
+- `parcelLot` es texto libre y hoy mezcla nombre de parcela, posición y número
+  escrito a mano (ver `fe/agent-context.md` §15.4). La solución de fondo es una FK
+  `plot_id` (brecha B-01). No asumas que `parcelLot` identifica una parcela.
+- `usercustomer.status` está en **NULL** para los socios anteriores a la migración de
+  estados (los 873 de Fortaleza). El getter lo normaliza a `ACTIVE`; en SQL usa
+  `coalesce(status, 'ACTIVE')` (misma regla de §12.3).
