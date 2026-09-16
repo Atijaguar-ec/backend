@@ -115,8 +115,8 @@ Estos campos fueron portados desde `staging` (MySQL) y adaptados a PostgreSQL.
 |---|---|---|
 | `weekNumber` | `Integer` | Semana de entrega (1–53), trazabilidad estacional |
 | `parcelLot` | `String(255)` | Lote de parcela de origen |
-| `variety` | `String(255)` | Variedad genética (Nacional, CCN51) |
-| `organicCertification` | `String(255)` | Certificación orgánica del lote |
+| `variety` | `String(255)` | Variedad genética: `NACIONAL`/`CCN51`, o `"1"`/`"2"` con `numericVarietyOptions` (UNOCACE, §18) |
+| `organicCertification` | `String(255)` | Certificación del lote: el **nombre ES** del catálogo, como texto (§18) |
 | `moisturePercentage` | `BigDecimal` | Porcentaje de humedad medido |
 | `moistureWeightDeduction` | `BigDecimal` | Deducción de peso por humedad |
 | `netQuantity` | `BigDecimal(38,2)` | Peso neto tras descuentos |
@@ -204,6 +204,11 @@ cost              = (pricePerUnit − damagedPriceDeduction) × (Net ?? totalQua
 - ⚠️ Hasta 2026-09-15 este archivo decía `Net = (Bruto − Tara − PesoDañado) × (Humedad / 100)`.
   Eso es el **descuento**, no el neto. No "corrijas" el código hacia esa fórmula.
   El orden completo del guardado y lo que exige a los clientes está en §16.
+
+### Orgánico y certificación por defecto (`StockOrderService`)
+CCN51 (`"CCN51"` o `"2"`) sin `organic` enviado queda como no orgánica; si una entrega
+no orgánica llega sin certificación, se completa con la primera no orgánica del
+catálogo. Lo enviado se respeta. Detalle y trampas en §18.
 
 ### Reportes Agrupados (`GroupStockOrderService`)
 Las queries JPQL de agrupación incluyen: `weekNumber`, `parcelLot`, `variety`,
@@ -1254,3 +1259,90 @@ order by 1,2;
 Al 2026-09-15 en producción de Fortaleza salían `2026-34-01` (33 sacos, 26 números)
 y `2026-34-02` (56 sacos, 35 números). Corregirlos es trabajo de datos aparte: el
 arreglo del código no deshace lo ya guardado.
+
+---
+
+## 18. Variedad 1/2 y certificación no orgánica "Convencional" (UNOCACE)
+
+> Escrito el **2026-09-16** (commit `1bd38c1e`, junto con el frontend `bc1fee1e`).
+> *Verificado* ese día con `StockOrderServiceTest` y en `inatrace_unocace_stage`.
+> Espejo del frontend: `fe/agent-context.md` §17. Plan, decisiones y conteos:
+> `docs/cambios/2026-09-16-unocace-variedad-y-certificaciones-plan.md`.
+
+### 18.1 Dónde vive cada dato
+
+| Dato | Tabla/columna | Forma |
+|---|---|---|
+| Variedad de la parcela | `plot.cocoavariety` | enum `ORGANICO`/`CCN51`. La pantalla muestra 1/2; **no** migres a números |
+| Certificación de la parcela | `plot.certificationtype_id` | FK: renombrar el catálogo no rompe nada |
+| Variedad de la entrega | `stockorder.variety` | texto: `"1"`/`"2"` con `numericVarietyOptions`; si no, `NACIONAL`/`CCN51` |
+| Certificación de la entrega | `stockorder.organiccertification` | **texto con el nombre ES**: renombrar el catálogo **no** actualiza las entregas |
+| Nombre que se muestra | `certificationtypetranslation.name` | **no** `certificationtype.name`: `CertificationTypeMapper` elige la traducción. Al renombrar, actualizá las dos tablas |
+
+### 18.2 Reglas de `StockOrderService` (bloque tras `setVariety`)
+
+- `isCcn51Variety()` acepta `"CCN51"` **y** `"2"`. Antes solo comparaba `"CCN51"`,
+  así que las entregas de UNOCACE (que guardan `"2"`) nunca entraban a la regla.
+- **Ya no se fuerza `organic = true` para CCN51.** Ese forzado (commit `f422aaf7`)
+  contradecía al frontend: guardaba "Orgánico: Sí" con una certificación de
+  transición. Ahora CCN51 con `organic == null` pasa a `false`, y un valor enviado
+  se respeta.
+- `defaultNonOrganicCertificationName()` busca en `CertificationType.findAllActive`
+  (ordenado por `code`) la primera cuyo **nombre ES** cumpla
+  `isNonOrganicCertificationName()`. Si no hay ninguna, devuelve `null`. **No
+  vuelvas a poner un nombre literal**: el `"Transición / Fairtrade / SPP"` que había
+  dejó de existir con el catálogo nuevo.
+- `isNonOrganicCertificationName()` reconoce
+  `convencional | conventional | transicion | transition` (NFD, sin marcas, en
+  minúscula). **Tiene que coincidir con `isNonOrganicCertification()` del frontend.**
+- Solo se completa la certificación si viene vacía. Este código corre para
+  **cualquier** `StockOrder` que pase por aquí; en Fortaleza no aplica, porque su
+  frontend siempre manda `organic = true` y una certificación.
+
+### 18.3 Tests
+
+`StockOrderServiceTest` (unitario, sin Spring): 5/5 el 2026-09-16.
+
+```bash
+mvn -q -o test -Dtest=StockOrderServiceTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+`-q` no imprime nada si todo pasa: mirá
+`target/surefire-reports/com.abelium.inatrace.components.stockorder.StockOrderServiceTest.txt`.
+
+### 18.4 Script de datos (solo UNOCACE)
+
+`scripts/unocace/sql/2026-09-16-catalogo-certificaciones-y-variedad.sql`. **No está en
+git**: el `.gitignore` excluye `scripts/*`, porque ahí vive el dump de producción de
+UNOCACE. La copia está en la máquina de Álvaro y el procedimiento, en el plan de `docs/`.
+
+- Renombra por **código** (no por id ni por nombre):
+  - `NATURLAND_FT_SPP` → `ORGANICO_UE_NOP_BIOSUISSE_NATURLAND_FT_SPP`
+  - `BIOSUISSE_FT_SPP` → `ORGANICO_UE_NOP_BIOSUISSE_FT_SPP`
+  - `FAIRTRADE_SPP` → `ORGANICO_UE_NOP_FT_SPP`
+  - `TRANSICION_FT_SPP` → `CONVENCIONAL_FT`
+  
+  También pasa las parcelas de `FAIRTRADE` ("Comercio Justo") a `CONVENCIONAL_FT` y
+  deja `FAIRTRADE` en `INACTIVE`.
+- Actualiza las traducciones ES y EN, renombra el texto de las entregas, pone
+  `organic = false` en las "Convencional Fairtrade", activa `numericVarietyOptions` en
+  **todas** las empresas y pasa la variedad de las entregas de `NACIONAL`/`CCN51` a
+  `1`/`2`.
+- Es idempotente y aborta si no existe la empresa `UNOCACE`. **Nunca en Fortaleza.**
+- Hay que correrlo **después** de desplegar este código: con el catálogo nuevo y el
+  código viejo, el combo de entregas no orgánicas queda vacío.
+- Ejecutado en pruebas el 2026-09-16. Respaldo en el servidor:
+  `/root/respaldos/antes-catalogo-certificaciones-20260916_133707.dump`.
+
+### 18.5 Antes de tocar esto, revisá
+
+```bash
+grep -rn "organicCertification\|isNonOrganic\|isCcn51" src/main/java ../fe/apps/inatrace-fe/src/app
+```
+
+Además del código, dependen del texto guardado:
+- las vistas de BI `bi.fact_cacao_purchase` y `bi.rpt_cacao_compras_certificadas`,
+  que agrupan por el texto;
+- `GroupStockOrderService` (export agrupado);
+- `batch-history` y el PDF del frontend, que lo muestran crudo.
+
