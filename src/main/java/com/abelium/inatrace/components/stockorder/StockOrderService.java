@@ -1,5 +1,7 @@
 package com.abelium.inatrace.components.stockorder;
 
+import com.abelium.inatrace.db.entities.codebook.CertificationType;
+import com.abelium.inatrace.db.entities.codebook.CertificationTypeTranslation;
 import com.abelium.inatrace.api.ApiBaseEntity;
 import com.abelium.inatrace.api.ApiPaginatedList;
 import com.abelium.inatrace.api.ApiPaginatedRequest;
@@ -76,6 +78,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -1026,20 +1029,17 @@ public class StockOrderService extends BaseService {
         }
         entity.setParcelLot(apiStockOrder.getParcelLot());
         entity.setVariety(apiStockOrder.getVariety());
-        if ("CCN51".equalsIgnoreCase(apiStockOrder.getVariety())) {
-            entity.setOrganic(true);
-            if (apiStockOrder.getOrganicCertification() != null) {
-                entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
-            } else {
-                entity.setOrganicCertification("Transición / Fairtrade / SPP");
-            }
-        } else if (Boolean.FALSE.equals(apiStockOrder.getOrganic())) {
-            entity.setOrganicCertification(apiStockOrder.getOrganicCertification() != null
-                    ? apiStockOrder.getOrganicCertification()
-                    : "Transición / Fairtrade / SPP");
-        } else {
-            entity.setOrganicCertification(apiStockOrder.getOrganicCertification());
+        // CCN51 es la variedad no orgánica (UNOCACE: 1 = Orgánico, 2 = CCN51). Solo se
+        // completa lo que falta: el orgánico y la certificación enviados se respetan.
+        if (isCcn51Variety(apiStockOrder.getVariety()) && apiStockOrder.getOrganic() == null) {
+            entity.setOrganic(false);
         }
+        String organicCertification = apiStockOrder.getOrganicCertification();
+        boolean nonOrganic = Boolean.FALSE.equals(entity.getOrganic()) || isCcn51Variety(apiStockOrder.getVariety());
+        if (nonOrganic && (organicCertification == null || organicCertification.isBlank())) {
+            organicCertification = defaultNonOrganicCertificationName();
+        }
+        entity.setOrganicCertification(organicCertification);
         entity.setMoisturePercentage(apiStockOrder.getMoisturePercentage());
         entity.setMoistureWeightDeduction(apiStockOrder.getMoistureWeightDeduction());
         entity.setNetQuantity(apiStockOrder.getNetQuantity());
@@ -1186,6 +1186,44 @@ public class StockOrderService extends BaseService {
         }
 
         return new ApiBaseEntity(entity);
+    }
+
+    /** Con numericVarietyOptions la entrega guarda "2" en lugar de "CCN51". */
+    static boolean isCcn51Variety(String variety) {
+        return variety != null && ("CCN51".equalsIgnoreCase(variety.trim()) || "2".equals(variety.trim()));
+    }
+
+    /**
+     * Misma regla que el formulario de entrega: una certificación es no orgánica si su
+     * nombre dice convencional o transición. Va por nombre porque es lo que guarda la
+     * entrega y lo que el admin puede crear desde Ajustes.
+     */
+    static boolean isNonOrganicCertificationName(String name) {
+        if (name == null) {
+            return false;
+        }
+        String normalized = Normalizer.normalize(name, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT);
+        return normalized.contains("convencional") || normalized.contains("conventional")
+                || normalized.contains("transicion") || normalized.contains("transition");
+    }
+
+    /**
+     * Primera certificación activa no orgánica, con el nombre en español: es el que usa
+     * el formulario de entrega. Null si el catálogo no tiene ninguna.
+     */
+    private String defaultNonOrganicCertificationName() {
+        return em.createNamedQuery("CertificationType.findAllActive", CertificationType.class)
+                .getResultStream()
+                .map(ct -> ct.getTranslations().stream()
+                        .filter(t -> Language.ES.equals(t.getLanguage()))
+                        .map(CertificationTypeTranslation::getName)
+                        .findFirst()
+                        .orElse(ct.getName()))
+                .filter(StockOrderService::isNonOrganicCertificationName)
+                .findFirst()
+                .orElse(null);
     }
 
     private void calculateNetQuantity(ApiStockOrder api, StockOrder entity) {

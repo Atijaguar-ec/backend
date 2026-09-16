@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.abelium.inatrace.components.facility.FacilityService;
@@ -94,5 +96,24 @@ class StockOrderServiceTest {
         // expected fallback to ZERO
         assertEquals(BigDecimal.ZERO, entity.getMoistureWeightDeduction());
         assertEquals(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP), entity.getNetQuantity().setScale(2, RoundingMode.HALF_UP));
+    }
+
+    @Test
+    void isCcn51Variety_reconoceTextoYNumero() {
+        assertTrue(StockOrderService.isCcn51Variety("CCN51"));
+        assertTrue(StockOrderService.isCcn51Variety("ccn51"));
+        assertTrue(StockOrderService.isCcn51Variety("2"));
+        assertFalse(StockOrderService.isCcn51Variety("1"));
+        assertFalse(StockOrderService.isCcn51Variety("NACIONAL"));
+        assertFalse(StockOrderService.isCcn51Variety(null));
+    }
+
+    @Test
+    void isNonOrganicCertificationName_convencionalYTransicion() {
+        assertTrue(StockOrderService.isNonOrganicCertificationName("Convencional Fairtrade"));
+        assertTrue(StockOrderService.isNonOrganicCertificationName("Transición / Fairtrade / SPP"));
+        assertTrue(StockOrderService.isNonOrganicCertificationName("Transition / Fairtrade / SPP"));
+        assertFalse(StockOrderService.isNonOrganicCertificationName("Organico UE/NOP/Fairtrade/SPP"));
+        assertFalse(StockOrderService.isNonOrganicCertificationName(null));
     }
 }
