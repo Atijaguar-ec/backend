@@ -1179,3 +1179,78 @@ Verificado con `information_schema` en staging: `cost`, `netquantity` y
 - `usercustomer.status` está en **NULL** para los socios anteriores a la migración de
   estados (los 873 de Fortaleza). El getter lo normaliza a `ACTIVE`; en SQL usa
   `coalesce(status, 'ACTIVE')` (misma regla de §12.3).
+
+---
+
+## 17. Sacos de salida de un procesamiento (`repackedOutputs`)
+
+> Escrito el **2026-09-15**, tras encontrar en producción de Fortaleza un lote que
+> subía de peso cada vez que se editaba. La causa está en el código base de INATrace
+> (viene del original de 2021), así que **afecta a todas las empresas**, no solo a
+> Fortaleza: cualquier acción de procesamiento cuyo semiproducto de salida tenga
+> `repackedOutputs` con `maxOutputWeight` parte el lote en varios `StockOrder`
+> ("sacos"), y todas caían en lo mismo.
+
+### 17.1 Qué es un saco y por qué hay muchos `StockOrder` por lote
+
+Cuando el semiproducto de salida tiene `repackedOutputs`, la salida de un
+`ProcessingOrder` **no es un `StockOrder`, son N**: uno por saco, cada uno con
+`sacNumber` y con el mismo `repackedOriginStockOrderId` (un UUID que genera el
+frontend para agruparlos). El peso del lote es la **suma** de los sacos; el campo
+"cantidad de salida" del formulario es solo una ayuda de pantalla y no se guarda.
+
+### 17.2 La trampa: quitar un saco no lo borraba
+
+`ProcessingOrder.targetStockOrders` es `@OneToMany(mappedBy = "processingOrder")`
+**sin `orphanRemoval`** ([ProcessingOrder.java](src/main/java/com/abelium/inatrace/db/entities/processingorder/ProcessingOrder.java)).
+Hasta el 2026-09-15, `createOrUpdateProcessingOrder` calculaba los sacos que ya no
+venían en la petición y solo hacía `entity.getTargetStockOrders().removeAll(...)`:
+eso **no genera ningún DELETE**. El saco seguía en la base, con su
+`processingorder_id` y su cantidad disponible, y la API respondía **200**.
+
+Consecuencia real (Fortaleza, lote `2026-34-02`): el usuario dejó unas pocas filas
+y agregó 14 sacos nuevos; se crearon los 14 y no se borró ninguno de los 42
+anteriores → **42 + 14 = 56 sacos, 3.864 kg** cuando el lote debía pesar ~1.000 kg.
+Editando otra vez solo se actualizaban las filas que quedaban, así que el peso casi
+no bajaba y los `sacNumber` quedaban repetidos.
+
+### 17.3 Reglas al tocar este código
+
+1. **Los sacos quitados se borran con `em.remove`**, no basta con sacarlos de la
+   colección. Si alguien reescribe este bloque con `removeAll` a secas, vuelve el
+   fallo.
+2. **En `TRANSFER` nunca se borra el destino.** Ahí el `StockOrder` destino **es el
+   mismo de origen** (la validación exige el mismo ID, ver el `case TRANSFER` de
+   `createOrUpdateProcessingOrder`). Borrarlo eliminaría la entrega original del
+   socio. Al 2026-09-15 había 31 transferencias con varios destinos en Fortaleza,
+   así que no es un caso raro. El borrado solo aplica a `PROCESSING`,
+   `FINAL_PROCESSING` y `GENERATE_QR_CODE`.
+3. **Antes de borrar, verificar que el saco no se usó:** cantidad consumida
+   (`totalQuantity > availableQuantity`), pagos asociados, o transacciones que lo
+   tengan como `sourceStockOrder`. Si se usó, `VALIDATION_ERROR`; nunca un OK falso.
+   La validación vieja comparaba al revés (`total - available < 0`) y no bloqueaba
+   nunca: no la "restaures" por parecer equivalente.
+4. **El orden de los sacos importa.** `targetStockOrders` es un `Set` (`HashSet`):
+   el orden cambia entre lecturas. `ProcessingOrderMapper` los ordena por
+   `sacNumber` y luego por `id`. Sin ese orden, el usuario edita filas distintas
+   cada vez que abre la pantalla y termina pisando sacos al azar.
+   Lo cubre `ProcessingOrderMapperTest`.
+
+### 17.4 Cómo detectar lotes ya dañados (cualquier empresa)
+
+Los números de saco repetidos son la huella del fallo:
+
+```sql
+select so.company_id, so.processingorder_id, so.internallotnumber,
+       count(*) sacos, count(distinct so.sacnumber) numeros_distintos,
+       sum(so.totalquantity) peso
+from stockorder so
+where so.processingorder_id is not null and so.sacnumber is not null
+group by 1,2,3
+having count(*) <> count(distinct so.sacnumber)
+order by 1,2;
+```
+
+Al 2026-09-15 en producción de Fortaleza salían `2026-34-01` (33 sacos, 26 números)
+y `2026-34-02` (56 sacos, 35 números). Corregirlos es trabajo de datos aparte: el
+arreglo del código no deshace lo ya guardado.
