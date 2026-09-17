@@ -3,7 +3,9 @@ package com.abelium.inatrace.components.company;
 import com.abelium.inatrace.api.*;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.company.api.*;
+import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonImportService;
 import com.abelium.inatrace.components.company.types.CompanyAction;
+import com.abelium.inatrace.components.company.types.PlotGeoJsonImportScope;
 import com.abelium.inatrace.components.product.api.ApiListCustomersRequest;
 import com.abelium.inatrace.components.product.api.ApiProductType;
 import com.abelium.inatrace.components.value_chain.api.ApiValueChain;
@@ -35,10 +37,15 @@ public class CompanyController {
 
     private final UserCustomerImportService userCustomerImportService;
 
+	private final PlotGeoJsonImportService plotGeoJsonImportService;
+
 	@Autowired
-	public CompanyController(CompanyService companyService, UserCustomerImportService userCustomerImportService) {
+	public CompanyController(CompanyService companyService,
+							 UserCustomerImportService userCustomerImportService,
+							 PlotGeoJsonImportService plotGeoJsonImportService) {
 		this.companyService = companyService;
         this.userCustomerImportService = userCustomerImportService;
+		this.plotGeoJsonImportService = plotGeoJsonImportService;
 	}
 
 	@PostMapping(value = "/create")
@@ -319,6 +326,31 @@ public class CompanyController {
             @Valid @Parameter(description = "Document ID", required = true) @PathVariable("documentId") Long documentId,
             @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
         return userCustomerImportService.importFarmersSpreadsheet(companyId, documentId, authUser, language);
+    }
+
+    @PostMapping(value = "/{id}/plots/import-geojson", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('SYSTEM_ADMIN')")
+    @Operation(summary = "Preview or apply the replacement of farmer plots with the polygons of a GeoJSON file",
+            description = "Farmers are matched by internal ID in the company and its connected companies. "
+                    + "Without apply=true nothing is saved. Applying needs the plotsToDelete and plotsToCreate "
+                    + "of the preview, and saves everything or nothing.")
+    public ApiResponse<ApiPlotGeoJsonImportResponse> importPlotsGeoJson(
+            @AuthenticationPrincipal CustomUserDetails authUser,
+            @Parameter(description = "Company ID", required = true) @PathVariable("id") Long id,
+            @RequestParam("file") MultipartFile file,
+            @Parameter(description = "Which existing plots are replaced", required = true)
+            @RequestParam("scope") PlotGeoJsonImportScope scope,
+            @Parameter(description = "Save the changes; false only previews them")
+            @RequestParam(value = "apply", defaultValue = "false") boolean apply,
+            @Parameter(description = "Import the valid features even if others cannot be imported")
+            @RequestParam(value = "skipInvalidFeatures", defaultValue = "false") boolean skipInvalidFeatures,
+            @Parameter(description = "plotsToDelete of the preview (required when applying)")
+            @RequestParam(value = "expectedPlotsToDelete", required = false) Long expectedPlotsToDelete,
+            @Parameter(description = "plotsToCreate of the preview (required when applying)")
+            @RequestParam(value = "expectedPlotsToCreate", required = false) Integer expectedPlotsToCreate
+    ) throws ApiException, IOException {
+        return new ApiResponse<>(plotGeoJsonImportService.importPlots(authUser, id, file.getBytes(), scope, apply,
+                skipInvalidFeatures, expectedPlotsToDelete, expectedPlotsToCreate));
     }
 
     @GetMapping(value = "/{id}/value-chains")

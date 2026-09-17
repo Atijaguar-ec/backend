@@ -2,14 +2,16 @@ package com.abelium.inatrace.components.company;
 
 import com.abelium.inatrace.api.*;
 import com.abelium.inatrace.api.errors.ApiException;
-import com.abelium.inatrace.components.agstack.AgStackClientService;
-import com.abelium.inatrace.components.agstack.api.ApiRegisterFieldBoundaryResponse;
+import com.abelium.inatrace.components.agstack.PlotGeoIdGenerator;
 import com.abelium.inatrace.components.common.BaseService;
 import com.abelium.inatrace.components.common.CommonService;
 import com.abelium.inatrace.components.common.api.ApiCertification;
 import com.abelium.inatrace.components.company.api.*;
 import com.abelium.inatrace.components.company.mappers.CompanyCustomerMapper;
 import com.abelium.inatrace.components.company.mappers.PlotMapper;
+import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonFeature;
+import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonImportPlanner;
+import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonReader;
 import com.abelium.inatrace.components.company.types.CompanyAction;
 import com.abelium.inatrace.components.product.ProductTypeMapper;
 import com.abelium.inatrace.components.product.api.ApiFarmPlantInformation;
@@ -36,7 +38,6 @@ import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.Point;
 import com.mapbox.geojson.Polygon;
-import com.mapbox.turf.TurfMeasurement;
 import jakarta.transaction.Transactional;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -80,7 +81,7 @@ public class CompanyService extends BaseService {
 	private CommonService commonService;
 
 	@Autowired
-	private AgStackClientService agStackClientService;
+	private PlotGeoIdGenerator plotGeoIdGenerator;
 
 	@Autowired
 	private MessageSource messageSource;
@@ -1043,7 +1044,7 @@ public class CompanyService extends BaseService {
 				}
 
 				// Generate Plot GeoID
-				plot.setGeoId(generatePlotGeoID(plot.getCoordinates()));
+				plot.setGeoId(plotGeoIdGenerator.generate(plot.getCoordinates()));
 
 				userCustomer.getPlots().add(plot);
 			}
@@ -1205,7 +1206,7 @@ public class CompanyService extends BaseService {
 			if (plot.getId() != null) {
 				refreshGeoIDForUserCustomerPlot(userCustomer.getId(), plot.getId(), user, language);
 			} else {
-				plot.setGeoId(generatePlotGeoID(plot.getCoordinates()));
+				plot.setGeoId(plotGeoIdGenerator.generate(plot.getCoordinates()));
 			}
 
 			if (apiPlot.getCrop() != null) {
@@ -1358,67 +1359,56 @@ public class CompanyService extends BaseService {
 		UserCustomer userCustomer = fetchUserCustomer(id);
 		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), authUser);
 
-		// Try to read the GeoJSON into Feature collection
-        try {
-
-	        FeatureCollection featureCollection = FeatureCollection.fromJson(new String(file.getBytes()));
-
-			if (!CollectionUtils.isEmpty(featureCollection.features())) {
-				int plotIndex = 1;
-				int pointIndex = 1;
-				for (Feature feature : featureCollection.features()) {
-					if (feature.geometry() instanceof Polygon) {
-
-						Polygon polygon = (Polygon) feature.geometry();
-
-						ApiPlot apiPlot = new ApiPlot();
-						apiPlot.setPlotName("Plot " + plotIndex++);
-
-						double polygonSizeInHa = TurfMeasurement.area(feature) / 1000;
-						apiPlot.setSize(Math.floor(polygonSizeInHa * 100) / 100);
-						apiPlot.setUnit("ha");
-
-						List<Point> polygonCoordinates = polygon.coordinates().get(0);
-
-						apiPlot.setCoordinates(polygonCoordinates.stream().map(lngLat -> {
-							ApiPlotCoordinate coordinate = new ApiPlotCoordinate();
-							coordinate.setLongitude(lngLat.longitude());
-							coordinate.setLatitude(lngLat.latitude());
-							return coordinate;
-						}).collect(Collectors.toList()));
-
-						ApiProductType apiProductType = new ApiProductType();
-						apiProductType.setId(userCustomer.getProductTypes().stream().toList().get(0).getProductType().getId());
-						apiPlot.setCrop(apiProductType);
-
-						createUserCustomerPlot(id, authUser, Language.EN, apiPlot);
-
-					} else if (feature.geometry() instanceof Point) {
-
-						Point point = (Point) feature.geometry();
-
-						ApiPlot apiPlot = new ApiPlot();
-						apiPlot.setPlotName("Point " + pointIndex++);
-
-						ApiPlotCoordinate coordinate = new ApiPlotCoordinate();
-						coordinate.setLongitude(point.longitude());
-						coordinate.setLatitude(point.latitude());
-						apiPlot.setCoordinates(List.of(coordinate));
-
-						ApiProductType apiProductType = new ApiProductType();
-						apiProductType.setId(userCustomer.getProductTypes().stream().toList().get(0).getProductType().getId());
-						apiPlot.setCrop(apiProductType);
-
-						createUserCustomerPlot(id, authUser, Language.EN, apiPlot);
-					}
-				}
-			}
-
-        } catch (IOException e) {
+		byte[] content;
+		try {
+			content = file.getBytes();
+		} catch (IOException e) {
 			logger.error("Error while reading GeoJSON file", e);
 			throw new ApiException(ApiStatus.ERROR, "Error while reading GeoJSON file");
-        }
-    }
+		}
+
+		List<PlotGeoJsonFeature> features = PlotGeoJsonReader.read(content);
+
+		// Reject the whole file instead of silently dropping what cannot be stored
+		// (multipolygons used to be skipped without a word).
+		String invalidFeatures = features.stream()
+				.filter(f -> f.geometryIssue() != null)
+				.map(f -> "#" + f.number() + " " + f.geometryIssue())
+				.collect(Collectors.joining(", "));
+		if (!invalidFeatures.isEmpty()) {
+			throw new ApiException(ApiStatus.VALIDATION_ERROR, "Features that cannot be stored as plots: " + invalidFeatures);
+		}
+
+		ApiProductType crop = new ApiProductType();
+		crop.setId(userCustomer.getProductTypes().stream()
+				.map(t -> t.getProductType().getId())
+				.min(Comparator.naturalOrder())
+				.orElseThrow(() -> new ApiException(ApiStatus.VALIDATION_ERROR, "The farmer has no product type")));
+
+		int plotIndex = 1;
+		int pointIndex = 1;
+		for (PlotGeoJsonFeature feature : features) {
+
+			ApiPlot apiPlot = new ApiPlot();
+			apiPlot.setCrop(crop);
+			apiPlot.setCoordinates(feature.ring().stream().map(lngLat -> {
+				ApiPlotCoordinate coordinate = new ApiPlotCoordinate();
+				coordinate.setLongitude(lngLat.longitude());
+				coordinate.setLatitude(lngLat.latitude());
+				return coordinate;
+			}).collect(Collectors.toList()));
+
+			if (feature.isPolygon()) {
+				apiPlot.setPlotName("Plot " + plotIndex++);
+				apiPlot.setSize(Math.floor(feature.areaHectares() * 100) / 100);
+				apiPlot.setUnit(PlotGeoJsonImportPlanner.HECTARE_UNIT);
+			} else {
+				apiPlot.setPlotName("Point " + pointIndex++);
+			}
+
+			createUserCustomerPlot(id, authUser, Language.EN, apiPlot);
+		}
+	}
 
 	@Transactional
 	public void deleteUserCustomer(Long id, CustomUserDetails user) throws ApiException {
@@ -1457,7 +1447,7 @@ public class CompanyService extends BaseService {
 		}
 
 		// Generate Plot GeoID
-		plot.setGeoId(generatePlotGeoID(plot.getCoordinates()));
+		plot.setGeoId(plotGeoIdGenerator.generate(plot.getCoordinates()));
 
 		em.persist(plot);
 
@@ -1480,48 +1470,10 @@ public class CompanyService extends BaseService {
 				.orElseThrow(() -> new ApiException(ApiStatus.INVALID_REQUEST, "Invalid Plot ID"));
 
 		if (StringUtils.isBlank(plot.getGeoId())) {
-			plot.setGeoId(generatePlotGeoID(plot.getCoordinates()));
+			plot.setGeoId(plotGeoIdGenerator.generate(plot.getCoordinates()));
 		}
 
 		return PlotMapper.toApiPlot(plot, language);
-	}
-
-	private String generatePlotGeoID(List<PlotCoordinate> coordinatesSet) {
-
-		List<PlotCoordinate> coordinates = new ArrayList<>(coordinatesSet);
-
-		if (coordinates.isEmpty() || coordinates.size() < 3) {
-			return null;
-		}
-
-		// Deployments without AgStack credentials simply have no geo id; attempting the
-		// call would log one login failure per saved plot.
-		if (!agStackClientService.isEnabled()) {
-			return null;
-		}
-
-		try {
-			ApiRegisterFieldBoundaryResponse response = agStackClientService.registerFieldBoundaryResponse(coordinates);
-			if (!CollectionUtils.isEmpty(response.getMatchedGeoIDs())) {
-                // On errors API returns additional message
-                if (response.getMessage() != null) {
-                    logger.error(response.getMessage());
-                }
-				return response.getMatchedGeoIDs().stream().findFirst().orElse(null);
-			} else {
-                // On errors API returns additional message
-                if (response.getGeoID() == null && response.getMessage() != null) {
-                    logger.error(response.getMessage());
-                }
-				return response.getGeoID();
-			}
-
-		} catch (Exception e) {
-            logger.error(e.getMessage());
-			logger.error("Error while generating plot geoid");
-		}
-
-		return null;
 	}
 
 	public ApiPaginatedList<ApiCompanyCustomer> listCompanyCustomers(CustomUserDetails authUser, Long companyId, ApiListCustomersRequest request) throws ApiException {

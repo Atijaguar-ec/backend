@@ -1346,3 +1346,98 @@ Además del código, dependen del texto guardado:
 - `GroupStockOrderService` (export agrupado);
 - `batch-history` y el PDF del frontend, que lo muestran crudo.
 
+
+---
+
+## 19. Importación masiva de polígonos (GeoJSON)
+
+> Escrito el **2026-09-16**. Espejo del frontend: `fe/agent-context.md` §19. Plan,
+> datos y decisiones: `docs/cambios/2026-09-16-unocace-reemplazo-poligonos.md`.
+> *Verificado* ese día con los tests unitarios y con el archivo real de UNOCACE
+> (104 polígonos de 2 de Mayo) contra una **copia** de `inatrace_unocace_stage`:
+> vista previa, rechazos y aplicación. La copia se borró al terminar.
+
+UNOCACE pidió borrar todos los polígonos cargados y dejar solo los validados en campo
+(pilotaje con la asociación 2 de Mayo). No se hace por SQL: hay un endpoint con vista
+previa, y la pantalla *Agricultores → Importar polígonos (GeoJSON)* lo usa.
+
+### 19.1 Piezas
+
+| Pieza | Qué hace |
+|---|---|
+| `POST /api/company/{id}/plots/import-geojson` | Solo `SYSTEM_ADMIN`. Multipart `file` + `scope`, `apply`, `skipInvalidFeatures`, `expectedPlotsToDelete`, `expectedPlotsToCreate` |
+| `plotimport/PlotGeoJsonReader` | Lee el `FeatureCollection`; errores de archivo → `ApiException`, errores de un elemento → quedan en el elemento |
+| `plotimport/PlotGeoJsonImportPlanner` | Puro, sin BD: empareja agricultores, decide lotes, incidencias y qué empresas se reemplazan |
+| `plotimport/PlotGeoJsonImportService` | Carga el alcance, aplica el plan en **una** transacción y genera los Geo-ID después del commit |
+| `agstack/PlotGeoIdGenerator` | La generación de Geo-ID que antes era privada de `CompanyService`; la usan todos los caminos que crean lotes |
+
+### 19.2 Reglas del archivo (formato de las capas GIS de UNOCACE)
+
+- `ID_INTERNO` = `UserCustomer.farmerCompanyInternalId`, sin distinguir mayúsculas ni
+  espacios alrededor. **No** se quita el prefijo `MY`: `0906065859` y `MY0906065859`
+  son agricultores distintos en la BD (hay un duplicado de Manuel Avilés así).
+- `COD_LOTE` → nombre del lote (obligatorio y único por agricultor).
+- `HECTAREA` → tamaño; si falta o es ≤ 0, se usa el área geodésica del polígono.
+- `CULTIVOPRI` → cultivo por **nombre** de `ProductType` ("CACAO CCN51", "CACAO
+  NACIONAL", como hizo la migración) y variedad: CCN51 → `CCN51`, Nacional →
+  `ORGANICO` (= variedad 1, ver §18). Si no coincide, el tipo de producto del
+  agricultor con menor id.
+- Se aceptan `Polygon`, `MultiPolygon` **de una sola parte** (QGIS exporta así) y
+  `Point`. Se rechazan multipartes, huecos, coordenadas fuera de rango y un `crs` que
+  no sea WGS 84 (un UTM se guardaría como basura).
+- El anillo se guarda **cerrado** (primer vértice repetido), como los 727 de 728 lotes
+  que ya había; `PlotGeometryTools` acepta ambos.
+
+### 19.3 Alcance y seguridad
+
+- Los agricultores se buscan en la empresa seleccionada **y sus empresas conectadas**
+  (las que comparten un producto con ella: en UNOCACE, las 20 asociaciones). No sirve
+  `getAssociations`: las asociaciones de UNOCACE son `PRODUCER`, no `ASSOCIATION`.
+- `scope = COMPANY_AND_CONNECTED` borra los lotes de todas esas empresas;
+  `MATCHED_COMPANIES` solo los de las empresas que reciben lotes del archivo. Usá el
+  segundo para cargar la próxima asociación validada **sin borrar 2 de Mayo**.
+- Sin `apply=true` no se guarda nada. Para aplicar hay que mandar los
+  `plotsToDelete`/`plotsToCreate` de la vista previa; si cambiaron, se rechaza.
+- Con incidencias no se aplica, salvo `skipInvalidFeatures=true` explícito.
+- Borrado con JPQL masivo en orden `PlotDeforestationAnalysis` → `PlotCoordinate` →
+  `Plot` (un `DELETE` JPQL **no** aplica cascadas) y luego `em.clear()`. No cambies a
+  `em.remove` sobre lotes que siguen en `UserCustomer.plots` (EAGER, `orphanRemoval`):
+  Hibernate falla con "deleted object would be re-saved by cascade".
+- Ninguna otra tabla referencia `plot` por FK. `stockorder.parcellot` es texto sin
+  FK (nombre del lote, o la posición "1", "2"… en los datos viejos; ver
+  `fe/agent-context.md` §12): las entregas existentes no cambian. No las "arregles".
+- **Sin lote no se vende** (`fe/agent-context.md` §12.1). Tras un reemplazo con
+  `COMPANY_AND_CONNECTED`, los agricultores de las empresas que no recibieron lotes
+  no pueden registrar entregas hasta que se carguen los suyos (o se active
+  `parcelLotFreeText` en esa empresa). En UNOCACE, el 2026-09-16, ninguna empresa lo
+  tenía activo.
+- Se pierden los datos que solo vivían en el lote: certificación, variedad, estimado
+  de producción, plantas, Geo-ID y análisis Whisp. UNOCACE decidió recargarlos.
+
+### 19.4 Geo-ID después del commit
+
+Con AgStack configurado (UNOCACE lo está), `apply` registra un
+`afterCommit` que genera los Geo-ID en **un** hilo propio (`plot-geoid-backfill`),
+uno por lote, cada escritura en su propia transacción corta. La respuesta dice cuántos
+quedaron pendientes (`geoIdsPending`) y el log cierra con
+`Plot GeoJSON import: generated X of Y AgStack geo ids`. No lo muevas dentro de la
+transacción (§14.5): 100 llamadas HTTP tardan minutos. Si el contenedor se reinicia en
+medio, los que falten se generan desde el mapa (*Actualizar*).
+
+### 19.5 Arreglos en la subida por agricultor (`uploadGeoData`)
+
+- Ignoraba en silencio todo `MultiPolygon`: con el archivo de UNOCACE respondía OK y
+  no creaba nada. Ahora usa el mismo lector y rechaza el archivo si algún elemento no
+  se puede guardar.
+- Calculaba el área como `m² / 1000`: los tamaños salían **10 veces** más grandes.
+  Ahora `m² / 10 000`. Los lotes subidos antes por esa vía conservan el tamaño malo.
+- Si el agricultor no tenía tipo de producto, fallaba con `IndexOutOfBounds`.
+
+### 19.6 Pruebas
+
+```bash
+mvn -q -o test -Dtest='PlotGeoJson*Test' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+14 tests (lector 8, planificador 6). Los JPQL solo se prueban contra una base real:
+el procedimiento con una copia de la BD y un túnel SSH está en el plan de `docs/`.
