@@ -314,7 +314,7 @@ public class CompanyService extends BaseService {
 
 	public ApiUserCustomer getUserCustomer(Long id, CustomUserDetails user, Language language) throws ApiException {
 
-		UserCustomer userCustomer = fetchUserCustomer(id);
+		UserCustomer userCustomer = fetchUserCustomerWithPlots(id);
 		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), user);
 
 		return companyApiTools.toApiUserCustomer(userCustomer, user.getUserId(), language);
@@ -1320,7 +1320,7 @@ public class CompanyService extends BaseService {
 
 	public byte[] exportUserCustomerGeoData(CustomUserDetails authUser, Long id) throws ApiException {
 
-		UserCustomer userCustomer = fetchUserCustomer(id);
+		UserCustomer userCustomer = fetchUserCustomerWithPlots(id);
 		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), authUser);
 
 		// Prepare the GeoJSON object
@@ -1465,7 +1465,7 @@ public class CompanyService extends BaseService {
 												   CustomUserDetails user,
 												   Language language) throws ApiException {
 
-		UserCustomer userCustomer = fetchUserCustomer(userCustomerId);
+		UserCustomer userCustomer = fetchUserCustomerWithPlots(userCustomerId);
 		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), user);
 
 		Plot plot = userCustomer.getPlots()
@@ -1590,6 +1590,17 @@ public class CompanyService extends BaseService {
 		}
 
 		return userCustomer;
+	}
+
+	private UserCustomer fetchUserCustomerWithPlots(Long id) throws ApiException {
+		List<UserCustomer> list = em.createNamedQuery("UserCustomer.getUserCustomerWithPlotsById", UserCustomer.class)
+				.setParameter("id", id)
+				.getResultList();
+		if (list.isEmpty()) {
+			throw new ApiException(ApiStatus.INVALID_REQUEST, "Invalid Company user customer ID");
+		}
+
+		return list.get(0);
 	}
 
 	private ProductType fetchProductType(Long id) throws ApiException {

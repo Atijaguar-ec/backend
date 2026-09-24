@@ -95,4 +95,42 @@ class SimpleCircuitBreakerTest {
         assertEquals("recovered", result);
         assertEquals(SimpleCircuitBreaker.State.CLOSED, circuitBreaker.getState());
     }
+
+    @Test
+    void testHalfOpenFailureTripsBackToOpen() throws InterruptedException {
+        // Force 3 failures to trip to OPEN
+        for (int i = 0; i < 3; i++) {
+            circuitBreaker.execute(() -> {
+                throw new RuntimeException("error");
+            }, () -> "fallback");
+        }
+        assertEquals(SimpleCircuitBreaker.State.OPEN, circuitBreaker.getState());
+
+        // Wait past reset timeout (100ms)
+        Thread.sleep(150);
+
+        // Next execution probes; if it fails, breaker must trip back to OPEN immediately
+        String result = circuitBreaker.execute(() -> {
+            throw new RuntimeException("probe failed");
+        }, () -> "probe_fallback");
+
+        assertEquals("probe_fallback", result);
+        assertEquals(SimpleCircuitBreaker.State.OPEN, circuitBreaker.getState());
+        assertFalse(circuitBreaker.allowExecution());
+    }
+
+    @Test
+    void testExplicitReset() {
+        // Trip to OPEN
+        for (int i = 0; i < 3; i++) {
+            circuitBreaker.execute(() -> {
+                throw new RuntimeException("error");
+            }, () -> "fallback");
+        }
+        assertEquals(SimpleCircuitBreaker.State.OPEN, circuitBreaker.getState());
+
+        circuitBreaker.reset();
+        assertEquals(SimpleCircuitBreaker.State.CLOSED, circuitBreaker.getState());
+        assertTrue(circuitBreaker.allowExecution());
+    }
 }

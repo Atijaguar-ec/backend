@@ -101,7 +101,7 @@ public class SimpleCircuitBreaker {
 
     public State getState() {
         if (state.get() == State.OPEN && (System.currentTimeMillis() - lastStateChangedTime.get() >= resetTimeoutMillis)) {
-            state.set(State.HALF_OPEN);
+            state.compareAndSet(State.OPEN, State.HALF_OPEN);
         }
         return state.get();
     }

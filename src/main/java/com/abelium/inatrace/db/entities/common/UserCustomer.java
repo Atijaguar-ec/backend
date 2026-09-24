@@ -25,7 +25,9 @@ import java.util.Set;
 	@NamedQuery(name = "UserCustomer.getUserCustomerByNameSurnameAndVillage",
 			    query = "SELECT u FROM UserCustomer u WHERE u.name = :name AND u.surname = :surname AND u.userCustomerLocation.address.village = :village"),
 	@NamedQuery(name = "UserCustomer.countCompanyFarmers",
-			    query = "SELECT COUNT(u) FROM UserCustomer u WHERE u.company.id = :companyId AND u.type = com.abelium.inatrace.types.UserCustomerType.FARMER")
+			    query = "SELECT COUNT(u) FROM UserCustomer u WHERE u.company.id = :companyId AND u.type = com.abelium.inatrace.types.UserCustomerType.FARMER"),
+	@NamedQuery(name = "UserCustomer.getUserCustomerWithPlotsById",
+			    query = "SELECT DISTINCT u FROM UserCustomer u LEFT JOIN FETCH u.plots WHERE u.id = :id")
 })
 public class UserCustomer extends BaseEntity {
 

@@ -44,7 +44,7 @@ public class CurrencyTypeService extends BaseService {
     private final SimpleCircuitBreaker circuitBreaker = new SimpleCircuitBreaker("ExchangeRatesSymbolsApi");
 
     @Autowired
-    private WebClient.Builder webClientBuilder;
+    private WebClient webClient;
 
     @Value("${INAtrace.exchangerate.apiKey}")
     private String apiKey;
@@ -97,8 +97,7 @@ public class CurrencyTypeService extends BaseService {
         }
 
         ApiCurrencySymbolsResponse apiCurrencySymbolsResponse = circuitBreaker.execute(() -> {
-            return webClientBuilder.build()
-                    .get()
+            return webClient.get()
                     .uri("https://api.exchangeratesapi.io/v1/symbols?access_key=" + apiKey)
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
@@ -112,20 +111,23 @@ public class CurrencyTypeService extends BaseService {
 
         if (apiCurrencySymbolsResponse != null && apiCurrencySymbolsResponse.isSuccess()) {
             Map<String, String> symbols = apiCurrencySymbolsResponse.getSymbols();
-            for (Map.Entry<String, String> entry : symbols.entrySet()) {
-                if (em.createNamedQuery("CurrencyType.getCurrencyTypeByCode").setParameter("code", entry.getKey()).getResultList().isEmpty()) {
-                    CurrencyType currencyType = new CurrencyType();
-                    currencyType.setCode(entry.getKey());
-                    currencyType.setLabel(entry.getValue());
-                    currencyType.setEnabled(Boolean.FALSE);
-                    em.persist(currencyType);
+            if (symbols != null) {
+                for (Map.Entry<String, String> entry : symbols.entrySet()) {
+                    if (em.createNamedQuery("CurrencyType.getCurrencyTypeByCode").setParameter("code", entry.getKey()).getResultList().isEmpty()) {
+                        CurrencyType currencyType = new CurrencyType();
+                        currencyType.setCode(entry.getKey());
+                        currencyType.setLabel(entry.getValue());
+                        currencyType.setEnabled(Boolean.FALSE);
+                        em.persist(currencyType);
+                    }
                 }
             }
+        } else if (apiCurrencySymbolsResponse != null && !apiCurrencySymbolsResponse.isSuccess()) {
+            log.warn("Exchange rates symbols API returned unsuccessful status");
         }
 
         ApiCurrencyRatesResponse apiCurrencyResponse = circuitBreaker.execute(() -> {
-            return webClientBuilder.build()
-                    .get()
+            return webClient.get()
                     .uri("https://api.exchangeratesapi.io/v1/latest?access_key=" + apiKey + "&base=EUR")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
@@ -143,18 +145,22 @@ public class CurrencyTypeService extends BaseService {
 
             List<String> enabled = getEnabledCurrencyCodes();
 
-            for (Map.Entry<String, BigDecimal> entry : rates.entrySet()) {
-                if (enabled.contains(entry.getKey()) && em.createNamedQuery("CurrencyPair.rateAtDate").setParameter(CURRENCY, entry.getKey()).setParameter("date", current).getResultList().isEmpty()) {
-                    CurrencyPair currencyPair = new CurrencyPair();
-                    CurrencyType from = getCurrencyTypeByCode("EUR");
-                    CurrencyType to = getCurrencyTypeByCode(entry.getKey());
-                    currencyPair.setFrom(from);
-                    currencyPair.setTo(to);
-                    currencyPair.setDate(current);
-                    currencyPair.setValue(entry.getValue());
-                    em.persist(currencyPair);
+            if (rates != null && current != null) {
+                for (Map.Entry<String, BigDecimal> entry : rates.entrySet()) {
+                    if (enabled.contains(entry.getKey()) && em.createNamedQuery("CurrencyPair.rateAtDate").setParameter(CURRENCY, entry.getKey()).setParameter("date", current).getResultList().isEmpty()) {
+                        CurrencyPair currencyPair = new CurrencyPair();
+                        CurrencyType from = getCurrencyTypeByCode("EUR");
+                        CurrencyType to = getCurrencyTypeByCode(entry.getKey());
+                        currencyPair.setFrom(from);
+                        currencyPair.setTo(to);
+                        currencyPair.setDate(current);
+                        currencyPair.setValue(entry.getValue());
+                        em.persist(currencyPair);
+                    }
                 }
             }
+        } else if (apiCurrencyResponse != null && !apiCurrencyResponse.isSuccess()) {
+            log.warn("Exchange rates latest rates API returned unsuccessful status");
         }
     }
 
