@@ -173,7 +173,7 @@ public class UserCustomer extends BaseEntity {
 	@NotAudited
 	private Set<FarmPlantInformation> farmPlantInformationList;
 
-	@OneToMany(mappedBy = "farmer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+	@OneToMany(mappedBy = "farmer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	@NotAudited
 	private Set<Plot> plots;
 	

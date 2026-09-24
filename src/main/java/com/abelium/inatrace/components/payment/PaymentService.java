@@ -30,8 +30,8 @@ import jakarta.transaction.Transactional;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
@@ -121,14 +121,15 @@ public class PaymentService extends BaseService {
 		List<ApiPayment> payments = getPaymentList(request, new PaymentQueryRequest(companyId), authUser).items;
 
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-		try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+		SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+		try (workbook) {
 
 			// Create date cell style
 			CellStyle dateCellStyle = workbook.createCellStyle();
 			dateCellStyle.setDataFormat((short) 14);
 
 			// Create Excel sheet
-			XSSFSheet sheet = workbook.createSheet(TranslateTools.getTranslatedValue(
+			Sheet sheet = workbook.createSheet(TranslateTools.getTranslatedValue(
 					messageSource, "export.payments.sheet.name", language
 			));
 
@@ -220,6 +221,8 @@ public class PaymentService extends BaseService {
 			}
 
 			workbook.write(byteArrayOutputStream);
+		} finally {
+			workbook.dispose();
 		}
 
 		return byteArrayOutputStream.toByteArray();
@@ -301,10 +304,11 @@ public class PaymentService extends BaseService {
 		List<ApiBulkPayment> bulkPayments = listBulkPayments(request, new PaymentQueryRequest(companyId), authUser).items;
 
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-		try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+		SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+		try (workbook) {
 
 			// Create Excel sheet
-			XSSFSheet sheet = workbook.createSheet(TranslateTools.getTranslatedValue(
+			Sheet sheet = workbook.createSheet(TranslateTools.getTranslatedValue(
 					messageSource, "export.bulkPayments.sheet.name", language
 			));
 
@@ -348,6 +352,8 @@ public class PaymentService extends BaseService {
 			}
 
 			workbook.write(byteArrayOutputStream);
+		} finally {
+			workbook.dispose();
 		}
 
 		return byteArrayOutputStream.toByteArray();

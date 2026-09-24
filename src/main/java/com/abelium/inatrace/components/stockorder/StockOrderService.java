@@ -64,8 +64,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
@@ -1646,14 +1646,15 @@ public class StockOrderService extends BaseService {
         List<ApiStockOrder> apiDeliveries = getStockOrderListForCompany(request, queryRequest, authUser, language).items;
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        try (workbook) {
 
             // Create date cell style
             CellStyle dateCellStyle = workbook.createCellStyle();
             dateCellStyle.setDataFormat((short) 14);
 
             // Create Excel sheet
-            XSSFSheet sheet = workbook.createSheet(TranslateTools.getTranslatedValue(
+            Sheet sheet = workbook.createSheet(TranslateTools.getTranslatedValue(
                     messageSource, "export.deliveries.sheet.name", language
             ));
 
@@ -1796,6 +1797,8 @@ public class StockOrderService extends BaseService {
             }
 
             workbook.write(byteArrayOutputStream);
+        } finally {
+            workbook.dispose();
         }
 
         return byteArrayOutputStream.toByteArray();
