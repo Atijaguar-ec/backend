@@ -62,9 +62,9 @@ CREATE INDEX IF NOT EXISTS idx_usercustomer_statusupdatedby_id ON public.usercus
 
 -- UserCustomer Relationships FK Indexes
 CREATE INDEX IF NOT EXISTS idx_usercustomerassociation_usercustomer_id ON public.usercustomerassociation USING btree (usercustomer_id);
-CREATE INDEX IF NOT EXISTS idx_usercustomerassociation_association_id ON public.usercustomerassociation USING btree (association_id);
+CREATE INDEX IF NOT EXISTS idx_usercustomerassociation_company_id ON public.usercustomerassociation USING btree (company_id);
 CREATE INDEX IF NOT EXISTS idx_usercustomercooperative_usercustomer_id ON public.usercustomercooperative USING btree (usercustomer_id);
-CREATE INDEX IF NOT EXISTS idx_usercustomercooperative_cooperative_id ON public.usercustomercooperative USING btree (cooperative_id);
+CREATE INDEX IF NOT EXISTS idx_usercustomercooperative_company_id ON public.usercustomercooperative USING btree (company_id);
 CREATE INDEX IF NOT EXISTS idx_usercustomerproducttype_usercustomer_id ON public.usercustomerproducttype USING btree (usercustomer_id);
 CREATE INDEX IF NOT EXISTS idx_usercustomerproducttype_producttype_id ON public.usercustomerproducttype USING btree (producttype_id);
 
