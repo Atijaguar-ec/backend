@@ -33,6 +33,7 @@ class GroupStockOrderServiceUnitTest {
     private GroupStockOrderService service;
     private Method weekColorCodesEnabledForMethod;
     private Method formatOrderTypeMethod;
+    private Method formatAvailabilityMethod;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -44,6 +45,9 @@ class GroupStockOrderServiceUnitTest {
 
         formatOrderTypeMethod = GroupStockOrderService.class.getDeclaredMethod("formatOrderType", String.class, Language.class);
         formatOrderTypeMethod.setAccessible(true);
+
+        formatAvailabilityMethod = GroupStockOrderService.class.getDeclaredMethod("formatAvailability", Boolean.class, Language.class);
+        formatAvailabilityMethod.setAccessible(true);
     }
 
     // -------------------------------------------------------------------------
@@ -234,5 +238,45 @@ class GroupStockOrderServiceUnitTest {
 
         assertEquals("Orden de Transferencia", formatOrderTypeMethod.invoke(service, "TRANSFER_ORDER", Language.ES));
         assertEquals("TRANSFER ORDER", formatOrderTypeMethod.invoke(service, "TRANSFER_ORDER", Language.EN));
+    }
+
+    // -------------------------------------------------------------------------
+    // HU-16: formatAvailability & Null-Safety in Excel Generation
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("formatAvailability translates boolean availability correctly in Spanish and English")
+    void formatAvailability_translations() throws Exception {
+        assertEquals("Disponible", formatAvailabilityMethod.invoke(service, Boolean.TRUE, Language.ES));
+        assertEquals("No Disponible", formatAvailabilityMethod.invoke(service, Boolean.FALSE, Language.ES));
+        assertEquals("-", formatAvailabilityMethod.invoke(service, null, Language.ES));
+
+        assertEquals("Available", formatAvailabilityMethod.invoke(service, Boolean.TRUE, Language.EN));
+        assertEquals("Not Available", formatAvailabilityMethod.invoke(service, Boolean.FALSE, Language.EN));
+        assertEquals("-", formatAvailabilityMethod.invoke(service, null, Language.EN));
+    }
+
+    @Test
+    @DisplayName("generateExcelFile handles null fields gracefully without NullPointerException")
+    void generateExcelFile_withNullFields_handlesGracefully() throws Exception {
+        ApiGroupStockOrder emptyOrder = new ApiGroupStockOrder(
+                "1", null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, null, null, null, null
+        );
+
+        List<ApiGroupStockOrder> list = Collections.singletonList(emptyOrder);
+
+        try (ByteArrayInputStream in = service.generateExcelFile(list, Language.ES, false);
+             Workbook workbook = WorkbookFactory.create(in)) {
+
+            assertNotNull(workbook);
+            Sheet sheet = workbook.getSheetAt(0);
+            assertNotNull(sheet);
+            assertEquals(2, sheet.getPhysicalNumberOfRows()); // Header + 1 data row
+            Row dataRow = sheet.getRow(1);
+            assertNotNull(dataRow);
+            assertEquals("-", dataRow.getCell(17).getStringCellValue()); // formatAvailability(null)
+        }
     }
 }

@@ -8,7 +8,12 @@ import com.abelium.inatrace.components.company.CompanyQueries;
 import com.abelium.inatrace.components.currencies.CurrencyService;
 import com.abelium.inatrace.components.facility.FacilityService;
 import com.abelium.inatrace.components.product.FinalProductService;
+import com.abelium.inatrace.components.stockorder.api.ApiHistoryTimelineItem;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
+import com.abelium.inatrace.components.stockorder.api.ApiStockOrderHistory;
+import com.abelium.inatrace.components.stockorder.api.ApiStockOrderHistoryTimelineItem;
+import com.abelium.inatrace.components.codebook.measure_unit_type.api.ApiMeasureUnitType;
+import com.abelium.inatrace.components.payment.api.ApiPayment;
 import com.abelium.inatrace.db.entities.payment.Payment;
 import com.abelium.inatrace.db.entities.payment.PaymentPurposeType;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
@@ -31,6 +36,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,6 +70,8 @@ class StockOrderServiceTest {
     private Method calculateNetQuantityMethod;
     private Method calculateBalanceForPurchaseOrderMethod;
     private Method calculateProducerPaymentsMethod;
+    private Method calculateFarmerPaymentsMethod;
+    private Method calculateRepetitionsMethod;
     private Method calculateFulfilledQuantityMethod;
     private Method calculateUsedQuantityMethod;
 
@@ -89,6 +97,12 @@ class StockOrderServiceTest {
 
         calculateProducerPaymentsMethod = StockOrderService.class.getDeclaredMethod("calculateProducerPayments", BigDecimal.class, BigDecimal.class);
         calculateProducerPaymentsMethod.setAccessible(true);
+
+        calculateFarmerPaymentsMethod = StockOrderService.class.getDeclaredMethod("calculateFarmerPayments", ApiStockOrderHistory.class);
+        calculateFarmerPaymentsMethod.setAccessible(true);
+
+        calculateRepetitionsMethod = StockOrderService.class.getDeclaredMethod("calculateRepetitions", List.class);
+        calculateRepetitionsMethod.setAccessible(true);
 
         calculateFulfilledQuantityMethod = StockOrderService.class.getDeclaredMethod("calculateFulfilledQuantity", List.class, Long.class);
         calculateFulfilledQuantityMethod.setAccessible(true);
@@ -385,5 +399,128 @@ class StockOrderServiceTest {
         assertTrue(StockOrderService.isNonOrganicCertificationName("Transition / Fairtrade / SPP"));
         assertFalse(StockOrderService.isNonOrganicCertificationName("Organico UE/NOP/Fairtrade/SPP"));
         assertFalse(StockOrderService.isNonOrganicCertificationName(null));
+    }
+
+    // -------------------------------------------------------------------------
+    // Farmer Payments, Repetitions & Quantities Edge Cases
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("calculateFarmerPayments returns weighted price per kg when all farmers are fully paid")
+    void calculateFarmerPayments_farmersFullyPaid_calculatesWeightedAverage() throws Exception {
+        ApiStockOrder order = new ApiStockOrder();
+        order.setBalance(BigDecimal.ZERO);
+        order.setFulfilledQuantity(new BigDecimal("100.00"));
+        ApiMeasureUnitType unitType = new ApiMeasureUnitType();
+        unitType.setWeight(new BigDecimal("1.00"));
+        order.setMeasureUnitType(unitType);
+
+        ApiPayment payment = new ApiPayment();
+        payment.setAmount(new BigDecimal("300.00"));
+        payment.setCurrency("USD");
+        payment.setFormalCreationTime(LocalDate.of(2026, 9, 24));
+        order.setPayments(Collections.singletonList(payment));
+
+        when(currencyService.convertAtDate(eq("USD"), eq("USD"), eq(new BigDecimal("300.00")), any(Date.class)))
+                .thenReturn(new BigDecimal("300.00"));
+
+        ApiStockOrderHistoryTimelineItem item = new ApiStockOrderHistoryTimelineItem();
+        item.setPurchaseOrders(Collections.singletonList(order));
+
+        ApiStockOrderHistory history = new ApiStockOrderHistory();
+        history.setTimelineItems(Collections.singletonList(item));
+
+        BigDecimal result = (BigDecimal) calculateFarmerPaymentsMethod.invoke(stockOrderService, history);
+        // 300 USD / (100 kg * 1.00) = 3.000
+        assertEquals(new BigDecimal("3.000"), result);
+    }
+
+    @Test
+    @DisplayName("calculateFarmerPayments returns null when any farmer has outstanding balance")
+    void calculateFarmerPayments_farmerNotFullyPaid_returnsNull() throws Exception {
+        ApiStockOrder order = new ApiStockOrder();
+        order.setBalance(new BigDecimal("50.00")); // outstanding balance > 0
+        order.setFulfilledQuantity(new BigDecimal("100.00"));
+
+        ApiStockOrderHistoryTimelineItem item = new ApiStockOrderHistoryTimelineItem();
+        item.setPurchaseOrders(Collections.singletonList(order));
+
+        ApiStockOrderHistory history = new ApiStockOrderHistory();
+        history.setTimelineItems(Collections.singletonList(item));
+
+        BigDecimal result = (BigDecimal) calculateFarmerPaymentsMethod.invoke(stockOrderService, history);
+        assertNull(result);
+    }
+
+    @Test
+    @DisplayName("calculateRepetitions counts consecutive repeated event names correctly")
+    void calculateRepetitions_countsConsecutiveEvents() throws Exception {
+        ApiHistoryTimelineItem ev1 = new ApiHistoryTimelineItem();
+        ev1.setName("HARVEST");
+        ApiHistoryTimelineItem ev2 = new ApiHistoryTimelineItem();
+        ev2.setName("FERMENTATION");
+        ApiHistoryTimelineItem ev3 = new ApiHistoryTimelineItem();
+        ev3.setName("FERMENTATION");
+        ApiHistoryTimelineItem ev4 = new ApiHistoryTimelineItem();
+        ev4.setName("FERMENTATION");
+        ApiHistoryTimelineItem ev5 = new ApiHistoryTimelineItem();
+        ev5.setName("DRYING");
+
+        @SuppressWarnings("unchecked")
+        List<Integer> repetitions = (List<Integer>) calculateRepetitionsMethod.invoke(
+                stockOrderService, Arrays.asList(ev1, ev2, ev3, ev4, ev5));
+
+        assertEquals(Arrays.asList(0, 0, 1, 2, 0), repetitions);
+    }
+
+    @Test
+    @DisplayName("calculateQuantities with newInputTransactionId subtracts new transaction output quantity")
+    void calculateQuantities_existingOrderWithNewInputTransactionId() throws Exception {
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 20L);
+        stockOrder.setOrderType(OrderType.PURCHASE_ORDER);
+        stockOrder.setFulfilledQuantity(new BigDecimal("1000.00"));
+        stockOrder.setAvailableQuantity(new BigDecimal("1000.00"));
+
+        Transaction tx1 = new Transaction();
+        ReflectionTestUtils.setField(tx1, "id", 501L);
+        tx1.setOutputQuantity(new BigDecimal("250.00"));
+
+        ProcessingOrder processingOrder = new ProcessingOrder();
+        com.abelium.inatrace.db.entities.processingaction.ProcessingAction action = new com.abelium.inatrace.db.entities.processingaction.ProcessingAction();
+        action.setType(com.abelium.inatrace.types.ProcessingActionType.TRANSFER);
+        processingOrder.setProcessingAction(action);
+        processingOrder.setInputTransactions(Collections.singleton(tx1));
+
+        ApiStockOrder api = new ApiStockOrder();
+        api.setOrderType(OrderType.PURCHASE_ORDER);
+        api.setTotalQuantity(new BigDecimal("1000.00"));
+        api.setFulfilledQuantity(new BigDecimal("1000.00"));
+
+        stockOrderService.calculateQuantities(api, stockOrder, processingOrder, 501L);
+
+        // Available quantity = 1000 - 250 = 750.00
+        assertEquals(new BigDecimal("750.00"), stockOrder.getAvailableQuantity());
+    }
+
+    @Test
+    @DisplayName("calculateQuantities recalculates available quantity when lastUsedQuantity is present and no processingOrder")
+    void calculateQuantities_existingOrderWithoutProcessingOrder_recalculatesAvailable() throws Exception {
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 21L);
+        stockOrder.setOrderType(OrderType.PURCHASE_ORDER);
+        // Fulfilled 800, available 600 -> lastUsedQuantity = 200
+        stockOrder.setFulfilledQuantity(new BigDecimal("800.00"));
+        stockOrder.setAvailableQuantity(new BigDecimal("600.00"));
+
+        ApiStockOrder api = new ApiStockOrder();
+        api.setOrderType(OrderType.PURCHASE_ORDER);
+        api.setTotalQuantity(new BigDecimal("900.00"));
+        api.setFulfilledQuantity(new BigDecimal("900.00"));
+
+        stockOrderService.calculateQuantities(api, stockOrder, null, null);
+
+        // Available quantity = api.fulfilledQuantity (900) - lastUsedQuantity (200) = 700.00
+        assertEquals(new BigDecimal("700.00"), stockOrder.getAvailableQuantity());
     }
 }

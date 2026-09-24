@@ -431,4 +431,99 @@ class PaymentServiceTest {
                 paymentService.createBulkPayment(bulk, authUser));
         assertTrue(ex.getMessage().contains("Recipient number is required."));
     }
+
+    @Test
+    @DisplayName("createBulkPayment creates BulkPayment entity, links payments bi-directionally, and persists")
+    void createBulkPayment_success_createsEntityAndBindsPayments() throws Exception {
+        ApiBulkPayment bulk = new ApiBulkPayment();
+        ApiCompany company = new ApiCompany();
+        company.setId(10L);
+        bulk.setPayingCompany(company);
+        bulk.setPaymentDescription("Batch Sept 2026");
+        bulk.setReceiptNumber("REC-001");
+        bulk.setTotalAmount(new BigDecimal("500.00"));
+        bulk.setPaymentPurposeType(PaymentPurposeType.SECOND_INSTALLMENT);
+
+        ApiPayment apiPayment = new ApiPayment();
+        ApiStockOrder so = new ApiStockOrder();
+        so.setId(200L);
+        apiPayment.setStockOrder(so);
+        apiPayment.setRecipientType(RecipientType.USER_CUSTOMER);
+        ApiUserCustomer farmer = new ApiUserCustomer();
+        farmer.setId(50L);
+        apiPayment.setRecipientUserCustomer(farmer);
+        apiPayment.setAmount(new BigDecimal("500.00"));
+        apiPayment.setPaymentPurposeType(PaymentPurposeType.SECOND_INSTALLMENT);
+        bulk.setPayments(Collections.singletonList(apiPayment));
+
+        when(entityManager.find(Company.class, 10L)).thenReturn(payingCompany);
+
+        StockOrder stockOrder = createMockPurchaseOrder(200L, new BigDecimal("1000.00"), Collections.emptyList());
+        when(entityManager.find(StockOrder.class, 200L)).thenReturn(stockOrder);
+
+        Payment persistedPayment = new Payment();
+        ReflectionTestUtils.setField(persistedPayment, "id", 101L);
+        persistedPayment.setPayingCompany(payingCompany);
+        persistedPayment.setStockOrder(stockOrder);
+
+        doAnswer(invocation -> {
+            Payment p = invocation.getArgument(0);
+            ReflectionTestUtils.setField(p, "id", 101L);
+            return null;
+        }).when(entityManager).persist(any(Payment.class));
+
+        when(entityManager.find(Payment.class, 101L)).thenReturn(persistedPayment);
+
+        ApiBaseEntity result = paymentService.createBulkPayment(bulk, authUser);
+
+        assertNotNull(result);
+        verify(entityManager).persist(any(BulkPayment.class));
+        assertNotNull(persistedPayment.getBulkPayment());
+    }
+
+    @Test
+    @DisplayName("deletePayment on GENERAL_ORDER removes payment without modifying stock order balance")
+    void deletePayment_generalOrder_doesNotRecalculateBalance() throws Exception {
+        Payment pToDelete = new Payment();
+        ReflectionTestUtils.setField(pToDelete, "id", 103L);
+        pToDelete.setTotalPaid(new BigDecimal("150.00"));
+        pToDelete.setPayingCompany(payingCompany);
+
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 205L);
+        stockOrder.setOrderType(OrderType.GENERAL_ORDER);
+        stockOrder.setBalance(new BigDecimal("500.00"));
+        stockOrder.setPayments(new HashSet<>(Collections.singletonList(pToDelete)));
+        pToDelete.setStockOrder(stockOrder);
+
+        when(entityManager.find(Payment.class, 103L)).thenReturn(pToDelete);
+
+        paymentService.deletePayment(103L, authUser);
+
+        verify(entityManager).remove(pToDelete);
+        assertEquals(new BigDecimal("500.00"), stockOrder.getBalance());
+        assertTrue(stockOrder.getPayments().isEmpty());
+    }
+
+    @Test
+    @DisplayName("deletePayment on PURCHASE_ORDER with priceDeterminedLater=true does not modify balance")
+    void deletePayment_priceDeterminedLater_doesNotRecalculateBalance() throws Exception {
+        Payment pToDelete = new Payment();
+        ReflectionTestUtils.setField(pToDelete, "id", 104L);
+        pToDelete.setTotalPaid(new BigDecimal("200.00"));
+        pToDelete.setPayingCompany(payingCompany);
+
+        StockOrder stockOrder = createMockPurchaseOrder(206L, new BigDecimal("1000.00"), Collections.singletonList(pToDelete));
+        stockOrder.setPriceDeterminedLater(true);
+        stockOrder.setBalance(null);
+        pToDelete.setStockOrder(stockOrder);
+
+        when(entityManager.find(Payment.class, 104L)).thenReturn(pToDelete);
+
+        paymentService.deletePayment(104L, authUser);
+
+        verify(entityManager).remove(pToDelete);
+        assertNull(stockOrder.getBalance());
+        assertTrue(stockOrder.getPayments().isEmpty());
+    }
 }
