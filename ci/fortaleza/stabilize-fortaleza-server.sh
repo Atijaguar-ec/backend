@@ -48,7 +48,15 @@ free -h || true
 # ------------------------------------------------------------------------------
 log_info "Paso 1: Aplicando contención sobre el servicio Jenkins..."
 
-JENKINS_HOME="${JENKINS_HOME:-/var/lib/jenkins}"
+if [[ -z "${JENKINS_HOME:-}" ]]; then
+  if [[ -d "/var/lib/jenkins" ]]; then
+    JENKINS_HOME="/var/lib/jenkins"
+  elif id -u jenkins >/dev/null 2>&1; then
+    JENKINS_HOME="$(getent passwd jenkins | cut -d: -f6)"
+  else
+    JENKINS_HOME="/var/lib/jenkins"
+  fi
+fi
 
 if systemctl is-active --quiet jenkins; then
   log_info "Deteniendo Jenkins temporalmente para purgar bucle y reconfigurar..."
@@ -155,8 +163,12 @@ fi
 # ------------------------------------------------------------------------------
 log_info "Paso 4: Verificación de memoria y refresco de swap..."
 
-FREE_RAM_MB=$(free -m | awk '/^Mem:/{print $7}')
-SWAP_USED_MB=$(free -m | awk '/^Swap:/{print $3}')
+FREE_RAM_MB=$(free -m 2>/dev/null | awk '/^Mem:/{print $7}')
+SWAP_USED_MB=$(free -m 2>/dev/null | awk '/^Swap:/{print $3}')
+FREE_RAM_MB="${FREE_RAM_MB:-0}"
+SWAP_USED_MB="${SWAP_USED_MB:-0}"
+if [[ ! "${FREE_RAM_MB}" =~ ^[0-9]+$ ]]; then FREE_RAM_MB=0; fi
+if [[ ! "${SWAP_USED_MB}" =~ ^[0-9]+$ ]]; then SWAP_USED_MB=0; fi
 
 log_info "RAM disponible: ${FREE_RAM_MB} MB | Swap en uso: ${SWAP_USED_MB} MB"
 if [[ "${SWAP_USED_MB}" -gt 0 && "${FREE_RAM_MB}" -gt $((SWAP_USED_MB + 512)) ]]; then
