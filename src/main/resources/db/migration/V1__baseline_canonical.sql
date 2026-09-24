@@ -5749,9 +5749,6 @@ ALTER TABLE ONLY public.stockorder
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ndM4HdBqQb4zfGp9IhUdk5OlD6cTav39MbhrlWgKwS3eofIYNLlZV6ZoJXmBZi8
-
-
 --
 -- Name: plotdeforestationanalysis plotdeforestationanalysis_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -5769,3 +5766,7 @@ ALTER TABLE ONLY public.plot
 
 ALTER TABLE ONLY public.usercustomer
     ADD CONSTRAINT fk_usercustomer_statusupdatedby FOREIGN KEY (statusupdatedby_id) REFERENCES public."User"(id);
+
+-- Restore search_path for subsequent migrations and session queries
+SET search_path = public, pg_catalog;
+

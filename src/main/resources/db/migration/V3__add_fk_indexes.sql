@@ -69,4 +69,4 @@ CREATE INDEX IF NOT EXISTS idx_usercustomerproducttype_usercustomer_id ON public
 CREATE INDEX IF NOT EXISTS idx_usercustomerproducttype_producttype_id ON public.usercustomerproducttype USING btree (producttype_id);
 
 -- Plot Deforestation Analysis
-CREATE INDEX IF NOT EXISTS idx_plotdeforestationanalysis_plot_id ON public.plotdeforestationanalysis USING btree (plot_id);
+CREATE INDEX IF NOT EXISTS idx_plotdeforestationanalysis_plot ON public.plotdeforestationanalysis USING btree (plot_id);
