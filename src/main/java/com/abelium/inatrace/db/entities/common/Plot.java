@@ -6,6 +6,9 @@ import com.abelium.inatrace.db.entities.codebook.CertificationType;
 import com.abelium.inatrace.db.entities.codebook.ProductType;
 import com.abelium.inatrace.types.CocoaVariety;
 import jakarta.persistence.*;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
+import org.hibernate.envers.RelationTargetAuditMode;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -16,12 +19,14 @@ import java.util.*;
  * @author Pece Adjievski, Sunesis d.o.o.
  */
 @Entity
+@Audited
 public class Plot extends BaseEntity {
 
 	@Column
 	private String plotName;
 
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private ProductType crop;
 
 	@Column
@@ -53,6 +58,7 @@ public class Plot extends BaseEntity {
 	 */
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "certificationtype_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private CertificationType certificationType;
 
 	@Enumerated(EnumType.STRING)
@@ -69,9 +75,11 @@ public class Plot extends BaseEntity {
 	           cascade = CascadeType.ALL,
 	           orphanRemoval = true,
 	           fetch = FetchType.LAZY)
+	@NotAudited
 	private List<PlotCoordinate> coordinates;
 
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private UserCustomer farmer;
 
 	public String getPlotName() {

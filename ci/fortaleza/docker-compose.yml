@@ -12,14 +12,16 @@ version: '3.8'
 services:
 
   inatrace-postgres:
-    image: postgres:16.10
+    image: postgres:16.14-alpine
     container_name: inatrace-postgres
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     environment:
       - POSTGRES_PASSWORD=${DB_ROOT_PASSWORD}
       - POSTGRES_DB=${DATABASE_NAME}
       - POSTGRES_USER=${DATASOURCE_USERNAME}
     volumes:
       - ${DB_VOLUME}:/var/lib/postgresql/data
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
     # NOTA: el contenedor real en staging/prod NO publica el puerto 5432 al
     # host (verificado con `docker ps`/`ss -tlnp`). Solo es alcanzable dentro
     # de la red Docker `backend`. No agregar `ports:` aquí sin verificar antes
