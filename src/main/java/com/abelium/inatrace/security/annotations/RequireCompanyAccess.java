@@ -19,11 +19,21 @@ import java.lang.annotation.Target;
 public @interface RequireCompanyAccess {
 
     /**
+     * Alias for paramName (e.g. @RequireCompanyAccess("companyId")).
+     */
+    String value() default "";
+
+    /**
      * Name of the parameter representing the company ID.
      * If blank (default), the aspect will automatically inspect parameter names
      * ("companyId", "id", "quoteCompanyId") or request body / query object getters.
      */
     String paramName() default "";
+
+    /**
+     * Explicit alias for the company ID parameter (e.g. companyIdParam = "companyId").
+     */
+    String companyIdParam() default "";
 
     /**
      * Optional field path or property name within an object parameter (e.g. "companyId").

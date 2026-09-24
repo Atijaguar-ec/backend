@@ -150,51 +150,50 @@ public class CompanySecurityAspect {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String[] paramNames = signature.getParameterNames();
         Object[] args = joinPoint.getArgs();
+        Parameter[] parameters = signature.getMethod() != null ? signature.getMethod().getParameters() : null;
 
-        String targetParam = annotation != null ? annotation.paramName().trim() : "";
-        if (!targetParam.isEmpty() && paramNames != null) {
-            for (int i = 0; i < paramNames.length; i++) {
-                if (paramNames[i].equalsIgnoreCase(targetParam)) {
-                    Long val = toLong(args[i]);
-                    if (val != null) return val;
+        String targetParam = resolveTargetParam(annotation);
+
+        // 1. If explicit target parameter is specified, check paramNames and Spring web annotations
+        if (!targetParam.isEmpty()) {
+            if (paramNames != null && args != null) {
+                for (int i = 0; i < Math.min(paramNames.length, args.length); i++) {
+                    if (paramNames[i].equalsIgnoreCase(targetParam)) {
+                        Long val = toLong(args[i]);
+                        if (val != null) return val;
+                    }
+                }
+            }
+            if (parameters != null && args != null) {
+                for (int i = 0; i < Math.min(parameters.length, args.length); i++) {
+                    if (matchesTargetParam(parameters[i], targetParam)) {
+                        Long val = toLong(args[i]);
+                        if (val != null) return val;
+                    }
                 }
             }
         }
 
-        // Look for parameters by standard names
-        if (paramNames != null) {
-            for (int i = 0; i < paramNames.length; i++) {
+        // 2. High-priority standard company parameters (companyId, quoteCompanyId)
+        if (paramNames != null && args != null) {
+            for (int i = 0; i < Math.min(paramNames.length, args.length); i++) {
                 String name = paramNames[i].toLowerCase();
-                if (name.equals("companyid") || name.equals("quotecompanyid") || name.equals("id")) {
+                if (name.equals("companyid") || name.equals("quotecompanyid")) {
+                    Long val = toLong(args[i]);
+                    if (val != null) return val;
+                }
+            }
+        }
+        if (parameters != null && args != null) {
+            for (int i = 0; i < Math.min(parameters.length, args.length); i++) {
+                if (matchesStandardCompanyParam(parameters[i])) {
                     Long val = toLong(args[i]);
                     if (val != null) return val;
                 }
             }
         }
 
-        // Check method annotations on parameters
-        Parameter[] parameters = signature.getMethod().getParameters();
-        for (int i = 0; i < parameters.length; i++) {
-            Parameter param = parameters[i];
-            var pathVar = param.getAnnotation(org.springframework.web.bind.annotation.PathVariable.class);
-            if (pathVar != null) {
-                String varName = pathVar.value().isEmpty() ? pathVar.name() : pathVar.value();
-                if ("companyId".equalsIgnoreCase(varName) || "quoteCompanyId".equalsIgnoreCase(varName) || "id".equalsIgnoreCase(varName)) {
-                    Long val = toLong(args[i]);
-                    if (val != null) return val;
-                }
-            }
-            var reqParam = param.getAnnotation(org.springframework.web.bind.annotation.RequestParam.class);
-            if (reqParam != null) {
-                String reqName = reqParam.value().isEmpty() ? reqParam.name() : reqParam.value();
-                if ("companyId".equalsIgnoreCase(reqName) || "quoteCompanyId".equalsIgnoreCase(reqName) || "id".equalsIgnoreCase(reqName)) {
-                    Long val = toLong(args[i]);
-                    if (val != null) return val;
-                }
-            }
-        }
-
-        // Inspect objects/DTOs in args
+        // 3. Inspect objects / DTOs in args
         if (args != null) {
             for (Object arg : args) {
                 if (arg != null && !isPrimitiveOrStandard(arg)) {
@@ -204,7 +203,75 @@ public class CompanySecurityAspect {
             }
         }
 
+        // 4. Low-priority fallback: generic "id" parameter (only if no explicit companyId param was found)
+        if (paramNames != null && args != null) {
+            for (int i = 0; i < Math.min(paramNames.length, args.length); i++) {
+                if (paramNames[i].equalsIgnoreCase("id")) {
+                    Long val = toLong(args[i]);
+                    if (val != null) return val;
+                }
+            }
+        }
+        if (parameters != null && args != null) {
+            for (int i = 0; i < Math.min(parameters.length, args.length); i++) {
+                if (matchesIdParam(parameters[i])) {
+                    Long val = toLong(args[i]);
+                    if (val != null) return val;
+                }
+            }
+        }
+
         return null;
+    }
+
+    private String resolveTargetParam(RequireCompanyAccess annotation) {
+        if (annotation == null) return "";
+        if (!annotation.paramName().trim().isEmpty()) return annotation.paramName().trim();
+        if (!annotation.companyIdParam().trim().isEmpty()) return annotation.companyIdParam().trim();
+        if (!annotation.value().trim().isEmpty()) return annotation.value().trim();
+        return "";
+    }
+
+    private boolean matchesTargetParam(Parameter param, String targetParam) {
+        var pathVar = param.getAnnotation(org.springframework.web.bind.annotation.PathVariable.class);
+        if (pathVar != null) {
+            String name = pathVar.value().isEmpty() ? pathVar.name() : pathVar.value();
+            if (targetParam.equalsIgnoreCase(name)) return true;
+        }
+        var reqParam = param.getAnnotation(org.springframework.web.bind.annotation.RequestParam.class);
+        if (reqParam != null) {
+            String name = reqParam.value().isEmpty() ? reqParam.name() : reqParam.value();
+            if (targetParam.equalsIgnoreCase(name)) return true;
+        }
+        return false;
+    }
+
+    private boolean matchesStandardCompanyParam(Parameter param) {
+        var pathVar = param.getAnnotation(org.springframework.web.bind.annotation.PathVariable.class);
+        if (pathVar != null) {
+            String name = (pathVar.value().isEmpty() ? pathVar.name() : pathVar.value()).toLowerCase();
+            if (name.equals("companyid") || name.equals("quotecompanyid")) return true;
+        }
+        var reqParam = param.getAnnotation(org.springframework.web.bind.annotation.RequestParam.class);
+        if (reqParam != null) {
+            String name = (reqParam.value().isEmpty() ? reqParam.name() : reqParam.value()).toLowerCase();
+            if (name.equals("companyid") || name.equals("quotecompanyid")) return true;
+        }
+        return false;
+    }
+
+    private boolean matchesIdParam(Parameter param) {
+        var pathVar = param.getAnnotation(org.springframework.web.bind.annotation.PathVariable.class);
+        if (pathVar != null) {
+            String name = pathVar.value().isEmpty() ? pathVar.name() : pathVar.value();
+            if ("id".equalsIgnoreCase(name)) return true;
+        }
+        var reqParam = param.getAnnotation(org.springframework.web.bind.annotation.RequestParam.class);
+        if (reqParam != null) {
+            String name = reqParam.value().isEmpty() ? reqParam.name() : reqParam.value();
+            if ("id".equalsIgnoreCase(name)) return true;
+        }
+        return false;
     }
 
     private Long extractCompanyIdFromObject(Object obj, String expression) {

@@ -92,17 +92,33 @@ class UpstreamSecurityPatchesTest {
     @Test
     void resetPassword_statusCheckPreventsLoginForUnapprovedUsers() {
         User pendingUser = new User();
-        pendingUser.setStatus(UserStatus.UNCONFIRMED);
+        pendingUser.setStatus(UserStatus.CONFIRMED_EMAIL);
         pendingUser.setEmail("pending@test.com");
 
         ConfirmationToken token = new ConfirmationToken();
         token.setUser(pendingUser);
+        token.setStatus(com.abelium.inatrace.types.Status.ACTIVE);
+        token.setType(com.abelium.inatrace.types.ConfirmationTokenType.PASSWORD_RESET);
 
-        // Verify that any status other than ACTIVE is stopped before loginUser
+        // A CONFIRMED_EMAIL user has a valid reset token per domain rules
+        assertTrue(token.isValidPasswordResetToken());
+
+        // HU-04 upstream patch: user status != ACTIVE must NOT auto-login
         assertNotEquals(UserStatus.ACTIVE, token.getUser().getStatus());
     }
 
     // Test Patch 4: Check enrolment before returning a product order
+    @Test
+    void getProductOrder_shouldDenyUnauthenticatedUser() {
+        ProductOrderService productOrderService = new ProductOrderService(
+                processingOrderService, facilityService, mockCompanyService
+        );
+
+        ApiException ex = assertThrows(ApiException.class, () ->
+                productOrderService.getProductOrder(123L, null, Language.EN)
+        );
+        assertTrue(ex.getMessage().contains("Authentication required"));
+    }
     @Test
     void getProductOrder_shouldDenyUnenrolledUser() throws Exception {
         ProductOrderService productOrderService = new ProductOrderService(
