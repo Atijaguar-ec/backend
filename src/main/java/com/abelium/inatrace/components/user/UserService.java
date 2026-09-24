@@ -486,6 +486,9 @@ public class UserService extends BaseService {
         }
         confirmationToken.setStatus(Status.DISABLED);
         confirmationToken.getUser().setPassword(new BCryptPasswordEncoder().encode(request.password));
+        if (confirmationToken.getUser().getStatus() != UserStatus.ACTIVE) {
+            return ResponseEntity.ok().body(new ApiDefaultResponse());
+        }
 		return loginUser(confirmationToken.getUser());
 	}
     

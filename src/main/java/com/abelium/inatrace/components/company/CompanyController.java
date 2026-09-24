@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
+import com.abelium.inatrace.security.annotations.RequireCompanyAccess;
 
 @RestController
 @RequestMapping("/company")
@@ -108,6 +109,7 @@ public class CompanyController {
     	return new ApiDefaultResponse();
     }
     
+    @RequireCompanyAccess
     @PostMapping(value = "/execute/{action}")
     @Operation(summary = "Execute company action. Must be an Company admin, System admin or Regional admin enrolled in this company",
                operationId = "executeCompanyAction")

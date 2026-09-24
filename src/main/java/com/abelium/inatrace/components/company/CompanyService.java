@@ -283,7 +283,9 @@ public class CompanyService extends BaseService {
 			}
 
 		} else if (authUser.getUserRole() != UserRole.SYSTEM_ADMIN) {
-			isCompanyAdmin(authUser, c.getId());
+			if (!isCompanyAdmin(authUser, c.getId())) {
+				throw new ApiException(ApiStatus.UNAUTHORIZED, "User doesn't have required permission!");
+			}
 		}
 
 		switch (action) {

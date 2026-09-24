@@ -51,7 +51,18 @@ public class ProductOrderService extends BaseService {
 	}
 
 	public ApiProductOrder getProductOrder(Long id, Language language) throws ApiException {
-		return ProductOrderMapper.toApiProductOrder(fetchProductOrder(id), language);
+		return getProductOrder(id, null, language);
+	}
+
+	public ApiProductOrder getProductOrder(Long id, CustomUserDetails user, Language language) throws ApiException {
+		ProductOrder productOrder = fetchProductOrder(id);
+		if (user != null && user.getUserRole() != UserRole.SYSTEM_ADMIN) {
+			if (productOrder.getFacility() == null || productOrder.getFacility().getCompany() == null ||
+					productOrder.getFacility().getCompany().getUsers().stream().noneMatch(cu -> cu.getUser().getId().equals(user.getUserId()))) {
+				throw new ApiException(ApiStatus.UNAUTHORIZED, "User is not enrolled in owner company");
+			}
+		}
+		return ProductOrderMapper.toApiProductOrder(productOrder, language);
 	}
 
 	@Transactional

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.time.LocalDate;
+import com.abelium.inatrace.security.annotations.RequireCompanyAccess;
 
 /**
  * REST controller for payment entity.
@@ -85,6 +86,7 @@ public class PaymentController {
 		));
 	}
 
+	@RequireCompanyAccess(paramName = "id")
 	@GetMapping("list/company/{id}")
 	@Operation(summary = "Get a list of payments by company ID.")
 	public ApiPaginatedResponse<ApiPayment> listPaymentsByCompany(
@@ -115,6 +117,7 @@ public class PaymentController {
 		));
 	}
 
+	@RequireCompanyAccess(paramName = "id")
 	@GetMapping(value = "export/company/{id}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 	@Operation(summary = "Export payments for provided company ID")
 	@ApiResponses({
@@ -140,6 +143,7 @@ public class PaymentController {
 				.body(response);
 	}
 
+	@RequireCompanyAccess(paramName = "id")
 	@GetMapping("list/bulk-payment/company/{id}")
 	@Operation(summary = "Get a list of bulk payments by company ID.")
 	public ApiPaginatedResponse<ApiBulkPayment> listBulkPaymentsByCompany(
@@ -154,6 +158,7 @@ public class PaymentController {
 		);
 	}
 
+	@RequireCompanyAccess(paramName = "id")
 	@GetMapping(value = "export/bulk-payment/company/{id}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 	@Operation(summary = "Export bulk-payments for provided company ID")
 	@ApiResponses({

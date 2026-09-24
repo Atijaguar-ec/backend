@@ -19,9 +19,11 @@ import jakarta.validation.Valid;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import com.abelium.inatrace.security.annotations.RequireCompanyAccess;
 
 @RestController
 @RequestMapping("/dashboard")
+@RequireCompanyAccess
 public class DashboardController {
 
     private final DashboardService dashboardService;
