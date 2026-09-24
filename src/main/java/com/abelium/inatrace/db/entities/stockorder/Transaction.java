@@ -10,6 +10,8 @@ import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.product.FinalProduct;
 import com.abelium.inatrace.db.entities.stockorder.enums.TransactionStatus;
 import jakarta.persistence.*;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.RelationTargetAuditMode;
 import java.math.BigDecimal;
 
 @NamedQueries({
@@ -18,32 +20,39 @@ import java.math.BigDecimal;
 		query = "SELECT t FROM Transaction t WHERE t.sourceStockOrder.id = :stockOrderId")
 })
 @Entity
+@Audited
 public class Transaction extends TimestampEntity {
 	
 	@Version
 	private Long entityVersion;
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Company company;
 
 	@Column
 	private Long initiationUserId;
 	
 	@OneToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private StockOrder sourceStockOrder;
 
 	@ManyToOne(fetch = FetchType.LAZY)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private ProcessingOrder targetProcessingOrder;
 
 	// Used for orders with action type 'PROCESSING'
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private SemiProduct semiProduct;
 
 	// Used for orders with action type 'FINAL_PROCESSING'
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private FinalProduct finalProduct;
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Facility sourceFacility;
 
 	@Column
@@ -57,6 +66,7 @@ public class Transaction extends TimestampEntity {
 	private Long shipmentId;
 
 	@OneToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private MeasureUnitType inputMeasureUnitType;
 	
 	@Column

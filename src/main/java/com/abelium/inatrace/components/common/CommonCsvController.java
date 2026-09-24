@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.time.LocalDate;
+import com.abelium.inatrace.security.annotations.RequireCompanyAccess;
 import java.util.List;
 
 /**
@@ -47,6 +48,7 @@ public class CommonCsvController {
 	}
 
 	@Deprecated
+	@RequireCompanyAccess(paramName = "id")
 	@PostMapping(value = "payments/company/{id}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 	@Operation(summary ="Generate a csv file with a list of filtered payments by companyId.")
 	public @ResponseBody byte[] generatePaymentsByCompanyCsv(
@@ -84,6 +86,7 @@ public class CommonCsvController {
 	}
 
 	@Deprecated
+	@RequireCompanyAccess(paramName = "id")
 	@PostMapping(value = "purchases/company/{id}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 	@Operation(summary ="Generate a csv file with a list of filtered purchases by companyId.")
 	public @ResponseBody byte[] generatePurchasesByCompanyCsv(

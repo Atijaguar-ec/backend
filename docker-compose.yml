@@ -16,15 +16,17 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: inatrace_keycloak
-    command: start-dev
+    command: start --optimized
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db:5432/inatrace_keycloak
-      KC_DB_USERNAME: inatrace
-      KC_DB_PASSWORD: inatrace
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB_USERNAME: ${DATASOURCE_USERNAME:-inatrace}
+      KC_DB_PASSWORD: ${DATASOURCE_PASSWORD:-inatrace}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-${KC_BOOTSTRAP_ADMIN_USERNAME:-}}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}
       KC_FEATURES: organization
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
     ports:
       - "8080:8080"
     volumes:

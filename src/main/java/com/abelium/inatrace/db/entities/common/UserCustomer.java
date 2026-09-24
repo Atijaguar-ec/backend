@@ -9,19 +9,25 @@ import com.abelium.inatrace.types.PersonType;
 import com.abelium.inatrace.types.UserCustomerStatus;
 import com.abelium.inatrace.types.UserCustomerType;
 import jakarta.persistence.*;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
+import org.hibernate.envers.RelationTargetAuditMode;
 
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
+@Audited
 @NamedQueries({
 	@NamedQuery(name = "UserCustomer.getUserCustomerByCompanyIdAndType",
 			    query = "SELECT u FROM UserCustomer u WHERE u.company.id = :companyId AND u.type = :type"),
 	@NamedQuery(name = "UserCustomer.getUserCustomerByNameSurnameAndVillage",
 			    query = "SELECT u FROM UserCustomer u WHERE u.name = :name AND u.surname = :surname AND u.userCustomerLocation.address.village = :village"),
 	@NamedQuery(name = "UserCustomer.countCompanyFarmers",
-			    query = "SELECT COUNT(u) FROM UserCustomer u WHERE u.company.id = :companyId AND u.type = com.abelium.inatrace.types.UserCustomerType.FARMER")
+			    query = "SELECT COUNT(u) FROM UserCustomer u WHERE u.company.id = :companyId AND u.type = com.abelium.inatrace.types.UserCustomerType.FARMER"),
+	@NamedQuery(name = "UserCustomer.getUserCustomerWithPlotsById",
+			    query = "SELECT DISTINCT u FROM UserCustomer u LEFT JOIN FETCH u.plots WHERE u.id = :id")
 })
 public class UserCustomer extends BaseEntity {
 
@@ -29,12 +35,14 @@ public class UserCustomer extends BaseEntity {
 	 * product this collector belongs to
 	 */
 	@ManyToOne(fetch = FetchType.LAZY)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Product product;
 
 	/**
 	 * company reference
 	 */
 	@ManyToOne(fetch = FetchType.LAZY)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Company company;
 
 	/**
@@ -84,6 +92,7 @@ public class UserCustomer extends BaseEntity {
 	 */
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "statusupdatedby_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private User statusUpdatedBy;
 
 	/**
@@ -130,6 +139,7 @@ public class UserCustomer extends BaseEntity {
 	private String location;
 
 	@OneToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private UserCustomerLocation userCustomerLocation;
 	
 	/**
@@ -146,21 +156,27 @@ public class UserCustomer extends BaseEntity {
 	private FarmInformation farm;
 
 	@OneToMany(mappedBy = "userCustomer", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<UserCustomerAssociation> associations;
 
 	@OneToMany(mappedBy = "userCustomer", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<UserCustomerCooperative> cooperatives;
 
 	@OneToMany(mappedBy = "userCustomer", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<UserCustomerCertification> certifications;
 
 	@OneToMany(mappedBy = "userCustomer", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<UserCustomerProductType> productTypes;
 
 	@OneToMany(mappedBy = "userCustomer", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<FarmPlantInformation> farmPlantInformationList;
 
-	@OneToMany(mappedBy = "farmer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+	@OneToMany(mappedBy = "farmer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+	@NotAudited
 	private Set<Plot> plots;
 	
 	public UserCustomerType getType() {

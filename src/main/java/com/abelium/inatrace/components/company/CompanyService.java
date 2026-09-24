@@ -44,8 +44,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
@@ -283,7 +283,9 @@ public class CompanyService extends BaseService {
 			}
 
 		} else if (authUser.getUserRole() != UserRole.SYSTEM_ADMIN) {
-			isCompanyAdmin(authUser, c.getId());
+			if (!isCompanyAdmin(authUser, c.getId())) {
+				throw new ApiException(ApiStatus.UNAUTHORIZED, "User doesn't have required permission!");
+			}
 		}
 
 		switch (action) {
@@ -312,7 +314,7 @@ public class CompanyService extends BaseService {
 
 	public ApiUserCustomer getUserCustomer(Long id, CustomUserDetails user, Language language) throws ApiException {
 
-		UserCustomer userCustomer = fetchUserCustomer(id);
+		UserCustomer userCustomer = fetchUserCustomerWithPlots(id);
 		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), user);
 
 		return companyApiTools.toApiUserCustomer(userCustomer, user.getUserId(), language);
@@ -404,15 +406,16 @@ public class CompanyService extends BaseService {
 	private byte[] prepareFarmersExcelFile(List<ApiUserCustomer> apiUserCustomers, Language language) throws IOException {
 
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-		try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+		SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+		try (workbook) {
 
 			// Create date cell style
 			CellStyle dateCellStyle = workbook.createCellStyle();
 			dateCellStyle.setDataFormat((short) 14);
 
 			// Create the Farmers Excel sheet and the Plots Excel sheet
-			XSSFSheet farmersSheet = workbook.createSheet(TranslateTools.getTranslatedValue(messageSource, "export.farmers.sheet.name", language));
-			XSSFSheet plotsSheet = workbook.createSheet(TranslateTools.getTranslatedValue(messageSource, "export.plots.sheet.name", language));
+			Sheet farmersSheet = workbook.createSheet(TranslateTools.getTranslatedValue(messageSource, "export.farmers.sheet.name", language));
+			Sheet plotsSheet = workbook.createSheet(TranslateTools.getTranslatedValue(messageSource, "export.plots.sheet.name", language));
 
 			// Prepare the headers
 			prepareFarmersSheetHeader(farmersSheet, language);
@@ -437,12 +440,14 @@ public class CompanyService extends BaseService {
 			}
 
 			workbook.write(byteArrayOutputStream);
+		} finally {
+			workbook.dispose();
 		}
 
 		return byteArrayOutputStream.toByteArray();
 	}
 
-	private void prepareFarmersSheetHeader(XSSFSheet farmersSheet, Language language) {
+	private void prepareFarmersSheetHeader(Sheet farmersSheet, Language language) {
 
 		// Prepare the header row for the Farmers sheet
 		Row farmersHeaderRow = farmersSheet.createRow(0);
@@ -538,7 +543,7 @@ public class CompanyService extends BaseService {
 		));
 	}
 
-	private void preparePlotsSheetHeader(XSSFSheet plotsSheet, Language language) {
+	private void preparePlotsSheetHeader(Sheet plotsSheet, Language language) {
 
 		// Prepare the header row for the Plots sheet
 		Row plotsHeaderRow = plotsSheet.createRow(0);
@@ -581,8 +586,8 @@ public class CompanyService extends BaseService {
 	}
 
 	private int fillFarmersExcelData(ApiUserCustomer apiUserCustomer,
-	                                 XSSFSheet farmersSheet,
-	                                 XSSFSheet plotsSheet,
+	                                 Sheet farmersSheet,
+	                                 Sheet plotsSheet,
 	                                 CellStyle dateCellStyle,
 	                                 int farmersSheetRowNum,
 	                                 int plotsSheetRowNum,
@@ -1315,7 +1320,7 @@ public class CompanyService extends BaseService {
 
 	public byte[] exportUserCustomerGeoData(CustomUserDetails authUser, Long id) throws ApiException {
 
-		UserCustomer userCustomer = fetchUserCustomer(id);
+		UserCustomer userCustomer = fetchUserCustomerWithPlots(id);
 		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), authUser);
 
 		// Prepare the GeoJSON object
@@ -1460,7 +1465,7 @@ public class CompanyService extends BaseService {
 												   CustomUserDetails user,
 												   Language language) throws ApiException {
 
-		UserCustomer userCustomer = fetchUserCustomer(userCustomerId);
+		UserCustomer userCustomer = fetchUserCustomerWithPlots(userCustomerId);
 		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), user);
 
 		Plot plot = userCustomer.getPlots()
@@ -1585,6 +1590,17 @@ public class CompanyService extends BaseService {
 		}
 
 		return userCustomer;
+	}
+
+	private UserCustomer fetchUserCustomerWithPlots(Long id) throws ApiException {
+		List<UserCustomer> list = em.createNamedQuery("UserCustomer.getUserCustomerWithPlotsById", UserCustomer.class)
+				.setParameter("id", id)
+				.getResultList();
+		if (list.isEmpty()) {
+			throw new ApiException(ApiStatus.INVALID_REQUEST, "Invalid Company user customer ID");
+		}
+
+		return list.get(0);
 	}
 
 	private ProductType fetchProductType(Long id) throws ApiException {

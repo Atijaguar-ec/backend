@@ -180,3 +180,9 @@ scripts/*
 
 # Scripts no versionados (Deploy local)
 scripts/deploy/
+
+# Saneamiento e higiene (HU-18)
+*.log
+*.diff
+*.patch
+scripts/unocace/data/*.sql

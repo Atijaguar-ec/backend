@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.time.LocalDate;
+import com.abelium.inatrace.security.annotations.RequireCompanyAccess;
 
 @RestController
 @RequestMapping("/chain/stock-order")
@@ -270,6 +271,7 @@ public class StockOrderController {
         return stockOrderService.createGeoJsonFromDeliveries(apiStockOrderHistory.getTimelineItems());
     }
 
+    @RequireCompanyAccess(paramName = "companyId")
     @GetMapping(value = "export/deliveries/company/{companyId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     @Operation(summary ="Export deliveries (stock orders of type PURCHASE_ORDER) for the provided company ID")
     @ApiResponses({

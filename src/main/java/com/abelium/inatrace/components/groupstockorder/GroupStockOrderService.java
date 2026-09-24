@@ -14,7 +14,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
@@ -236,14 +237,18 @@ public class GroupStockOrderService extends BaseService {
         return company != null && WeekNumberTools.weekColorCodesEnabled(company.getConfiguration());
     }
 
-    private ByteArrayInputStream generateExcelFile(List<ApiGroupStockOrder> orders, Language language,
-                                                  boolean withWeekColor) throws IOException {
+    ByteArrayInputStream generateExcelFile(List<ApiGroupStockOrder> orders, Language language,
+                                           boolean withWeekColor) throws IOException {
         logger.debug("Generating Excel file with {} orders in language {}", orders.size(), language);
         // La columna de color va al final para no correr las que ya consume quien usa
         // este archivo, y solo aparece si la empresa trabaja con colores de semana.
         String[] columns = getColumnHeaders(language, withWeekColor);
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        try (workbook; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet(getSheetName(language));
+            if (sheet instanceof SXSSFSheet sxssfSheet) {
+                sxssfSheet.trackAllColumnsForAutoSizing();
+            }
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
             headerFont.setFontHeightInPoints((short) EXCEL_HEADER_FONT_SIZE);
@@ -320,6 +325,8 @@ public class GroupStockOrderService extends BaseService {
             workbook.write(out);
             logger.info("Excel file generated successfully with {} data rows", orders.size());
             return new ByteArrayInputStream(out.toByteArray());
+        } finally {
+            workbook.dispose();
         }
     }
     

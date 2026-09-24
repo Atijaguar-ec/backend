@@ -17,6 +17,9 @@ import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
 import com.abelium.inatrace.db.entities.stockorder.enums.PreferredWayOfPayment;
 import jakarta.persistence.*;
 import jakarta.persistence.JoinColumn;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
+import org.hibernate.envers.RelationTargetAuditMode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,6 +28,7 @@ import java.util.Set;
 
 @Entity
 @Table
+@Audited
 @NamedQueries({
 	@NamedQuery(name = "StockOrder.getPurchaseOrderByIdAndType",
 				query = "SELECT so FROM StockOrder so "
@@ -43,10 +47,12 @@ public class StockOrder extends TimestampEntity {
 
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "createdby_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private User createdBy;
 
 	@ManyToOne
 	@JoinColumn(name = "updatedby_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private User updatedBy;
 
 	@Column
@@ -58,21 +64,26 @@ public class StockOrder extends TimestampEntity {
 
 	// Farmer
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private UserCustomer producerUserCustomer;
 
 	// Farmer representative - collector
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private UserCustomer representativeOfProducerUserCustomer;
 	
 	@OneToOne(cascade = CascadeType.ALL)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private StockOrderLocation productionLocation;
 
 	// The company customer for which the stock order was placed
 	@OneToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private CompanyCustomer consumerCompanyCustomer;
 
 	// Set when this stock order represent a unit of quantity for a semi-product (used in processing)
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private SemiProduct semiProduct;
 
 	@Column
@@ -80,48 +91,60 @@ public class StockOrder extends TimestampEntity {
 
 	// Set when this stock order represents a uint of quantity for a final product (used in final processing)
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private FinalProduct finalProduct;
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Facility facility;
 
 	// The facility that is quoted for total quantity of the provided semi-product
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Facility quoteFacility;
 
 	// The company of the quoted facility (this should be set automatically from the facility company)
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Company quoteCompany;
 
 	@OneToMany(mappedBy = "stockOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<Certification> certifications;
 
 	// The required processing evidence fields values - the available values are sourced from the
 	// selected Processing action definition;
 	@OneToMany(mappedBy = "stockOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<StockOrderPEFieldValue> processingEFValues;
 
 	// The required processing evidence documents - the available values are sourced from the
 	// selected Processing action definition;
 	@OneToMany(mappedBy = "stockOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<StockOrderPETypeValue> documentRequirements;
 
 	// Activity proofs that were provided while creating or updating a purchase order
 	@OneToMany(mappedBy = "stockOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<StockOrderActivityProof> activityProofs;
 
 	// A stock (purchase) order can be divided in many payments
 	@OneToMany(mappedBy = "stockOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+	@NotAudited
 	private Set<Payment> payments = new HashSet<>();
 
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Company company;
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private MeasureUnitType measurementUnitType;
 
 	// The product order that created this stock order (this stock order represents final product item with the requested quantity)
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private ProductOrder productOrder;
 
 	/**
@@ -208,6 +231,7 @@ public class StockOrder extends TimestampEntity {
 	private BigDecimal damagedWeightDeduction;
 
 	@ManyToOne(fetch = FetchType.LAZY)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private ProcessingOrder processingOrder;
 	
 	@Enumerated(EnumType.STRING)
@@ -249,6 +273,7 @@ public class StockOrder extends TimestampEntity {
 
 	// The final product for which the QR code tag is generated
 	@ManyToOne(fetch = FetchType.LAZY)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private FinalProduct qrCodeTagFinalProduct;
 
 	// Generated ID provided by the client; This is used to group repacked stock orders when doing repacking with multiple outputs

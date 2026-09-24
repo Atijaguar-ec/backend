@@ -14,6 +14,8 @@ import com.abelium.inatrace.tools.QueryTools;
 import com.abelium.inatrace.db.entities.codebook.CertificationType;
 import com.abelium.inatrace.db.entities.codebook.CertificationTypeTranslation;
 import com.abelium.inatrace.types.Language;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.torpedoquery.jakarta.jpa.Torpedo;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 @Service
 public class CertificationTypeService extends BaseService {
 
+    @Cacheable(value = "certifications", key = "#language")
     public List<ApiCertificationType> listActiveCertificationTypes(Language language) {
         List<CertificationType> entities = em.createNamedQuery("CertificationType.findAllActive", CertificationType.class)
                 .getResultList();
@@ -70,6 +73,7 @@ public class CertificationTypeService extends BaseService {
         return CertificationTypeMapper.toApiCertificationType(entity, language);
     }
 
+    @CacheEvict(value = "certifications", allEntries = true)
     @Transactional
     public ApiBaseEntity createOrUpdateCertificationType(ApiCertificationType apiDTO) throws ApiException {
         
@@ -119,6 +123,7 @@ public class CertificationTypeService extends BaseService {
         return new ApiBaseEntity(entity);
     }
 
+    @CacheEvict(value = "certifications", allEntries = true)
     @Transactional
     public void deleteCertificationType(Long id) throws ApiException {
         CertificationType entity = fetchEntity(id);

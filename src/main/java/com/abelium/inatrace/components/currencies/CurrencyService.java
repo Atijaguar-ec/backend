@@ -5,6 +5,9 @@ import com.abelium.inatrace.components.common.BaseService;
 import com.abelium.inatrace.components.currencies.api.ApiCurrencyRatesResponse;
 import com.abelium.inatrace.db.entities.codebook.CurrencyType;
 import com.abelium.inatrace.db.entities.currencies.CurrencyPair;
+import com.abelium.inatrace.tools.SimpleCircuitBreaker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -15,6 +18,7 @@ import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -24,10 +28,16 @@ import java.util.Map;
 @Service
 public class CurrencyService extends BaseService {
 
+    private static final Logger log = LoggerFactory.getLogger(CurrencyService.class);
     private static final String CURRENCY = "currency";
+
+    private final SimpleCircuitBreaker circuitBreaker = new SimpleCircuitBreaker("ExchangeRatesHistoricalApi");
 
     @Autowired
     private CurrencyTypeService currencyTypeService;
+
+    @Autowired
+    private WebClient webClient;
 
     @Value("${INAtrace.exchangerate.apiKey}")
     private String apiKey;
@@ -36,11 +46,21 @@ public class CurrencyService extends BaseService {
     private boolean exchangerateEnabled;
 
     public BigDecimal convertFromEur(String to, BigDecimal value) {
-        return value.multiply(em.createNamedQuery("CurrencyPair.latestRate", BigDecimal.class).setParameter(CURRENCY, to).getResultList().get(0));
+        List<BigDecimal> rates = em.createNamedQuery("CurrencyPair.latestRate", BigDecimal.class).setParameter(CURRENCY, to).getResultList();
+        if (rates.isEmpty()) {
+            log.warn("No exchange rate found for EUR -> {}, falling back to 1:1 conversion", to);
+            return value;
+        }
+        return value.multiply(rates.get(0));
     }
 
     public BigDecimal convertToEur(String from, BigDecimal value) {
-        return value.divide(em.createNamedQuery("CurrencyPair.latestRate", BigDecimal.class).setParameter(CURRENCY, from).getResultList().get(0), 6, RoundingMode.HALF_UP);
+        List<BigDecimal> rates = em.createNamedQuery("CurrencyPair.latestRate", BigDecimal.class).setParameter(CURRENCY, from).getResultList();
+        if (rates.isEmpty()) {
+            log.warn("No exchange rate found for {} -> EUR, falling back to 1:1 conversion", from);
+            return value;
+        }
+        return value.divide(rates.get(0), 6, RoundingMode.HALF_UP);
     }
 
     @Transactional
@@ -50,7 +70,12 @@ public class CurrencyService extends BaseService {
         BigDecimal rate;
         if (rates.isEmpty()) {
             fetchRates(date);
-            rate = rateAtDateQuery(to, date).getSingleResult();
+            List<BigDecimal> newRates = rateAtDateQuery(to, date).getResultList();
+            if (newRates.isEmpty()) {
+                log.warn("No exchange rate available for {} at date {}, attempting fallback to latest rate", to, date);
+                return convertFromEur(to, value);
+            }
+            rate = newRates.get(0);
         } else {
             rate = rates.get(0);
         }
@@ -64,7 +89,12 @@ public class CurrencyService extends BaseService {
         BigDecimal rate;
         if (rates.isEmpty()) {
             fetchRates(date);
-            rate = rateAtDateQuery(from, date).getSingleResult();
+            List<BigDecimal> newRates = rateAtDateQuery(from, date).getResultList();
+            if (newRates.isEmpty()) {
+                log.warn("No exchange rate available for {} at date {}, attempting fallback to latest rate", from, date);
+                return convertToEur(from, value);
+            }
+            rate = newRates.get(0);
         } else {
             rate = rates.get(0);
         }
@@ -101,42 +131,52 @@ public class CurrencyService extends BaseService {
     public void fetchRates(Date date) {
 
         if (!exchangerateEnabled) {
-            System.out.println("INFO: Exchange rate synchronization is disabled by configuration (INATrace.exchangerate.enabled=false).");
+            log.info("Exchange rate synchronization is disabled by configuration (INATrace.exchangerate.enabled=false).");
             return;
         }
 
         if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("your_api_key_here") || apiKey.equals("dummy-test-key") || apiKey.equalsIgnoreCase("disabled")) {
-            System.out.println("WARN: Exchange rates API key is not configured (" + apiKey + "). Skipping rate fetch for date.");
+            log.warn("Exchange rates API key is not configured ({}). Skipping rate fetch for date.", apiKey);
             return;
         }
 
         String isoDate = DateTimeFormatter.ISO_LOCAL_DATE.format(date.toInstant().atZone(ZoneId.of("GMT")));
-        WebClient webClient = WebClient.create("http://api.exchangeratesapi.io/v1/" + isoDate + "?access_key=" + apiKey + "&base=EUR");
-        ApiCurrencyRatesResponse apiCurrencyRatesResponse = webClient
-                .get()
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve().bodyToMono(ApiCurrencyRatesResponse.class)
-                .doOnError(Throwable::printStackTrace)
-                .onErrorReturn(new ApiCurrencyRatesResponse())
-                .block();
+
+        ApiCurrencyRatesResponse apiCurrencyRatesResponse = circuitBreaker.execute(() -> {
+            return webClient.get()
+                    .uri("https://api.exchangeratesapi.io/v1/" + isoDate + "?access_key=" + apiKey + "&base=EUR")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(ApiCurrencyRatesResponse.class)
+                    .timeout(Duration.ofSeconds(10))
+                    .block();
+        }, () -> {
+            log.warn("Fallback: unable to fetch historical currency rates for date {}, returning empty response", isoDate);
+            return new ApiCurrencyRatesResponse();
+        });
+
         if (apiCurrencyRatesResponse != null && apiCurrencyRatesResponse.isSuccess()) {
             Map<String, BigDecimal> rates = apiCurrencyRatesResponse.getRates();
             Date current = apiCurrencyRatesResponse.getDate();
 
             List<String> enabled = currencyTypeService.getEnabledCurrencyCodes();
 
-            for (Map.Entry<String, BigDecimal> entry : rates.entrySet()) {
-                if (enabled.contains(entry.getKey()) && rateAtDateQuery(entry.getKey(), current).getResultList().isEmpty()) {
-                    CurrencyPair currencyPair = new CurrencyPair();
-                    CurrencyType from = currencyTypeService.getCurrencyTypeByCode("EUR");
-                    CurrencyType to = currencyTypeService.getCurrencyTypeByCode(entry.getKey());
-                    currencyPair.setFrom(from);
-                    currencyPair.setTo(to);
-                    currencyPair.setDate(current);
-                    currencyPair.setValue(entry.getValue());
-                    em.persist(currencyPair);
+            if (rates != null && current != null) {
+                for (Map.Entry<String, BigDecimal> entry : rates.entrySet()) {
+                    if (enabled.contains(entry.getKey()) && rateAtDateQuery(entry.getKey(), current).getResultList().isEmpty()) {
+                        CurrencyPair currencyPair = new CurrencyPair();
+                        CurrencyType from = currencyTypeService.getCurrencyTypeByCode("EUR");
+                        CurrencyType to = currencyTypeService.getCurrencyTypeByCode(entry.getKey());
+                        currencyPair.setFrom(from);
+                        currencyPair.setTo(to);
+                        currencyPair.setDate(current);
+                        currencyPair.setValue(entry.getValue());
+                        em.persist(currencyPair);
+                    }
                 }
             }
+        } else if (apiCurrencyRatesResponse != null && !apiCurrencyRatesResponse.isSuccess()) {
+            log.warn("Historical currency rates API returned unsuccessful status for date {}", isoDate);
         }
     }
 

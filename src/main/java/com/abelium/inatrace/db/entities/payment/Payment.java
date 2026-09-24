@@ -10,6 +10,8 @@ import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 import com.abelium.inatrace.db.entities.stockorder.enums.PreferredWayOfPayment;
 import jakarta.persistence.*;
 import jakarta.persistence.JoinColumn;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.RelationTargetAuditMode;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -17,6 +19,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table
+@Audited
 @NamedQueries({
 	@NamedQuery(name = "Payment.listPaymentsByPurchaseId", 
 				query = "SELECT p FROM Payment p "
@@ -47,10 +50,12 @@ public class Payment extends TimestampEntity {
 
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "createdby_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private User createdBy; // logged-in user
 	
 	@ManyToOne
 	@JoinColumn(name = "updatedby_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private User updatedBy;
 	
 	@Enumerated(EnumType.STRING)
@@ -74,18 +79,23 @@ public class Payment extends TimestampEntity {
 	private BigDecimal totalPaid;
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private StockOrder stockOrder; // stock order to which the payment(s) belong to
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Company payingCompany; // company who is paying - logged-in user
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Company recipientCompany; // the company that is receiving the payment (payment for quote orders)
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private UserCustomer recipientUserCustomer; // farmer
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private UserCustomer representativeOfRecipientUserCustomer; // collector
 	
 	@Enumerated(EnumType.STRING)
@@ -96,6 +106,7 @@ public class Payment extends TimestampEntity {
 	private String receiptNumber; // defined by user
 
 	@OneToOne(cascade = CascadeType.ALL)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Document receiptDocument; // document info
 	
 	@Enumerated(EnumType.STRING)
@@ -103,6 +114,7 @@ public class Payment extends TimestampEntity {
 	private ReceiptDocumentType receiptDocumentType; // purchase sheet, receipt
 	
 	@ManyToOne(fetch = FetchType.LAZY)
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private BulkPayment bulkPayment;
 	
 	@Enumerated(EnumType.STRING)
@@ -115,9 +127,11 @@ public class Payment extends TimestampEntity {
 	
 	@ManyToOne
 	@JoinColumn(name = "paymentconfirmedbyuser_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private User paymentConfirmedByUser; // user logged-in
 	
 	@ManyToOne
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private Company paymentConfirmedByCompany; // user's company who's logged-in
     
     @Column

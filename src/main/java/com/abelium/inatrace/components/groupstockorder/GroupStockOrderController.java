@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import java.io.ByteArrayInputStream;
 
 
+import com.abelium.inatrace.security.annotations.RequireCompanyAccess;
+
 @RestController
 @RequestMapping("/chain/group-stock-order")
 public class GroupStockOrderController {
@@ -67,6 +69,7 @@ public class GroupStockOrderController {
                 .body(resource);
     }
 
+    @RequireCompanyAccess(paramName = "companyId")
     @GetMapping(value = "/export/company/{companyId}", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @Operation(summary = "Export grouped stock orders to Excel for a company (last year)")
     public ResponseEntity<Resource> exportGroupedStockOrdersExcelByCompany(

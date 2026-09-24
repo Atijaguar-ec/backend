@@ -38,8 +38,8 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
@@ -661,8 +661,9 @@ public class DashboardService extends BaseService {
         Map<String, String> additionalFilters = createAdditionalFiltersFromRequest(request, language);
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            XSSFSheet sheet = workbook.createSheet(
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        try (workbook) {
+            Sheet sheet = workbook.createSheet(
                     TranslateTools.getTranslatedValue(messageSource, "export.dashboard.sheet.name.deliveries", language));
 
             // generate header
@@ -705,6 +706,8 @@ public class DashboardService extends BaseService {
             }
 
             workbook.write(byteArrayOutputStream);
+        } finally {
+            workbook.dispose();
         }
 
         return byteArrayOutputStream.toByteArray();
@@ -823,8 +826,9 @@ public class DashboardService extends BaseService {
         Map<String, String> additionalFilters = createAdditionalFiltersFromRequest(request, language);
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            XSSFSheet sheet = workbook.createSheet(
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        try (workbook) {
+            Sheet sheet = workbook.createSheet(
                     TranslateTools.getTranslatedValue(messageSource, "export.dashboard.sheet.name.processingPerformance",
                             language));
 
@@ -871,6 +875,8 @@ public class DashboardService extends BaseService {
             }
 
             workbook.write(byteArrayOutputStream);
+        } finally {
+            workbook.dispose();
         }
 
         return byteArrayOutputStream.toByteArray();
