@@ -225,6 +225,9 @@ public class ApiStockOrder extends ApiBaseEntity {
     @Schema(description = "The final price discount applied")
     private BigDecimal finalPriceDiscount;
 
+    @Schema(description = "Delivery receipt number (comprobante)")
+    private String deliveryReceipt;
+
     public String getIdentifier() {
         return identifier;
     }
@@ -755,5 +758,13 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
         this.finalPriceDiscount = finalPriceDiscount;
+    }
+
+    public String getDeliveryReceipt() {
+        return deliveryReceipt;
+    }
+
+    public void setDeliveryReceipt(String deliveryReceipt) {
+        this.deliveryReceipt = deliveryReceipt;
     }
 }

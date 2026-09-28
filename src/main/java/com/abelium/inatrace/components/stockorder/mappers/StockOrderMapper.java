@@ -32,6 +32,7 @@ public class StockOrderMapper {
         ApiStockOrder apiStockOrder = new ApiStockOrder();
         apiStockOrder.setId(entity.getId());
         apiStockOrder.setIdentifier(entity.getIdentifier());
+        apiStockOrder.setDeliveryReceipt(entity.getDeliveryReceipt());
         apiStockOrder.setLotPrefix(entity.getLotPrefix());
         apiStockOrder.setInternalLotNumber(setupInternalLotNumberForSacked(entity.getInternalLotNumber(), entity.getSacNumber()));
         apiStockOrder.setCurrency(entity.getCurrency());
@@ -85,6 +86,7 @@ public class StockOrderMapper {
         ApiStockOrder apiStockOrder = new ApiStockOrder();
         apiStockOrder.setId(entity.getId());
         apiStockOrder.setIdentifier(entity.getIdentifier());
+        apiStockOrder.setDeliveryReceipt(entity.getDeliveryReceipt());
         apiStockOrder.setCreatedBy(UserMapper.toSimpleApiUser(entity.getCreatedBy()));
         apiStockOrder.setUpdatedBy(UserMapper.toSimpleApiUser(entity.getUpdatedBy()));
         apiStockOrder.setCreationTimestamp(entity.getCreationTimestamp());
@@ -231,6 +233,7 @@ public class StockOrderMapper {
         ApiStockOrder apiStockOrder = new ApiStockOrder();
         apiStockOrder.setId(entity.getId());
         apiStockOrder.setIdentifier(entity.getIdentifier());
+        apiStockOrder.setDeliveryReceipt(entity.getDeliveryReceipt());
         apiStockOrder.setInternalLotNumber(setupInternalLotNumberForSacked(entity.getInternalLotNumber(), entity.getSacNumber()));
         apiStockOrder.setSacNumber(entity.getSacNumber());
         apiStockOrder.setProductionDate(entity.getProductionDate());
@@ -241,6 +244,11 @@ public class StockOrderMapper {
                 MeasureUnitTypeMapper.toApiMeasureUnitType(entity.getMeasurementUnitType()));
 
         apiStockOrder.setFacility(FacilityMapper.toApiFacilityBase(entity.getFacility(), language));
+        if (entity.getCompany() != null) {
+            apiStockOrder.setCompany(CompanyMapper.toApiCompanyBase(entity.getCompany()));
+        } else if (entity.getFacility() != null && entity.getFacility().getCompany() != null) {
+            apiStockOrder.setCompany(CompanyMapper.toApiCompanyBase(entity.getFacility().getCompany()));
+        }
 
         apiStockOrder.setWomenShare(entity.getWomenShare());
         apiStockOrder.setOrganic(entity.getOrganic());

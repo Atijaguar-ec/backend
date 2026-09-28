@@ -22,7 +22,8 @@ class FlywayMigrationParseTest {
         String[] files = {
             "db/migration/V1__baseline_canonical.sql",
             "db/migration/V2__envers_audit_tables.sql",
-            "db/migration/V3__add_fk_indexes.sql"
+            "db/migration/V3__add_fk_indexes.sql",
+            "db/migration/V4__add_delivery_receipt_and_unocace_config.sql"
         };
 
         for (String file : files) {

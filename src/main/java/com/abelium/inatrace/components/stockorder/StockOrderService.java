@@ -47,6 +47,7 @@ import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.security.utils.PermissionsUtil;
 import com.abelium.inatrace.tools.PaginationTools;
 import com.abelium.inatrace.tools.Queries;
+import com.abelium.inatrace.tools.DeliveryReceiptTools;
 import com.abelium.inatrace.tools.QueryTools;
 import com.abelium.inatrace.tools.TranslateTools;
 import com.abelium.inatrace.tools.WeekNumberTools;
@@ -57,6 +58,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 import org.apache.commons.lang3.BooleanUtils;
@@ -702,6 +704,7 @@ public class StockOrderService extends BaseService {
         }
 
         // Set the Stock order and Processing order for which the history is calculated (including the input transaction for the Processing order)
+        ensureDeliveryReceipt(stockOrder);
         stockOrderHistory.setStockOrder(StockOrderMapper.toApiStockOrderHistory(stockOrder, language));
         stockOrderHistory.setProcessingOrder(ProcessingOrderMapper.toApiProcessingOrderHistory(stockOrder.getProcessingOrder(), language));
 
@@ -824,6 +827,7 @@ public class StockOrderService extends BaseService {
 
             } else {
 
+                ensureDeliveryReceipt(stockOrder);
                 nextHistory.setStockOrder(StockOrderMapper.toApiStockOrderHistory(stockOrder, language));
                 nextHistory.setDepth(currentDepth);
             }
@@ -865,6 +869,7 @@ public class StockOrderService extends BaseService {
 
             // set Id in response
             farmer.setId(apiBaseEntity.getId());
+            farmer.setDeliveryReceipt(apiStockOrder.getDeliveryReceipt());
         }
 
         return apiPurchaseOrder;
@@ -890,6 +895,7 @@ public class StockOrderService extends BaseService {
 
             // copy farmer attributes
             apiStockOrder.setIdentifier(farmer.getIdentifier());
+            apiStockOrder.setDeliveryReceipt(farmer.getDeliveryReceipt());
             apiStockOrder.setOrganic(farmer.getOrganic());
             apiStockOrder.setDamagedPriceDeduction(farmer.getDamagedPriceDeduction());
             apiStockOrder.setDamagedWeightDeduction(farmer.getDamagedWeightDeduction());
@@ -1047,6 +1053,7 @@ public class StockOrderService extends BaseService {
 
         if (apiStockOrder.getOrderType() == OrderType.PURCHASE_ORDER) {
             calculateNetQuantity(apiStockOrder, entity);
+            assignDeliveryReceipt(entity, apiStockOrder);
         }
 
         // Calculate the quantities for this stock order accommodating all different cases of stock orders
@@ -1240,6 +1247,108 @@ public class StockOrderService extends BaseService {
         } else {
             entity.setMoistureWeightDeduction(BigDecimal.ZERO);
             entity.setNetQuantity(grossTareDamaged);
+        }
+    }
+
+    public void assignDeliveryReceipt(StockOrder entity, ApiStockOrder apiStockOrder) {
+        if (apiStockOrder.getDeliveryReceipt() != null && !apiStockOrder.getDeliveryReceipt().isBlank()) {
+            entity.setDeliveryReceipt(apiStockOrder.getDeliveryReceipt().trim());
+            return;
+        }
+        if (entity.getDeliveryReceipt() != null && !entity.getDeliveryReceipt().isBlank()) {
+            apiStockOrder.setDeliveryReceipt(entity.getDeliveryReceipt());
+            return;
+        }
+        Company company = entity.getCompany();
+        if (company == null && entity.getFacility() != null) {
+            company = entity.getFacility().getCompany();
+        }
+        if (company != null && DeliveryReceiptTools.deliveryReceiptEnabled(company.getConfiguration())) {
+            String nextSeq = generateNextDeliveryReceipt(company.getId());
+            entity.setDeliveryReceipt(nextSeq);
+            if (apiStockOrder != null) {
+                apiStockOrder.setDeliveryReceipt(nextSeq);
+            }
+        }
+    }
+
+    public synchronized String generateNextDeliveryReceipt(Long companyId) {
+        if (companyId == null || em == null) {
+            return null;
+        }
+        try {
+            em.flush();
+            Query query = em.createNativeQuery(
+                "SELECT COALESCE(MAX(CASE WHEN deliveryreceipt ~ '^[0-9]+$' THEN CAST(deliveryreceipt AS integer) ELSE 0 END), 0) " +
+                "FROM stockorder WHERE company_id = :companyId AND ordertype = 'PURCHASE_ORDER'"
+            );
+            if (query == null) {
+                return null;
+            }
+            query.setParameter("companyId", companyId);
+            Number maxSeq = (Number) query.getSingleResult();
+            int nextVal = (maxSeq != null ? maxSeq.intValue() : 0);
+            if (nextVal <= 0) {
+                Query countQuery = em.createNativeQuery(
+                    "SELECT count(*) FROM stockorder WHERE company_id = :companyId AND ordertype = 'PURCHASE_ORDER'"
+                );
+                if (countQuery != null) {
+                    countQuery.setParameter("companyId", companyId);
+                    Number count = (Number) countQuery.getSingleResult();
+                    nextVal = count != null ? count.intValue() : 0;
+                }
+            }
+            nextVal += 1;
+            return DeliveryReceiptTools.formatSequence(nextVal);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void ensureDeliveryReceipt(StockOrder stockOrder) {
+        if (stockOrder == null || stockOrder.getOrderType() != OrderType.PURCHASE_ORDER) {
+            return;
+        }
+        if (stockOrder.getDeliveryReceipt() != null && !stockOrder.getDeliveryReceipt().isBlank()) {
+            return;
+        }
+        Company company = stockOrder.getCompany();
+        if (company == null && stockOrder.getFacility() != null) {
+            company = stockOrder.getFacility().getCompany();
+        }
+        if (company != null && DeliveryReceiptTools.deliveryReceiptEnabled(company.getConfiguration())) {
+            String computed = computeDeliveryReceiptForExistingOrder(stockOrder);
+            if (computed != null) {
+                stockOrder.setDeliveryReceipt(computed);
+            }
+        }
+    }
+
+    public String computeDeliveryReceiptForExistingOrder(StockOrder stockOrder) {
+        if (stockOrder == null || stockOrder.getId() == null || em == null) {
+            return null;
+        }
+        Company company = stockOrder.getCompany();
+        if (company == null && stockOrder.getFacility() != null) {
+            company = stockOrder.getFacility().getCompany();
+        }
+        if (company == null || company.getId() == null) {
+            return null;
+        }
+        try {
+            Query countQuery = em.createNativeQuery(
+                "SELECT count(*) FROM stockorder WHERE company_id = :companyId AND ordertype = 'PURCHASE_ORDER' AND id <= :currentId"
+            );
+            if (countQuery == null) {
+                return null;
+            }
+            countQuery.setParameter("companyId", company.getId());
+            countQuery.setParameter("currentId", stockOrder.getId());
+            Number count = (Number) countQuery.getSingleResult();
+            long seq = count != null ? count.longValue() : 1;
+            return DeliveryReceiptTools.formatSequence(seq);
+        } catch (Exception e) {
+            return null;
         }
     }
 

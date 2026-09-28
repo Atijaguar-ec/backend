@@ -523,4 +523,110 @@ class StockOrderServiceTest {
         // Available quantity = api.fulfilledQuantity (900) - lastUsedQuantity (200) = 700.00
         assertEquals(new BigDecimal("700.00"), stockOrder.getAvailableQuantity());
     }
+
+    @Test
+    @DisplayName("assignDeliveryReceipt: does not assign receipt when company has feature disabled (FV default)")
+    void assignDeliveryReceipt_disabledByDefaultForCompany() {
+        StockOrder entity = new StockOrder();
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        // FV configuration with onlyOrganicProduction = true, but no enableDeliveryReceipt
+        Map<String, Object> config = new HashMap<>();
+        config.put("onlyOrganicProduction", true);
+        company.setConfiguration(config);
+        entity.setCompany(company);
+
+        ApiStockOrder apiStockOrder = new ApiStockOrder();
+        stockOrderService.assignDeliveryReceipt(entity, apiStockOrder);
+
+        assertNull(entity.getDeliveryReceipt(), "Receipt must be null when disabled for company");
+        assertNull(apiStockOrder.getDeliveryReceipt(), "API receipt must be null when disabled for company");
+    }
+
+    @Test
+    @DisplayName("assignDeliveryReceipt: assigns next sequential receipt when enabled for company (UNOCACE)")
+    void assignDeliveryReceipt_enabledForCompany_assignsNextSequence() {
+        StockOrder entity = new StockOrder();
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 2L);
+        Map<String, Object> config = new HashMap<>();
+        config.put("enableDeliveryReceipt", true);
+        company.setConfiguration(config);
+        entity.setCompany(company);
+
+        jakarta.persistence.Query mockQuery = mock(jakarta.persistence.Query.class);
+        when(entityManager.createNativeQuery(contains("MAX(CASE WHEN deliveryreceipt"))).thenReturn(mockQuery);
+        when(mockQuery.getSingleResult()).thenReturn(3);
+
+        ApiStockOrder apiStockOrder = new ApiStockOrder();
+        stockOrderService.assignDeliveryReceipt(entity, apiStockOrder);
+
+        assertEquals("0004", entity.getDeliveryReceipt(), "Next sequence from 3 should be 0004");
+        assertEquals("0004", apiStockOrder.getDeliveryReceipt());
+    }
+
+    @Test
+    @DisplayName("assignDeliveryReceipt: preserves existing delivery receipt on entity")
+    void assignDeliveryReceipt_preservesExistingReceipt() {
+        StockOrder entity = new StockOrder();
+        entity.setDeliveryReceipt("0005");
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 2L);
+        company.setConfiguration(Map.of("enableDeliveryReceipt", true));
+        entity.setCompany(company);
+
+        ApiStockOrder apiStockOrder = new ApiStockOrder();
+        stockOrderService.assignDeliveryReceipt(entity, apiStockOrder);
+
+        assertEquals("0005", entity.getDeliveryReceipt(), "Existing receipt on entity must be preserved");
+        assertEquals("0005", apiStockOrder.getDeliveryReceipt());
+    }
+
+    @Test
+    @DisplayName("assignDeliveryReceipt: respects apiStockOrder supplied delivery receipt")
+    void assignDeliveryReceipt_respectsApiReceipt() {
+        StockOrder entity = new StockOrder();
+        ApiStockOrder apiStockOrder = new ApiStockOrder();
+        apiStockOrder.setDeliveryReceipt("0042");
+
+        stockOrderService.assignDeliveryReceipt(entity, apiStockOrder);
+
+        assertEquals("0042", entity.getDeliveryReceipt());
+    }
+
+    @Test
+    @DisplayName("ensureDeliveryReceipt: computes receipt for existing order when company has feature enabled")
+    void ensureDeliveryReceipt_computesForExistingOrder() {
+        StockOrder entity = new StockOrder();
+        ReflectionTestUtils.setField(entity, "id", 100L);
+        entity.setOrderType(OrderType.PURCHASE_ORDER);
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 2L);
+        company.setConfiguration(Map.of("enableDeliveryReceipt", true));
+        entity.setCompany(company);
+
+        jakarta.persistence.Query mockQuery = mock(jakarta.persistence.Query.class);
+        when(entityManager.createNativeQuery(contains("count(*) FROM stockorder"))).thenReturn(mockQuery);
+        when(mockQuery.getSingleResult()).thenReturn(7L);
+
+        stockOrderService.ensureDeliveryReceipt(entity);
+
+        assertEquals("0007", entity.getDeliveryReceipt());
+    }
+
+    @Test
+    @DisplayName("ensureDeliveryReceipt: does nothing when company has feature disabled (FV default)")
+    void ensureDeliveryReceipt_doesNothingWhenDisabled() {
+        StockOrder entity = new StockOrder();
+        ReflectionTestUtils.setField(entity, "id", 100L);
+        entity.setOrderType(OrderType.PURCHASE_ORDER);
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        company.setConfiguration(Collections.emptyMap());
+        entity.setCompany(company);
+
+        stockOrderService.ensureDeliveryReceipt(entity);
+
+        assertNull(entity.getDeliveryReceipt());
+    }
 }

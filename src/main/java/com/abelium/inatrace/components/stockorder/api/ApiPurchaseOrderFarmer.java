@@ -14,6 +14,9 @@ public class ApiPurchaseOrderFarmer extends ApiBaseEntity {
 	@Schema(description = "Purchase order identifier")
 	private String identifier;
 
+	@Schema(description = "Delivery receipt number (comprobante)")
+	private String deliveryReceipt;
+
 	@Schema(description = "Id of the person who has produced the entry.")
 	private ApiUserCustomer producerUserCustomer;
 
@@ -174,5 +177,13 @@ public class ApiPurchaseOrderFarmer extends ApiBaseEntity {
 
 	public void setBalance(BigDecimal balance) {
 		this.balance = balance;
+	}
+
+	public String getDeliveryReceipt() {
+		return deliveryReceipt;
+	}
+
+	public void setDeliveryReceipt(String deliveryReceipt) {
+		this.deliveryReceipt = deliveryReceipt;
 	}
 }

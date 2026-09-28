@@ -304,6 +304,9 @@ public class StockOrder extends TimestampEntity {
 	@Column
 	private BigDecimal finalPriceDiscount;
 
+	@Column
+	private String deliveryReceipt;
+
 	public User getCreatedBy() {
 		return createdBy;
 	}
@@ -813,5 +816,13 @@ public class StockOrder extends TimestampEntity {
 
 	public void setFinalPriceDiscount(BigDecimal finalPriceDiscount) {
 		this.finalPriceDiscount = finalPriceDiscount;
+	}
+
+	public String getDeliveryReceipt() {
+		return deliveryReceipt;
+	}
+
+	public void setDeliveryReceipt(String deliveryReceipt) {
+		this.deliveryReceipt = deliveryReceipt;
 	}
 }
