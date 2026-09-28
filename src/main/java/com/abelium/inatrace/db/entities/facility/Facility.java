@@ -50,6 +50,9 @@ public class Facility extends TimestampEntity {
 	private Boolean displayTare;
 
 	@Column
+	private Boolean displayQuotaBalance;
+
+	@Column
 	private Boolean displayWomenOnly;
 
 	@Column
@@ -153,6 +156,14 @@ public class Facility extends TimestampEntity {
 
 	public void setDisplayTare(Boolean displayTare) {
 		this.displayTare = displayTare;
+	}
+
+	public Boolean getDisplayQuotaBalance() {
+		return displayQuotaBalance;
+	}
+
+	public void setDisplayQuotaBalance(Boolean displayQuotaBalance) {
+		this.displayQuotaBalance = displayQuotaBalance;
 	}
 
 	public Boolean getDisplayWomenOnly() {

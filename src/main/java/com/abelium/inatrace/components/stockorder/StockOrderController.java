@@ -4,6 +4,7 @@ import com.abelium.inatrace.api.*;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.processingorder.api.ApiProcessingOrder;
 import com.abelium.inatrace.components.stockorder.api.ApiPurchaseOrder;
+import com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrderHistory;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
@@ -242,6 +243,22 @@ public class StockOrderController {
 
         stockOrderService.deleteStockOrder(id, authUser);
         return new ApiDefaultResponse();
+    }
+
+    @GetMapping("quota-balance")
+    @Operation(summary = "Get farmer and plot delivery quota balance.")
+    public ApiResponse<ApiQuotaBalance> getQuotaBalance(
+            @Valid @Parameter(description = "Company ID", required = true) @RequestParam("companyId") Long companyId,
+            @Valid @Parameter(description = "Farmer (UserCustomer) ID", required = true) @RequestParam("farmerId") Long farmerId,
+            @Valid @Parameter(description = "Parcel / Plot lot name or position") @RequestParam(value = "parcelLot", required = false) String parcelLot,
+            @Valid @Parameter(description = "Semi-product ID") @RequestParam(value = "semiProductId", required = false) Long semiProductId,
+            @Valid @Parameter(description = "Delivery date (defaults to current date)") @RequestParam(value = "deliveryDate", required = false) LocalDate deliveryDate,
+            @Valid @Parameter(description = "Stock order ID to exclude (when editing)") @RequestParam(value = "excludeStockOrderId", required = false) Long excludeStockOrderId,
+            @AuthenticationPrincipal CustomUserDetails authUser,
+            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
+
+        return new ApiResponse<>(stockOrderService.getQuotaBalance(
+                companyId, farmerId, parcelLot, semiProductId, deliveryDate, excludeStockOrderId, authUser, language));
     }
 
     @GetMapping("{id}/aggregated-history")

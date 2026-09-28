@@ -76,6 +76,7 @@ public final class FacilityMapper {
 		apiFacility.setDisplayPriceDeductionDamage(entity.getDisplayPriceDeductionDamage());
 		apiFacility.setDisplayWeightDeductionDamage(entity.getDisplayWeightDeductionDamage());
 		apiFacility.setDisplayTare(entity.getDisplayTare());
+		apiFacility.setDisplayQuotaBalance(entity.getDisplayQuotaBalance());
 		apiFacility.setDisplayWomenOnly(entity.getDisplayWomenOnly());
 		apiFacility.setDisplayPriceDeterminedLater(entity.getDisplayPriceDeterminedLater());
 		apiFacility.setLevel(entity.getLevel());

@@ -37,6 +37,9 @@ public class ApiFacility extends ApiBaseEntity {
 	@Schema(description = "Enable form control 'Tare'")
 	private Boolean displayTare;
 
+	@Schema(description = "Enable form control 'Quota balance'")
+	private Boolean displayQuotaBalance;
+
 	@Schema(description = "Enable form control 'Women only'")
 	private Boolean displayWomenOnly;
 
@@ -138,6 +141,14 @@ public class ApiFacility extends ApiBaseEntity {
 
 	public void setDisplayTare(Boolean displayTare) {
 		this.displayTare = displayTare;
+	}
+
+	public Boolean getDisplayQuotaBalance() {
+		return displayQuotaBalance;
+	}
+
+	public void setDisplayQuotaBalance(Boolean displayQuotaBalance) {
+		this.displayQuotaBalance = displayQuotaBalance;
 	}
 
 	public Boolean getDisplayWomenOnly() {

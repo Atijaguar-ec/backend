@@ -81,6 +81,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -1928,5 +1929,194 @@ public class StockOrderService extends BaseService {
         }
         // if areaSum is < 0, polygon order is counter-clockwise
         return areaSum < 0;
+    }
+
+    public ApiQuotaBalance getQuotaBalance(
+            Long companyId,
+            Long farmerId,
+            String parcelLot,
+            Long semiProductId,
+            LocalDate deliveryDate,
+            Long excludeStockOrderId,
+            CustomUserDetails authUser,
+            Language language) throws ApiException {
+
+        Company company = Queries.get(em, Company.class, companyId);
+        if (company == null) {
+            throw new ApiException(ApiStatus.NOT_FOUND, "Company not found");
+        }
+
+        UserCustomer farmer = Queries.get(em, UserCustomer.class, farmerId);
+        if (farmer == null) {
+            throw new ApiException(ApiStatus.NOT_FOUND, "Farmer not found");
+        }
+
+        // 1. Determine unit & conversion factor from quintales (qq) to delivery unit.
+        // Standard in Ecuador cacao: 1 quintal (qq) = 100 libras (lb) = ~45.36 kg
+        BigDecimal conversionFactor = new BigDecimal("100");
+        String unitLabel = "Libra";
+
+        if (semiProductId != null) {
+            try {
+                com.abelium.inatrace.db.entities.codebook.SemiProduct sp = semiProductService.fetchSemiProduct(semiProductId);
+                if (sp != null && sp.getMeasurementUnitType() != null) {
+                    if (sp.getMeasurementUnitType().getLabel() != null) {
+                        unitLabel = sp.getMeasurementUnitType().getLabel();
+                    }
+                    String code = sp.getMeasurementUnitType().getCode();
+                    if (code != null) {
+                        if (code.equalsIgnoreCase("PESOKG") || code.equalsIgnoreCase("KG")) {
+                            conversionFactor = new BigDecimal("45.3592");
+                        } else if (code.equalsIgnoreCase("QUINTALES") || code.equalsIgnoreCase("QQ")) {
+                            conversionFactor = BigDecimal.ONE;
+                        } else {
+                            conversionFactor = new BigDecimal("100");
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 2. Resolve initial quota for the parcel and/or farmer
+        BigDecimal plotInitialQuotaQq = null;
+        String resolvedPlotName = null;
+
+        if (StringUtils.isNotBlank(parcelLot) && farmer.getPlots() != null) {
+            String target = parcelLot.trim();
+            Plot matchedPlot = null;
+            for (Plot p : farmer.getPlots()) {
+                if (p.getPlotName() != null && p.getPlotName().trim().equalsIgnoreCase(target)) {
+                    matchedPlot = p;
+                    break;
+                }
+            }
+            if (matchedPlot == null && target.matches("\\d+")) {
+                int pos = Integer.parseInt(target);
+                List<Plot> sortedPlots = farmer.getPlots().stream()
+                        .sorted(Comparator.comparing(Plot::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                        .collect(Collectors.toList());
+                if (pos >= 1 && pos <= sortedPlots.size()) {
+                    matchedPlot = sortedPlots.get(pos - 1);
+                }
+            }
+            if (matchedPlot != null) {
+                resolvedPlotName = matchedPlot.getPlotName();
+                if (matchedPlot.getProductionEstimate() != null) {
+                    plotInitialQuotaQq = matchedPlot.getProductionEstimate();
+                }
+            }
+        }
+
+        // Farmer total quota in qq
+        BigDecimal farmerTotalQuotaQq = null;
+        if (farmer.getFarm() != null && farmer.getFarm().getMaxProductionQuantity() != null) {
+            farmerTotalQuotaQq = farmer.getFarm().getMaxProductionQuantity();
+        } else if (farmer.getPlots() != null) {
+            BigDecimal sumPlots = BigDecimal.ZERO;
+            boolean hasAny = false;
+            for (Plot p : farmer.getPlots()) {
+                if (p.getProductionEstimate() != null) {
+                    sumPlots = sumPlots.add(p.getProductionEstimate());
+                    hasAny = true;
+                }
+            }
+            if (hasAny) {
+                farmerTotalQuotaQq = sumPlots;
+            }
+        }
+
+        BigDecimal effectiveInitialQuotaQq = plotInitialQuotaQq != null ? plotInitialQuotaQq : farmerTotalQuotaQq;
+
+        // 3. Query delivered quantities in the current cycle / year
+        int cycleYear = deliveryDate != null ? deliveryDate.getYear() : LocalDate.now().getYear();
+        LocalDate startDate = LocalDate.of(cycleYear, 1, 1);
+        LocalDate endDate = LocalDate.of(cycleYear, 12, 31);
+
+        // Farmer total delivered across all plots
+        StringBuilder farmerHql = new StringBuilder(
+                "SELECT COALESCE(SUM(COALESCE(so.netQuantity, so.totalQuantity, so.totalGrossQuantity)), 0) " +
+                "FROM StockOrder so " +
+                "WHERE so.producerUserCustomer.id = :farmerId " +
+                "AND so.orderType = :orderType " +
+                "AND so.productionDate >= :startDate AND so.productionDate <= :endDate ");
+        if (excludeStockOrderId != null) {
+            farmerHql.append("AND so.id != :excludeId ");
+        }
+
+        TypedQuery<BigDecimal> farmerQuery = em.createQuery(farmerHql.toString(), BigDecimal.class)
+                .setParameter("farmerId", farmerId)
+                .setParameter("orderType", OrderType.PURCHASE_ORDER)
+                .setParameter("startDate", startDate)
+                .setParameter("endDate", endDate);
+        if (excludeStockOrderId != null) {
+            farmerQuery.setParameter("excludeId", excludeStockOrderId);
+        }
+        BigDecimal farmerTotalDelivered = farmerQuery.getSingleResult();
+        if (farmerTotalDelivered == null) {
+            farmerTotalDelivered = BigDecimal.ZERO;
+        }
+
+        // Delivered for specific parcel
+        BigDecimal parcelDelivered = BigDecimal.ZERO;
+        if (StringUtils.isNotBlank(parcelLot)) {
+            StringBuilder parcelHql = new StringBuilder(
+                    "SELECT COALESCE(SUM(COALESCE(so.netQuantity, so.totalQuantity, so.totalGrossQuantity)), 0) " +
+                    "FROM StockOrder so " +
+                    "WHERE so.producerUserCustomer.id = :farmerId " +
+                    "AND so.orderType = :orderType " +
+                    "AND so.productionDate >= :startDate AND so.productionDate <= :endDate " +
+                    "AND LOWER(TRIM(so.parcelLot)) = :parcelLot ");
+            if (excludeStockOrderId != null) {
+                parcelHql.append("AND so.id != :excludeId ");
+            }
+            TypedQuery<BigDecimal> parcelQuery = em.createQuery(parcelHql.toString(), BigDecimal.class)
+                    .setParameter("farmerId", farmerId)
+                    .setParameter("orderType", OrderType.PURCHASE_ORDER)
+                    .setParameter("startDate", startDate)
+                    .setParameter("endDate", endDate)
+                    .setParameter("parcelLot", parcelLot.trim().toLowerCase());
+            if (excludeStockOrderId != null) {
+                parcelQuery.setParameter("excludeId", excludeStockOrderId);
+            }
+            parcelDelivered = parcelQuery.getSingleResult();
+            if (parcelDelivered == null) {
+                parcelDelivered = BigDecimal.ZERO;
+            }
+        }
+
+        BigDecimal effectiveDelivered = plotInitialQuotaQq != null ? parcelDelivered : farmerTotalDelivered;
+
+        ApiQuotaBalance response = new ApiQuotaBalance();
+        response.setUnit(unitLabel);
+        response.setPlotName(resolvedPlotName);
+        response.setTotalDelivered(effectiveDelivered.setScale(2, RoundingMode.HALF_UP));
+        response.setFarmerTotalDelivered(farmerTotalDelivered.setScale(2, RoundingMode.HALF_UP));
+
+        if (effectiveInitialQuotaQq != null) {
+            BigDecimal initialInUnit = effectiveInitialQuotaQq.multiply(conversionFactor).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal remainingInUnit = initialInUnit.subtract(effectiveDelivered).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal remainingInQq = remainingInUnit.divide(conversionFactor, 2, RoundingMode.HALF_UP);
+
+            response.setInitialQuota(effectiveInitialQuotaQq.setScale(2, RoundingMode.HALF_UP));
+            response.setInitialQuotaInUnit(initialInUnit);
+            response.setRemainingBalance(remainingInUnit);
+            response.setRemainingBalanceInQq(remainingInQq);
+
+            boolean isExceeded = remainingInUnit.compareTo(BigDecimal.ZERO) <= 0;
+            boolean isNearLimit = !isExceeded && remainingInUnit.compareTo(initialInUnit.multiply(new BigDecimal("0.10"))) <= 0;
+
+            response.setIsExceeded(isExceeded);
+            response.setIsNearLimit(isNearLimit);
+        }
+
+        if (farmerTotalQuotaQq != null) {
+            BigDecimal farmerInitialInUnit = farmerTotalQuotaQq.multiply(conversionFactor).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal farmerRemainingInUnit = farmerInitialInUnit.subtract(farmerTotalDelivered).setScale(2, RoundingMode.HALF_UP);
+            response.setFarmerTotalQuotaInUnit(farmerInitialInUnit);
+            response.setFarmerTotalRemainingBalance(farmerRemainingInUnit);
+        }
+
+        return response;
     }
 }

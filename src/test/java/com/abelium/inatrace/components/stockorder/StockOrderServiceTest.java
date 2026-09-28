@@ -629,4 +629,76 @@ class StockOrderServiceTest {
 
         assertNull(entity.getDeliveryReceipt());
     }
+
+    @Test
+    @DisplayName("getQuotaBalance: computes remaining balance for specific plot in delivery unit (Libra)")
+    void getQuotaBalance_computesRemainingBalanceForPlot() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(1L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 2L);
+
+        com.abelium.inatrace.db.entities.common.Plot plot1 = new com.abelium.inatrace.db.entities.common.Plot();
+        plot1.setPlotName("LOTE-3");
+        plot1.setProductionEstimate(new BigDecimal("57.49"));
+        farmer.setPlots(Set.of(plot1));
+
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(2L))).thenReturn(farmer);
+
+        // Mock deliveries query for parcel
+        TypedQuery<BigDecimal> mockParcelQuery = mock(TypedQuery.class);
+        when(mockParcelQuery.setParameter(anyString(), any())).thenReturn(mockParcelQuery);
+        when(mockParcelQuery.getSingleResult()).thenReturn(new BigDecimal("900.00"));
+
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class)))
+                .thenReturn(mockParcelQuery);
+
+        com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance result =
+                stockOrderService.getQuotaBalance(1L, 2L, "LOTE-3", null, LocalDate.of(2026, 9, 21), null, null, null);
+
+        assertNotNull(result);
+        assertEquals(new BigDecimal("57.49"), result.getInitialQuota());
+        // 57.49 qq * 100 = 5749.00 Libra
+        assertEquals(new BigDecimal("5749.00"), result.getInitialQuotaInUnit());
+        assertEquals(new BigDecimal("900.00"), result.getTotalDelivered());
+        // 5749.00 - 900.00 = 4849.00 Libra
+        assertEquals(new BigDecimal("4849.00"), result.getRemainingBalance());
+        assertEquals(new BigDecimal("48.49"), result.getRemainingBalanceInQq());
+        assertFalse(result.getIsExceeded());
+        assertFalse(result.getIsNearLimit());
+        assertEquals("Libra", result.getUnit());
+    }
+
+    @Test
+    @DisplayName("getQuotaBalance: marks isExceeded when delivered quantity exceeds initial quota")
+    void getQuotaBalance_marksExceededWhenDeliveredExceedsQuota() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(1L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 2L);
+
+        com.abelium.inatrace.db.entities.common.Plot plot1 = new com.abelium.inatrace.db.entities.common.Plot();
+        plot1.setPlotName("LOTE-1");
+        plot1.setProductionEstimate(new BigDecimal("10.00")); // 1000 lbs
+        farmer.setPlots(Set.of(plot1));
+
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(2L))).thenReturn(farmer);
+
+        TypedQuery<BigDecimal> mockQuery = mock(TypedQuery.class);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        when(mockQuery.getSingleResult()).thenReturn(new BigDecimal("1200.00")); // delivered 1200 lbs
+
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class))).thenReturn(mockQuery);
+
+        com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance result =
+                stockOrderService.getQuotaBalance(1L, 2L, "LOTE-1", null, LocalDate.of(2026, 9, 21), null, null, null);
+
+        assertNotNull(result);
+        assertEquals(new BigDecimal("-200.00"), result.getRemainingBalance());
+        assertTrue(result.getIsExceeded());
+    }
 }
