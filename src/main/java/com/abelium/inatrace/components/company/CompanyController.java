@@ -217,7 +217,7 @@ public class CompanyController {
                 .body(response);
     }
 
-    @PostMapping(value = "/userCustomers/{id}/uploadGeoData")
+    @PostMapping(value = "/userCustomers/{id}/uploadGeoData", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload Geo-data for the user customer with the provided ID")
     public ApiDefaultResponse uploadUserCustomerGeoData(
             @AuthenticationPrincipal CustomUserDetails authUser,

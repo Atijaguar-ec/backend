@@ -1321,7 +1321,7 @@ public class CompanyService extends BaseService {
 	public byte[] exportUserCustomerGeoData(CustomUserDetails authUser, Long id) throws ApiException {
 
 		UserCustomer userCustomer = fetchUserCustomerWithPlots(id);
-		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), authUser);
+		PermissionsUtil.checkUserIfCompanyEnrolledOrSystemAdmin(userCustomer.getCompany().getUsers().stream().toList(), authUser);
 
 		// Prepare the GeoJSON object
 		List<Feature> features = new ArrayList<>();
@@ -1362,7 +1362,7 @@ public class CompanyService extends BaseService {
 	public void uploadUserCustomerGeoData(CustomUserDetails authUser, Long id, MultipartFile file) throws ApiException {
 
 		UserCustomer userCustomer = fetchUserCustomer(id);
-		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), authUser);
+		PermissionsUtil.checkUserIfCompanyEnrolledOrSystemAdmin(userCustomer.getCompany().getUsers().stream().toList(), authUser);
 
 		byte[] content;
 		try {
@@ -1431,7 +1431,7 @@ public class CompanyService extends BaseService {
 										  ApiPlot request) throws ApiException {
 
 		UserCustomer userCustomer = fetchUserCustomer(userCustomerId);
-		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), user);
+		PermissionsUtil.checkUserIfCompanyEnrolledOrSystemAdmin(userCustomer.getCompany().getUsers().stream().toList(), user);
 
 		Plot plot = new Plot();
 		plot.setPlotName(request.getPlotName());
@@ -1466,7 +1466,7 @@ public class CompanyService extends BaseService {
 												   Language language) throws ApiException {
 
 		UserCustomer userCustomer = fetchUserCustomerWithPlots(userCustomerId);
-		PermissionsUtil.checkUserIfCompanyEnrolled(userCustomer.getCompany().getUsers().stream().toList(), user);
+		PermissionsUtil.checkUserIfCompanyEnrolledOrSystemAdmin(userCustomer.getCompany().getUsers().stream().toList(), user);
 
 		Plot plot = userCustomer.getPlots()
 				.stream()
