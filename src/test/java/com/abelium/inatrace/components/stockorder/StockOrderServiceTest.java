@@ -635,6 +635,7 @@ class StockOrderServiceTest {
     void getQuotaBalance_computesRemainingBalanceForPlot() throws Exception {
         com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
         ReflectionTestUtils.setField(company, "id", 1L);
+        company.setConfiguration(Map.of("enableQuotaBalance", true));
         when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(1L))).thenReturn(company);
 
         com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
@@ -676,6 +677,7 @@ class StockOrderServiceTest {
     void getQuotaBalance_marksExceededWhenDeliveredExceedsQuota() throws Exception {
         com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
         ReflectionTestUtils.setField(company, "id", 1L);
+        company.setConfiguration(Map.of("enableQuotaBalance", true));
         when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(1L))).thenReturn(company);
 
         com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
@@ -700,5 +702,52 @@ class StockOrderServiceTest {
         assertNotNull(result);
         assertEquals(new BigDecimal("-200.00"), result.getRemainingBalance());
         assertTrue(result.getIsExceeded());
+    }
+
+    @Test
+    @DisplayName("getQuotaBalance: returns 0 when company has enableQuotaBalance disabled (e.g. Fortaleza del Valle)")
+    void getQuotaBalance_returnsZeroWhenCompanyDisabled() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 10L);
+        // Sin enableQuotaBalance (o con false)
+        company.setConfiguration(Map.of("onlyOrganicProduction", true));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(10L))).thenReturn(company);
+
+        com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance result =
+                stockOrderService.getQuotaBalance(10L, 2L, "LOTE-1", null, LocalDate.of(2026, 9, 21), null, null, null);
+
+        assertNotNull(result);
+        assertEquals(new BigDecimal("0.00"), result.getRemainingBalance());
+        assertEquals(new BigDecimal("0.00"), result.getInitialQuota());
+        assertFalse(result.getIsExceeded());
+    }
+
+    @Test
+    @DisplayName("getQuotaBalance: defaults to 0 when farmer or plot has no quota estimate registered")
+    void getQuotaBalance_defaultsToZeroWhenEstimateNull() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        company.setConfiguration(Map.of("enableQuotaBalance", true));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(1L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 2L);
+        // Sin parcelas ni estimación
+        farmer.setPlots(Set.of());
+
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(2L))).thenReturn(farmer);
+
+        TypedQuery<BigDecimal> mockQuery = mock(TypedQuery.class);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        when(mockQuery.getSingleResult()).thenReturn(BigDecimal.ZERO);
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class))).thenReturn(mockQuery);
+
+        com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance result =
+                stockOrderService.getQuotaBalance(1L, 2L, null, null, LocalDate.of(2026, 9, 21), null, null, null);
+
+        assertNotNull(result);
+        assertEquals(new BigDecimal("0.00"), result.getRemainingBalance());
+        assertEquals(new BigDecimal("0.00"), result.getInitialQuota());
+        assertFalse(result.getIsExceeded());
     }
 }

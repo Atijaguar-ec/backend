@@ -21,6 +21,7 @@ public final class DeliveryReceiptTools {
     public static final String DELIVERY_RECEIPT_ALT_KEY = "deliveryReceiptSequence";
     public static final String SIMPLIFY_SEMI_PRODUCT_KEY = "simplifySemiProductToCacao";
     public static final String SIMPLIFY_SEMI_PRODUCT_ALT_KEY = "genericCacaoDisplay";
+    public static final String QUOTA_BALANCE_CONFIG_KEY = "enableQuotaBalance";
 
     private DeliveryReceiptTools() {
     }
@@ -64,6 +65,17 @@ public final class DeliveryReceiptTools {
         }
         return isTruthy(companyConfiguration.get(SIMPLIFY_SEMI_PRODUCT_KEY))
                 || isTruthy(companyConfiguration.get(SIMPLIFY_SEMI_PRODUCT_ALT_KEY));
+    }
+
+    /**
+     * Determina si la empresa tiene habilitado el control y visualización de
+     * saldo de cupo en entregas (enableQuotaBalance).
+     */
+    public static boolean quotaBalanceEnabled(Map<String, Object> companyConfiguration) {
+        if (companyConfiguration == null) {
+            return false;
+        }
+        return isTruthy(companyConfiguration.get(QUOTA_BALANCE_CONFIG_KEY));
     }
 
     /**

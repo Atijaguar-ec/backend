@@ -1946,6 +1946,19 @@ public class StockOrderService extends BaseService {
             throw new ApiException(ApiStatus.NOT_FOUND, "Company not found");
         }
 
+        if (!com.abelium.inatrace.tools.DeliveryReceiptTools.quotaBalanceEnabled(company.getConfiguration())) {
+            ApiQuotaBalance disabled = new ApiQuotaBalance();
+            disabled.setUnit("Libra");
+            disabled.setInitialQuota(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            disabled.setInitialQuotaInUnit(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            disabled.setRemainingBalance(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            disabled.setRemainingBalanceInQq(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            disabled.setTotalDelivered(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            disabled.setIsExceeded(false);
+            disabled.setIsNearLimit(false);
+            return disabled;
+        }
+
         UserCustomer farmer = Queries.get(em, UserCustomer.class, farmerId);
         if (farmer == null) {
             throw new ApiException(ApiStatus.NOT_FOUND, "Farmer not found");
@@ -2108,6 +2121,13 @@ public class StockOrderService extends BaseService {
 
             response.setIsExceeded(isExceeded);
             response.setIsNearLimit(isNearLimit);
+        } else {
+            response.setInitialQuota(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            response.setInitialQuotaInUnit(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            response.setRemainingBalance(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            response.setRemainingBalanceInQq(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            response.setIsExceeded(false);
+            response.setIsNearLimit(false);
         }
 
         if (farmerTotalQuotaQq != null) {
