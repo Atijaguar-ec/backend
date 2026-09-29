@@ -26,6 +26,9 @@ public class ApiProcessingEvidenceField extends ApiBaseEntity {
 	@Schema(description = "Processing evidence field required on quote")
 	private Boolean requiredOnQuote;
 	
+	@Schema(description = "Processing evidence field sort order")
+	private Integer sortOrder;
+	
 	@Schema(description = "Processing evidence field type")
 	private ProcessingEvidenceFieldType type;
 
@@ -63,6 +66,14 @@ public class ApiProcessingEvidenceField extends ApiBaseEntity {
 	public void setRequiredOnQuote(Boolean requiredOnQuote) {
 		this.requiredOnQuote = requiredOnQuote;
 	}
+	
+	public Integer getSortOrder() {
+		return sortOrder;
+	}
+
+	public void setSortOrder(Integer sortOrder) {
+		this.sortOrder = sortOrder;
+	}
 
 	public ProcessingEvidenceFieldType getType() {
 		return type;
@@ -84,13 +95,14 @@ public class ApiProcessingEvidenceField extends ApiBaseEntity {
 	}
 
 	public ApiProcessingEvidenceField(String label, Boolean mandatory, Boolean requiredOnQuote,
-									  ProcessingEvidenceFieldType type, List<ApiProcessingEvidenceFieldTranslation> translations) {
+									  ProcessingEvidenceFieldType type, List<ApiProcessingEvidenceFieldTranslation> translations, Integer sortOrder) {
 		super();
 		this.label = label;
 		this.mandatory = mandatory;
 		this.requiredOnQuote = requiredOnQuote;
 		this.type = type;
 		this.translations = translations;
+		this.sortOrder = sortOrder;
 	}
 
 	public ApiProcessingEvidenceField() {

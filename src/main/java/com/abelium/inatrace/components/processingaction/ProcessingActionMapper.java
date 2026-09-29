@@ -240,9 +240,15 @@ public final class ProcessingActionMapper {
 					apiProcessingEvidenceField.setType(procEvidenceField.getType());
 					apiProcessingEvidenceField.setMandatory(processingActionProcessingEvidenceField.getMandatory());
 					apiProcessingEvidenceField.setRequiredOnQuote(processingActionProcessingEvidenceField.getRequiredOnQuote());
+					apiProcessingEvidenceField.setSortOrder(processingActionProcessingEvidenceField.getSortOrder());
 					apiRequiredEvidenceFields.add(apiProcessingEvidenceField);
 				}
 		);
+		
+		apiRequiredEvidenceFields.sort(java.util.Comparator.comparing(
+			ApiProcessingEvidenceField::getSortOrder,
+			java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())
+		));
 
 		return apiRequiredEvidenceFields;
 	}

@@ -23,6 +23,9 @@ public class ProcessingActionPEF extends BaseEntity {
 	
 	@Column
 	private Boolean requiredOnQuote;
+	
+	@Column(name = "sortorder")
+	private Integer sortOrder;
 
 	public ProcessingAction getProcessingAction() {
 		return processingAction;
@@ -56,16 +59,26 @@ public class ProcessingActionPEF extends BaseEntity {
 		this.requiredOnQuote = requiredOnQuote;
 	}
 
+	public Integer getSortOrder() {
+		return sortOrder;
+	}
+
+	public void setSortOrder(Integer sortOrder) {
+		this.sortOrder = sortOrder;
+	}
+
 	public ProcessingActionPEF(
 		@NotNull ProcessingAction processingAction,
 		@NotNull ProcessingEvidenceField processingEvidenceField,
 		Boolean mandatory,
-		Boolean requiredOnQuote) {
+		Boolean requiredOnQuote,
+		Integer sortOrder) {
 		super();
 		this.processingAction = processingAction;
 		this.processingEvidenceField = processingEvidenceField;
 		this.mandatory = mandatory;
 		this.requiredOnQuote = requiredOnQuote;
+		this.sortOrder = sortOrder;
 	}
 
 	public ProcessingActionPEF() {

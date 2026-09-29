@@ -488,6 +488,7 @@ public class ProcessingActionService extends BaseService {
 								requiredEvidenceField.getMandatory() != null && requiredEvidenceField.getMandatory());
 						processingActionPEF.setRequiredOnQuote(
 								requiredEvidenceField.getRequiredOnQuote() != null && requiredEvidenceField.getRequiredOnQuote());
+						processingActionPEF.setSortOrder(requiredEvidenceField.getSortOrder());
 						processingActionPEF.setProcessingAction(entity);
 					} catch (ApiException e) {
 						e.printStackTrace();

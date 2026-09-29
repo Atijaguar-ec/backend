@@ -1441,3 +1441,27 @@ mvn -q -o test -Dtest='PlotGeoJson*Test' -Dsurefire.failIfNoSpecifiedTests=false
 
 14 tests (lector 8, planificador 6). Los JPQL solo se prueban contra una base real:
 el procedimiento con una copia de la BD y un túnel SSH está en el plan de `docs/`.
+
+---
+
+## 20. Orden Manual de Campos Dinámicos de Evidencia (`sortOrder`) (2026-09-29)
+
+### 20.1 Problema
+Al crear o ejecutar un proceso de transformación (ej. Exportación o Secado), los campos dinámicos
+de evidencia (PEF) se mostraban en orden no determinista o según el ID de inserción, impidiendo
+definir una secuencia lógica de captura para los operarios.
+
+### 20.2 Implementación
+1. **Migración Flyway:** `src/main/resources/db/migration/V7__add_sortorder_to_processingactionpef.sql`:
+   ```sql
+   ALTER TABLE processingactionpef ADD COLUMN IF NOT EXISTS sortorder INTEGER NULL;
+   ```
+2. **Entidad JPA:** `ProcessingActionPEF.java` incluye el campo `@Column(name = "sortorder") private Integer sortOrder;`
+   con sus respectivos getters/setters.
+3. **DTO de API:** `ApiProcessingEvidenceField.java` incorpora `private Integer sortOrder;`.
+4. **Mapeador y Servicio:**
+   - `ProcessingActionMapper.java`: al convertir a DTO, ordena `requiredEvidenceFields` por `sortOrder`
+     ascendente (`Comparator.comparing(ApiProcessingEvidenceField::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder()))`).
+   - `ProcessingActionService.java`: al guardar/actualizar la acción de proceso, persiste el valor de
+     `sortOrder` en cada relación `ProcessingActionPEF`.
+
