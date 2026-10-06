@@ -753,6 +753,77 @@ class StockOrderServiceTest {
     }
 
     @Test
+    @DisplayName("getQuotaBalance: uses custom quotaAlertThresholdPercent (75%) and marks isNearLimit appropriately")
+    void getQuotaBalance_usesCustomAlertThreshold() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        company.setConfiguration(Map.of(
+                "enableQuotaBalance", true,
+                "quotaAlertThresholdPercent", 75
+        ));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(1L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 2L);
+
+        com.abelium.inatrace.db.entities.common.Plot plot1 = new com.abelium.inatrace.db.entities.common.Plot();
+        plot1.setPlotName("LOTE-1");
+        plot1.setProductionEstimate(new BigDecimal("10.00")); // 1000 lbs
+        farmer.setPlots(Set.of(plot1));
+
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(2L))).thenReturn(farmer);
+
+        TypedQuery<BigDecimal> mockQuery = mock(TypedQuery.class);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        // Delivered 760 lbs -> remaining 240 lbs (24% remaining <= 25% remaining threshold)
+        when(mockQuery.getSingleResult()).thenReturn(new BigDecimal("760.00"));
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class))).thenReturn(mockQuery);
+
+        com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance result =
+                stockOrderService.getQuotaBalance(1L, 2L, "LOTE-1", null, LocalDate.of(2026, 9, 21), null, null, null);
+
+        assertNotNull(result);
+        assertEquals(new BigDecimal("75.00"), result.getAlertThresholdPercent());
+        assertEquals(new BigDecimal("240.00"), result.getRemainingBalance());
+        assertFalse(result.getIsExceeded());
+        assertTrue(result.getIsNearLimit());
+    }
+
+    @Test
+    @DisplayName("getQuotaBalance: defaults to 80% alert threshold when not configured")
+    void getQuotaBalance_defaultAlertThreshold80Percent() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        company.setConfiguration(Map.of("enableQuotaBalance", true));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(1L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 2L);
+
+        com.abelium.inatrace.db.entities.common.Plot plot1 = new com.abelium.inatrace.db.entities.common.Plot();
+        plot1.setPlotName("LOTE-1");
+        plot1.setProductionEstimate(new BigDecimal("10.00")); // 1000 lbs
+        farmer.setPlots(Set.of(plot1));
+
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(2L))).thenReturn(farmer);
+
+        TypedQuery<BigDecimal> mockQuery = mock(TypedQuery.class);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        // Delivered 750 lbs -> remaining 250 lbs (25% remaining > 20% remaining threshold for 80%)
+        when(mockQuery.getSingleResult()).thenReturn(new BigDecimal("750.00"));
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class))).thenReturn(mockQuery);
+
+        com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance result =
+                stockOrderService.getQuotaBalance(1L, 2L, "LOTE-1", null, LocalDate.of(2026, 9, 21), null, null, null);
+
+        assertNotNull(result);
+        assertEquals(new BigDecimal("80.00"), result.getAlertThresholdPercent());
+        assertEquals(new BigDecimal("250.00"), result.getRemainingBalance());
+        assertFalse(result.getIsExceeded());
+        assertFalse(result.getIsNearLimit());
+    }
+
+    @Test
     @DisplayName("cancelStockOrder: successfully cancels order when available equals fulfilled quantity")
     void cancelStockOrder_success() throws Exception {
         com.abelium.inatrace.db.entities.common.User userEntity = new com.abelium.inatrace.db.entities.common.User();

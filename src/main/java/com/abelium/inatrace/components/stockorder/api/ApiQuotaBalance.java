@@ -30,8 +30,11 @@ public class ApiQuotaBalance {
     @Schema(description = "Whether the remaining quota is zero or exceeded")
     private Boolean isExceeded;
 
-    @Schema(description = "Whether the remaining quota is at or below 10% of initial quota")
+    @Schema(description = "Whether the remaining quota is at or below the configured alert threshold")
     private Boolean isNearLimit;
+
+    @Schema(description = "Configured alert threshold percentage (e.g. 80.00%)")
+    private BigDecimal alertThresholdPercent;
 
     @Schema(description = "Plot name if quota was resolved for a specific plot")
     private String plotName;
@@ -107,6 +110,14 @@ public class ApiQuotaBalance {
 
     public void setIsNearLimit(Boolean isNearLimit) {
         this.isNearLimit = isNearLimit;
+    }
+
+    public BigDecimal getAlertThresholdPercent() {
+        return alertThresholdPercent;
+    }
+
+    public void setAlertThresholdPercent(BigDecimal alertThresholdPercent) {
+        this.alertThresholdPercent = alertThresholdPercent;
     }
 
     public String getPlotName() {

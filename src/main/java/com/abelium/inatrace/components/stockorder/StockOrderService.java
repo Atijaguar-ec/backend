@@ -1160,6 +1160,9 @@ public class StockOrderService extends BaseService {
                 entity.setProducerUserCustomer(fetchEntity(apiStockOrder.getProducerUserCustomer().getId(), UserCustomer.class));
                 entity.setPurchaseOrder(true);
 
+                // Validate quota balance limit if enabled for the company
+                validateQuotaBalanceForPurchaseOrder(entity, apiStockOrder, user);
+
                 // Optional
                 if(apiStockOrder.getRepresentativeOfProducerUserCustomer() != null)
                     entity.setRepresentativeOfProducerUserCustomer(fetchEntity(apiStockOrder.getRepresentativeOfProducerUserCustomer().getId(), UserCustomer.class));
@@ -1999,6 +2002,7 @@ public class StockOrderService extends BaseService {
             disabled.setTotalDelivered(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             disabled.setIsExceeded(false);
             disabled.setIsNearLimit(false);
+            disabled.setAlertThresholdPercent(com.abelium.inatrace.tools.DeliveryReceiptTools.DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT);
             return disabled;
         }
 
@@ -2162,11 +2166,17 @@ public class StockOrderService extends BaseService {
             response.setRemainingBalanceInQq(remainingInQq);
 
             boolean isExceeded = remainingInUnit.compareTo(BigDecimal.ZERO) <= 0;
-            boolean isNearLimit = !isExceeded && remainingInUnit.compareTo(initialInUnit.multiply(new BigDecimal("0.10"))) <= 0;
+            BigDecimal alertThreshold = com.abelium.inatrace.tools.DeliveryReceiptTools.getQuotaAlertThresholdPercent(company.getConfiguration());
+            response.setAlertThresholdPercent(alertThreshold);
+            BigDecimal remainingRatio = BigDecimal.valueOf(100).subtract(alertThreshold)
+                    .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+            boolean isNearLimit = !isExceeded && remainingInUnit.compareTo(initialInUnit.multiply(remainingRatio)) <= 0;
 
             response.setIsExceeded(isExceeded);
             response.setIsNearLimit(isNearLimit);
         } else {
+            BigDecimal alertThreshold = com.abelium.inatrace.tools.DeliveryReceiptTools.getQuotaAlertThresholdPercent(company.getConfiguration());
+            response.setAlertThresholdPercent(alertThreshold);
             response.setInitialQuota(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             response.setInitialQuotaInUnit(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             response.setRemainingBalance(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
@@ -2183,5 +2193,41 @@ public class StockOrderService extends BaseService {
         }
 
         return response;
+    }
+
+    private void validateQuotaBalanceForPurchaseOrder(StockOrder entity, ApiStockOrder apiStockOrder, CustomUserDetails user) throws ApiException {
+        if (entity.getCompany() == null || !com.abelium.inatrace.tools.DeliveryReceiptTools.quotaBalanceEnabled(entity.getCompany().getConfiguration())) {
+            return;
+        }
+        if (entity.getProducerUserCustomer() == null) {
+            return;
+        }
+
+        Long companyId = entity.getCompany().getId();
+        Long farmerId = entity.getProducerUserCustomer().getId();
+        String parcelLot = apiStockOrder != null ? apiStockOrder.getParcelLot() : entity.getParcelLot();
+        Long semiProductId = entity.getSemiProduct() != null ? entity.getSemiProduct().getId() : null;
+        LocalDate deliveryDate = entity.getProductionDate();
+        Long excludeStockOrderId = entity.getId();
+
+        ApiQuotaBalance balance = getQuotaBalance(companyId, farmerId, parcelLot, semiProductId, deliveryDate, excludeStockOrderId, user, null);
+        if (balance == null || balance.getInitialQuota() == null || balance.getInitialQuota().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal remaining = balance.getRemainingBalance() != null ? balance.getRemainingBalance() : BigDecimal.ZERO;
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ApiException(ApiStatus.VALIDATION_ERROR,
+                    "El agricultor ha alcanzado o superado el cupo permitido para este año calendario.");
+        }
+
+        BigDecimal currentQuantity = entity.getTotalGrossQuantity() != null ? entity.getTotalGrossQuantity() :
+                (entity.getNetQuantity() != null ? entity.getNetQuantity() : entity.getTotalQuantity());
+
+        if (currentQuantity != null && currentQuantity.compareTo(remaining) > 0) {
+            throw new ApiException(ApiStatus.VALIDATION_ERROR,
+                    "La cantidad a entregar (" + currentQuantity.setScale(2, RoundingMode.HALF_UP) + " " + balance.getUnit() +
+                    ") supera el saldo de cupo disponible (" + remaining.setScale(2, RoundingMode.HALF_UP) + " " + balance.getUnit() + ").");
+        }
     }
 }

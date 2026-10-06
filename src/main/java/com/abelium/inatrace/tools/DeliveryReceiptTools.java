@@ -1,5 +1,7 @@
 package com.abelium.inatrace.tools;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 
 /**
@@ -9,6 +11,8 @@ import java.util.Map;
  * a "Cacao" se leen de la columna jsonb {@code company.configuration}:
  * - {@code enableDeliveryReceipt} (o {@code deliveryReceiptSequence}): comprobante secuencial
  * - {@code simplifySemiProductToCacao} (o {@code genericCacaoDisplay}): mostrar "Cacao"
+ * - {@code enableQuotaBalance}: control y visualización de cupo
+ * - {@code quotaAlertThresholdPercent}: umbral de alerta de cupo (default: 80%)
  *
  * Ambas opciones están DESACTIVADAS por defecto (ausente o false = inactivo).
  * Para UNOCACE se activan vía configuración, y para Fortaleza del Valle (FV)
@@ -22,6 +26,8 @@ public final class DeliveryReceiptTools {
     public static final String SIMPLIFY_SEMI_PRODUCT_KEY = "simplifySemiProductToCacao";
     public static final String SIMPLIFY_SEMI_PRODUCT_ALT_KEY = "genericCacaoDisplay";
     public static final String QUOTA_BALANCE_CONFIG_KEY = "enableQuotaBalance";
+    public static final String QUOTA_ALERT_THRESHOLD_KEY = "quotaAlertThresholdPercent";
+    public static final BigDecimal DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT = new BigDecimal("80.00");
 
     private DeliveryReceiptTools() {
     }
@@ -76,6 +82,39 @@ public final class DeliveryReceiptTools {
             return false;
         }
         return isTruthy(companyConfiguration.get(QUOTA_BALANCE_CONFIG_KEY));
+    }
+
+    /**
+     * Obtiene el umbral porcentual de alerta de cupo configurado para la empresa
+     * (por defecto 80.00%).
+     */
+    public static BigDecimal getQuotaAlertThresholdPercent(Map<String, Object> companyConfiguration) {
+        if (companyConfiguration == null) {
+            return DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT;
+        }
+        Object val = companyConfiguration.get(QUOTA_ALERT_THRESHOLD_KEY);
+        if (val == null) {
+            return DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT;
+        }
+        try {
+            BigDecimal parsed;
+            if (val instanceof Number) {
+                parsed = new BigDecimal(val.toString()).setScale(2, RoundingMode.HALF_UP);
+            } else if (val instanceof String) {
+                String s = ((String) val).trim();
+                if (s.isEmpty()) {
+                    return DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT;
+                }
+                parsed = new BigDecimal(s).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                return DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT;
+            }
+            if (parsed.compareTo(BigDecimal.ZERO) > 0 && parsed.compareTo(new BigDecimal("100.00")) <= 0) {
+                return parsed;
+            }
+        } catch (Exception ignored) {
+        }
+        return DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT;
     }
 
     /**
