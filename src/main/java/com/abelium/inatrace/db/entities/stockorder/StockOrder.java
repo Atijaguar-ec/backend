@@ -22,6 +22,7 @@ import org.hibernate.envers.NotAudited;
 import org.hibernate.envers.RelationTargetAuditMode;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
@@ -249,6 +250,21 @@ public class StockOrder extends TimestampEntity {
 	// the stock unit represented by this stock order is available in the facility
 	@Column
 	private Boolean isAvailable;
+
+	@Enumerated(EnumType.STRING)
+	@Column(length = Lengths.ENUM)
+	private StockOrderStatus status = StockOrderStatus.ACTIVE;
+
+	@Column(length = Lengths.DEFAULT)
+	private String cancellationReason;
+
+	@Column
+	private Instant cancellationTimestamp;
+
+	@ManyToOne
+	@JoinColumn(name = "canceledby_id")
+	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
+	private User canceledBy;
 
 	/**
 	 * This field denotes that the total quantity (output quantity) of this stock order is not in the expected range.
@@ -824,5 +840,41 @@ public class StockOrder extends TimestampEntity {
 
 	public void setDeliveryReceipt(String deliveryReceipt) {
 		this.deliveryReceipt = deliveryReceipt;
+	}
+
+	public StockOrderStatus getStatus() {
+		return status != null ? status : StockOrderStatus.ACTIVE;
+	}
+
+	public void setStatus(StockOrderStatus status) {
+		this.status = status;
+	}
+
+	public boolean isCanceled() {
+		return StockOrderStatus.CANCELED.equals(this.status);
+	}
+
+	public String getCancellationReason() {
+		return cancellationReason;
+	}
+
+	public void setCancellationReason(String cancellationReason) {
+		this.cancellationReason = cancellationReason;
+	}
+
+	public Instant getCancellationTimestamp() {
+		return cancellationTimestamp;
+	}
+
+	public void setCancellationTimestamp(Instant cancellationTimestamp) {
+		this.cancellationTimestamp = cancellationTimestamp;
+	}
+
+	public User getCanceledBy() {
+		return canceledBy;
+	}
+
+	public void setCanceledBy(User canceledBy) {
+		this.canceledBy = canceledBy;
 	}
 }

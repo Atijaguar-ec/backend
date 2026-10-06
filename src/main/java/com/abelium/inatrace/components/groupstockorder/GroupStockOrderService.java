@@ -94,6 +94,7 @@ public class GroupStockOrderService extends BaseService {
         // Build WHERE query string for filtering purposes
         StringBuilder whereClause = new StringBuilder();
         whereClause.append(" WHERE (SPT.language IS NULL OR SPT.language = :language)");
+        whereClause.append(" AND (SO.status = 'ACTIVE' OR SO.status IS NULL)");
         if(queryRequest.facilityId != null) {
             whereClause.append(" AND SO.facility.id = :facilityId");
         }
@@ -185,6 +186,7 @@ public class GroupStockOrderService extends BaseService {
         );
 
         queryString.append(" WHERE (SPT.language IS NULL OR SPT.language = :language)");
+        queryString.append(" AND (SO.status = 'ACTIVE' OR SO.status IS NULL)");
         queryString.append(" AND SO.productionDate >= :oneYearAgo");
 
         if (facilityId != null) {

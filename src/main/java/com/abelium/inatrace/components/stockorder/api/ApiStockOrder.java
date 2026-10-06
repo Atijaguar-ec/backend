@@ -15,6 +15,7 @@ import com.abelium.inatrace.components.productorder.api.ApiProductOrder;
 import com.abelium.inatrace.components.user.api.ApiUser;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
 import com.abelium.inatrace.db.entities.stockorder.enums.PreferredWayOfPayment;
+import com.abelium.inatrace.db.entities.stockorder.StockOrderStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.validation.annotation.Validated;
 
@@ -227,6 +228,15 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     @Schema(description = "Delivery receipt number (comprobante)")
     private String deliveryReceipt;
+
+    @Schema(description = "Lifecycle status of the stock order (ACTIVE, CANCELED)")
+    private StockOrderStatus status;
+
+    @Schema(description = "Cancellation reason if the order was canceled")
+    private String cancellationReason;
+
+    @Schema(description = "Timestamp when the stock order was canceled")
+    private Instant cancellationTimestamp;
 
     public String getIdentifier() {
         return identifier;
@@ -766,5 +776,29 @@ public class ApiStockOrder extends ApiBaseEntity {
 
     public void setDeliveryReceipt(String deliveryReceipt) {
         this.deliveryReceipt = deliveryReceipt;
+    }
+
+    public StockOrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(StockOrderStatus status) {
+        this.status = status;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
+    }
+
+    public Instant getCancellationTimestamp() {
+        return cancellationTimestamp;
+    }
+
+    public void setCancellationTimestamp(Instant cancellationTimestamp) {
+        this.cancellationTimestamp = cancellationTimestamp;
     }
 }

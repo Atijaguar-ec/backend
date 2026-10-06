@@ -18,6 +18,7 @@ import com.abelium.inatrace.db.entities.payment.Payment;
 import com.abelium.inatrace.db.entities.payment.PaymentPurposeType;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
+import com.abelium.inatrace.db.entities.stockorder.StockOrderStatus;
 import com.abelium.inatrace.db.entities.stockorder.Transaction;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
 import com.abelium.inatrace.db.entities.stockorder.enums.PreferredWayOfPayment;
@@ -749,5 +750,105 @@ class StockOrderServiceTest {
         assertEquals(new BigDecimal("0.00"), result.getRemainingBalance());
         assertEquals(new BigDecimal("0.00"), result.getInitialQuota());
         assertFalse(result.getIsExceeded());
+    }
+
+    @Test
+    @DisplayName("cancelStockOrder: successfully cancels order when available equals fulfilled quantity")
+    void cancelStockOrder_success() throws Exception {
+        com.abelium.inatrace.db.entities.common.User userEntity = new com.abelium.inatrace.db.entities.common.User();
+        ReflectionTestUtils.setField(userEntity, "id", 10L);
+
+        com.abelium.inatrace.db.entities.company.CompanyUser companyUser = new com.abelium.inatrace.db.entities.company.CompanyUser();
+        companyUser.setUser(userEntity);
+
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        company.setUsers(Set.of(companyUser));
+
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 100L);
+        stockOrder.setCompany(company);
+        stockOrder.setFulfilledQuantity(new BigDecimal("150.00"));
+        stockOrder.setAvailableQuantity(new BigDecimal("150.00"));
+        stockOrder.setStatus(StockOrderStatus.ACTIVE);
+        stockOrder.setAvailable(true);
+
+        when(entityManager.find(eq(StockOrder.class), eq(100L))).thenReturn(stockOrder);
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.User.class), eq(10L))).thenReturn(userEntity);
+
+        com.abelium.inatrace.security.service.CustomUserDetails userDetails = mock(com.abelium.inatrace.security.service.CustomUserDetails.class);
+        when(userDetails.getUserId()).thenReturn(10L);
+
+        ApiStockOrder result = stockOrderService.cancelStockOrder(100L, "Error en pesaje", userDetails);
+
+        assertNotNull(result);
+        assertEquals(StockOrderStatus.CANCELED, result.getStatus());
+        assertEquals("Error en pesaje", result.getCancellationReason());
+        assertEquals(BigDecimal.ZERO, stockOrder.getAvailableQuantity());
+        assertFalse(stockOrder.getAvailable());
+        assertEquals(StockOrderStatus.CANCELED, stockOrder.getStatus());
+        assertNotNull(stockOrder.getCancellationTimestamp());
+        assertEquals(userEntity, stockOrder.getCanceledBy());
+    }
+
+    @Test
+    @DisplayName("cancelStockOrder: throws validation error when order is already canceled")
+    void cancelStockOrder_alreadyCanceled() {
+        com.abelium.inatrace.db.entities.common.User userEntity = new com.abelium.inatrace.db.entities.common.User();
+        ReflectionTestUtils.setField(userEntity, "id", 10L);
+
+        com.abelium.inatrace.db.entities.company.CompanyUser companyUser = new com.abelium.inatrace.db.entities.company.CompanyUser();
+        companyUser.setUser(userEntity);
+
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        company.setUsers(Set.of(companyUser));
+
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 101L);
+        stockOrder.setCompany(company);
+        stockOrder.setStatus(StockOrderStatus.CANCELED);
+
+        when(entityManager.find(eq(StockOrder.class), eq(101L))).thenReturn(stockOrder);
+
+        com.abelium.inatrace.security.service.CustomUserDetails userDetails = mock(com.abelium.inatrace.security.service.CustomUserDetails.class);
+        when(userDetails.getUserId()).thenReturn(10L);
+
+        ApiException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                ApiException.class,
+                () -> stockOrderService.cancelStockOrder(101L, "Intento duplicado", userDetails)
+        );
+
+        assertTrue(ex.getMessage().contains("already canceled"));
+    }
+
+    @Test
+    @DisplayName("cancelStockOrder: throws validation error when cacao was already consumed in processing")
+    void cancelStockOrder_alreadyConsumed() {
+        com.abelium.inatrace.db.entities.common.User userEntity = new com.abelium.inatrace.db.entities.common.User();
+        ReflectionTestUtils.setField(userEntity, "id", 10L);
+
+        com.abelium.inatrace.db.entities.company.CompanyUser companyUser = new com.abelium.inatrace.db.entities.company.CompanyUser();
+        companyUser.setUser(userEntity);
+
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        company.setUsers(Set.of(companyUser));
+
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 102L);
+        stockOrder.setCompany(company);
+        stockOrder.setFulfilledQuantity(new BigDecimal("200.00"));
+        stockOrder.setAvailableQuantity(new BigDecimal("50.00")); // 150 lbs already consumed!
+        stockOrder.setStatus(StockOrderStatus.ACTIVE);
+
+        when(entityManager.find(eq(StockOrder.class), eq(102L))).thenReturn(stockOrder);
+
+        com.abelium.inatrace.security.service.CustomUserDetails userDetails = mock(com.abelium.inatrace.security.service.CustomUserDetails.class);
+        when(userDetails.getUserId()).thenReturn(10L);
+
+        ApiException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                ApiException.class,
+                () -> stockOrderService.cancelStockOrder(102L, "Anular lote procesado", userDetails)
+        );
+
+        assertTrue(ex.getMessage().contains("already been processed or consumed"));
     }
 }

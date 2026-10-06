@@ -277,6 +277,18 @@ public class StockOrderService extends BaseService {
             condition = condition.and(stockOrderProxy.getOrganic()).eq(queryRequest.organicOnly);
         }
 
+        if (queryRequest.status != null) {
+            if (queryRequest.status == StockOrderStatus.ACTIVE) {
+                condition = condition.and(Torpedo.condition(stockOrderProxy.getStatus()).eq(StockOrderStatus.ACTIVE)
+                        .or(Torpedo.condition(stockOrderProxy.getStatus()).isNull()));
+            } else {
+                condition = condition.and(stockOrderProxy.getStatus()).eq(queryRequest.status);
+            }
+        } else if (!Boolean.TRUE.equals(queryRequest.includeCanceled)) {
+            condition = condition.and(Torpedo.condition(stockOrderProxy.getStatus()).eq(StockOrderStatus.ACTIVE)
+                    .or(Torpedo.condition(stockOrderProxy.getStatus()).isNull()));
+        }
+
         // If LOT name is provided filter by LOT prefix or LOT name
         if (StringUtils.isNotBlank(queryRequest.internalLotName)) {
             String lotQuery = queryRequest.internalLotName.toLowerCase();
@@ -1516,6 +1528,37 @@ public class StockOrderService extends BaseService {
         em.remove(stockOrder);
     }
 
+    @Transactional
+    public ApiStockOrder cancelStockOrder(Long id, String reason, CustomUserDetails user) throws ApiException {
+
+        StockOrder stockOrder = fetchEntity(id, StockOrder.class);
+
+        PermissionsUtil.checkUserIfCompanyEnrolled(stockOrder.getCompany().getUsers().stream().toList(), user);
+
+        if (stockOrder.isCanceled()) {
+            throw new ApiException(ApiStatus.VALIDATION_ERROR, "Stock order is already canceled.");
+        }
+
+        // Validate consumption: if availableQuantity != fulfilledQuantity, it has been consumed in processing
+        if (stockOrder.getFulfilledQuantity() != null && stockOrder.getAvailableQuantity() != null) {
+            if (stockOrder.getAvailableQuantity().compareTo(stockOrder.getFulfilledQuantity()) != 0) {
+                throw new ApiException(ApiStatus.VALIDATION_ERROR,
+                        "Cannot cancel stock order: cacao has already been processed or consumed.");
+            }
+        }
+
+        stockOrder.setStatus(StockOrderStatus.CANCELED);
+        stockOrder.setAvailable(false);
+        stockOrder.setAvailableQuantity(BigDecimal.ZERO);
+        stockOrder.setCancellationReason(reason);
+        stockOrder.setCancellationTimestamp(java.time.Instant.now());
+        if (user != null && user.getUserId() != null) {
+            stockOrder.setCanceledBy(em.find(User.class, user.getUserId()));
+        }
+
+        return StockOrderMapper.toApiStockOrderBase(stockOrder);
+    }
+
     public <E> E fetchEntity(Long id, Class<E> entityClass) throws ApiException {
 
         E entity = Queries.get(em, entityClass, id);
@@ -2052,7 +2095,8 @@ public class StockOrderService extends BaseService {
                 "FROM StockOrder so " +
                 "WHERE so.producerUserCustomer.id = :farmerId " +
                 "AND so.orderType = :orderType " +
-                "AND so.productionDate >= :startDate AND so.productionDate <= :endDate ");
+                "AND so.productionDate >= :startDate AND so.productionDate <= :endDate " +
+                "AND (so.status = 'ACTIVE' OR so.status IS NULL) ");
         if (excludeStockOrderId != null) {
             farmerHql.append("AND so.id != :excludeId ");
         }
@@ -2079,6 +2123,7 @@ public class StockOrderService extends BaseService {
                     "WHERE so.producerUserCustomer.id = :farmerId " +
                     "AND so.orderType = :orderType " +
                     "AND so.productionDate >= :startDate AND so.productionDate <= :endDate " +
+                    "AND (so.status = 'ACTIVE' OR so.status IS NULL) " +
                     "AND LOWER(TRIM(so.parcelLot)) = :parcelLot ");
             if (excludeStockOrderId != null) {
                 parcelHql.append("AND so.id != :excludeId ");

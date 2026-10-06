@@ -3,6 +3,7 @@ package com.abelium.inatrace.components.stockorder;
 import com.abelium.inatrace.api.*;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.processingorder.api.ApiProcessingOrder;
+import com.abelium.inatrace.components.stockorder.api.ApiCancelStockOrderRequest;
 import com.abelium.inatrace.components.stockorder.api.ApiPurchaseOrder;
 import com.abelium.inatrace.components.stockorder.api.ApiQuotaBalance;
 import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
@@ -243,6 +244,17 @@ public class StockOrderController {
 
         stockOrderService.deleteStockOrder(id, authUser);
         return new ApiDefaultResponse();
+    }
+
+    @PostMapping("{id}/cancel")
+    @Operation(summary = "Cancels a stock order with the provided ID.")
+    public ApiResponse<ApiStockOrder> cancelStockOrder(
+            @AuthenticationPrincipal CustomUserDetails authUser,
+            @Valid @Parameter(description = "StockOrder ID", required = true) @PathVariable("id") Long id,
+            @RequestBody(required = false) ApiCancelStockOrderRequest request) throws ApiException {
+
+        String reason = request != null ? request.getReason() : null;
+        return new ApiResponse<>(stockOrderService.cancelStockOrder(id, reason, authUser));
     }
 
     @GetMapping("quota-balance")

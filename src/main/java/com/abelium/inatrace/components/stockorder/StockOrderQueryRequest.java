@@ -28,6 +28,8 @@ public class StockOrderQueryRequest {
     public String producerUserCustomerName;
     public Boolean isAvailable;
     public Boolean isOpenOnly;
+    public com.abelium.inatrace.db.entities.stockorder.StockOrderStatus status;
+    public Boolean includeCanceled;
 
     public StockOrderQueryRequest() {}
 

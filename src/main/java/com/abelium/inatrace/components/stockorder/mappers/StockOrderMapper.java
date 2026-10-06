@@ -61,6 +61,9 @@ public class StockOrderMapper {
         apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
         apiStockOrder.setNetQuantity(entity.getNetQuantity());
         apiStockOrder.setFinalPriceDiscount(entity.getFinalPriceDiscount());
+        apiStockOrder.setStatus(entity.getStatus());
+        apiStockOrder.setCancellationReason(entity.getCancellationReason());
+        apiStockOrder.setCancellationTimestamp(entity.getCancellationTimestamp());
 
         // Farmer
         apiStockOrder.setProducerUserCustomer(
