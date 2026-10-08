@@ -27,7 +27,8 @@ class FlywayMigrationParseTest {
             "db/migration/V5__enable_delivery_receipt_for_all_unocace_orgs.sql",
             "db/migration/V6__add_display_quota_balance.sql",
             "db/migration/V7__add_sortorder_to_processingactionpef.sql",
-            "db/migration/V8__configure_unocace_quota_alert_threshold.sql"
+            "db/migration/V8__configure_unocace_quota_alert_threshold.sql",
+            "db/migration/V9__add_stockorder_cancellation.sql"
         };
 
         for (String file : files) {
