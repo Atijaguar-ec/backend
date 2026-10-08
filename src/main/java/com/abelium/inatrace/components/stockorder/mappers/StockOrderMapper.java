@@ -204,6 +204,9 @@ public class StockOrderMapper {
         apiStockOrder.setMoistureWeightDeduction(entity.getMoistureWeightDeduction());
         apiStockOrder.setNetQuantity(entity.getNetQuantity());
         apiStockOrder.setFinalPriceDiscount(entity.getFinalPriceDiscount());
+        apiStockOrder.setStatus(entity.getStatus());
+        apiStockOrder.setCancellationReason(entity.getCancellationReason());
+        apiStockOrder.setCancellationTimestamp(entity.getCancellationTimestamp());
 
         // Set price and currency for end customer (used in Quote orders for final products)
         apiStockOrder.setPricePerUnitForEndCustomer(entity.getPricePerUnitForEndCustomer());

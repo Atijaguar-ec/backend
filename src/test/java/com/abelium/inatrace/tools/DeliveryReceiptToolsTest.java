@@ -87,4 +87,27 @@ class DeliveryReceiptToolsTest {
         assertEquals("1234", DeliveryReceiptTools.formatSequence(1234));
         assertEquals("10005", DeliveryReceiptTools.formatSequence(10005));
     }
+
+    @Test
+    @DisplayName("isPublicDeliveryReceiptEnabled: false by default, true when enablePublicDeliveryReceipt is true")
+    void testPublicDeliveryReceiptEnabled() {
+        assertFalse(DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(null), "Null config must be false");
+        assertFalse(DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(Collections.emptyMap()), "Empty config must be false");
+
+        Map<String, Object> config = new HashMap<>();
+        config.put(DeliveryReceiptTools.PUBLIC_DELIVERY_RECEIPT_CONFIG_KEY, false);
+        assertFalse(DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(config), "Explicitly false must be false");
+
+        config.put(DeliveryReceiptTools.PUBLIC_DELIVERY_RECEIPT_CONFIG_KEY, "false");
+        assertFalse(DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(config), "String false must be false");
+
+        config.put(DeliveryReceiptTools.PUBLIC_DELIVERY_RECEIPT_CONFIG_KEY, true);
+        assertTrue(DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(config), "Boolean true must be true");
+
+        config.put(DeliveryReceiptTools.PUBLIC_DELIVERY_RECEIPT_CONFIG_KEY, "true");
+        assertTrue(DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(config), "String true must be true");
+
+        config.put(DeliveryReceiptTools.PUBLIC_DELIVERY_RECEIPT_CONFIG_KEY, 1);
+        assertTrue(DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(config), "Number 1 must be true");
+    }
 }

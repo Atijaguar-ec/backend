@@ -27,6 +27,7 @@ public final class DeliveryReceiptTools {
     public static final String SIMPLIFY_SEMI_PRODUCT_ALT_KEY = "genericCacaoDisplay";
     public static final String QUOTA_BALANCE_CONFIG_KEY = "enableQuotaBalance";
     public static final String QUOTA_ALERT_THRESHOLD_KEY = "quotaAlertThresholdPercent";
+    public static final String PUBLIC_DELIVERY_RECEIPT_CONFIG_KEY = "enablePublicDeliveryReceipt";
     public static final BigDecimal DEFAULT_QUOTA_ALERT_THRESHOLD_PERCENT = new BigDecimal("80.00");
 
     private DeliveryReceiptTools() {
@@ -125,5 +126,16 @@ public final class DeliveryReceiptTools {
             return null;
         }
         return String.format("%04d", sequence);
+    }
+
+    /**
+     * Determina si la empresa tiene habilitada la consulta pública del comprobante
+     * de entrega vía código QR sin requerir inicio de sesión.
+     */
+    public static boolean isPublicDeliveryReceiptEnabled(Map<String, Object> companyConfiguration) {
+        if (companyConfiguration == null) {
+            return false;
+        }
+        return isTruthy(companyConfiguration.get(PUBLIC_DELIVERY_RECEIPT_CONFIG_KEY));
     }
 }

@@ -14,6 +14,7 @@ import com.abelium.inatrace.components.product.ProductService;
 import com.abelium.inatrace.components.product.api.*;
 import com.abelium.inatrace.components.stockorder.StockOrderService;
 import com.abelium.inatrace.components.stockorder.api.ApiQRTagPublic;
+import com.abelium.inatrace.components.stockorder.api.ApiStockOrder;
 import com.abelium.inatrace.types.Language;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -73,6 +74,14 @@ public class PublicController {
 			@Valid @Parameter(description = "Return aggregated history") @RequestParam(value = "withHistory", required = false) Boolean withHistory,
 			@RequestHeader(value = "language", defaultValue = "EN", required = false) Language language) throws ApiException {
 		return new ApiResponse<>(stockOrderService.getQRTagPublicData(qrTag, withHistory, language));
+	}
+
+	@GetMapping(value = "/delivery-receipt/{id}")
+	@Operation(summary = "Get public delivery receipt data if enabled by organization")
+	public ApiResponse<ApiStockOrder> getPublicDeliveryReceipt(
+			@Parameter(description = "Stock order ID", required = true) @PathVariable("id") Long id,
+			@RequestHeader(value = "language", defaultValue = "ES", required = false) Language language) throws ApiException {
+		return new ApiResponse<>(stockOrderService.getPublicDeliveryReceipt(id, language));
 	}
     
     @GetMapping(value = "/product/knowledgeBlog/{id}")

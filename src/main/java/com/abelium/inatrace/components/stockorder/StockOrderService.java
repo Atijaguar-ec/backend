@@ -529,6 +529,43 @@ public class StockOrderService extends BaseService {
         return apiQRTagPublic;
     }
 
+    /**
+     * Consulta pública de un comprobante de entrega (Stock order) vía código QR.
+     * Solo se permite el acceso si la empresa emisora tiene activada la opción
+     * {@code enablePublicDeliveryReceipt} en su configuración. Si está desactivada
+     * o la orden no existe, se arroja la excepción correspondiente.
+     */
+    public ApiStockOrder getPublicDeliveryReceipt(Long id, Language language) throws ApiException {
+        if (id == null) {
+            throw new ApiException(ApiStatus.INVALID_REQUEST, "ID de orden de entrega requerido");
+        }
+
+        StockOrder stockOrder = Queries.get(em, StockOrder.class, id);
+        if (stockOrder == null) {
+            throw new ApiException(ApiStatus.NOT_FOUND, "Comprobante de entrega no encontrado");
+        }
+
+        Company company = stockOrder.getCompany();
+        if (company == null && stockOrder.getFacility() != null) {
+            company = stockOrder.getFacility().getCompany();
+        }
+        if (company == null && stockOrder.getQuoteCompany() != null) {
+            company = stockOrder.getQuoteCompany();
+        }
+
+        if (company == null || !DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(company.getConfiguration())) {
+            throw new ApiException(ApiStatus.UNAUTHORIZED, "La consulta pública de comprobantes de entrega no está habilitada para esta organización");
+        }
+
+        ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, null, language, false);
+
+        if (DeliveryReceiptTools.simplifySemiProductEnabled(company.getConfiguration()) && apiStockOrder.getSemiProduct() != null) {
+            apiStockOrder.getSemiProduct().setName("Cacao");
+        }
+
+        return apiStockOrder;
+    }
+
     private List<ApiPayment> getProducerPayments(ApiStockOrderHistory stockOrderHistory, List<Company> producers) {
         return stockOrderHistory.getTimelineItems().stream().flatMap(apiStockOrderHistoryTimelineItem -> {
             if (apiStockOrderHistoryTimelineItem.getProcessingOrder() != null && apiStockOrderHistoryTimelineItem.getProcessingOrder().getTargetStockOrders() != null) {
