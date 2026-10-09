@@ -1537,5 +1537,83 @@ Para emitir una Declaración de Debida Diligencia (DDS) en TRACES-UE o generar l
 - Migraciones relacionadas: `V4` (columna `deliveryreceipt`), `V5` (correlativos y config UNOCACE), `V6` (columna `displayquotabalance` y `enableQuotaBalance`), `V8` (umbral al 80% y purga explícita en FV).
 - **Regla Anti-Regresión:** Toda migración SQL en `src/main/resources/db/migration/` debe registrarse en `FlywayMigrationParseTest.java` y pasar en verde.
 
+---
+
+## 23. Anulación de Entregas y Órdenes de Stock (`StockOrder` Status y Auditoría) (2026-10-08)
+
+### 23.1 Problema
+Anteriormente, una entrega o movimiento erróneo no podía cancelarse de forma trazable en el sistema. Los operarios debían recurrir a ajustes manuales o modificaciones directas en base de datos, lo que corrompía los correlativos secuenciales y la auditoría.
+
+### 23.2 Implementación
+1. **Migración Flyway:** `src/main/resources/db/migration/V9__add_stockorder_cancellation.sql`:
+   ```sql
+   ALTER TABLE public.stockorder ADD COLUMN IF NOT EXISTS status character varying(40) DEFAULT 'ACTIVE';
+   ALTER TABLE public.stockorder ADD COLUMN IF NOT EXISTS cancellationreason character varying(255);
+   ALTER TABLE public.stockorder ADD COLUMN IF NOT EXISTS cancellationtimestamp timestamp(6) with time zone;
+   ALTER TABLE public.stockorder ADD COLUMN IF NOT EXISTS canceledby_id bigint;
+   ```
+   - Registra foreign key condicional a `public."User"(id)`.
+   - Crea índices en `(canceledby_id)` y `(company_id, status)`.
+   - Replica los campos en `stockorder_aud` para la auditoría de Hibernate Envers.
+2. **Entidad JPA:** `StockOrder.java`:
+   - Campos: `status` (`ACTIVE` / `CANCELED`), `cancellationReason`, `cancellationTimestamp`, y relación `@ManyToOne` `canceledBy`.
+3. **Reglas de Negocio en Servicios:**
+   - **Exclusión de Stock Disponible:** Toda orden con `status = 'CANCELED'` se excluye automáticamente de consultas de stock disponible y procesos de transformación de lotes.
+   - **Cómputo de Cupo:** En `QuotaBalanceService` / `StockOrderService`, las entregas canceladas **no** restan cupo al agricultor.
+   - **Inmutabilidad:** Una orden cancelada no puede ser reactivada ni modificada en sus valores físicos (pesos, precios, productor).
+
+---
+
+## 24. Endpoint Público de Comprobante de Entrega por Código QR (`/api/public/delivery-receipt/{id}`) (2026-10-08)
+
+### 24.1 Problema
+Productores y transportistas necesitan consultar los datos de recepción y pesaje en sus dispositivos móviles mediante el código QR impreso en el ticket térmico, sin necesidad de tener credenciales de usuario en INATrace (Keycloak). Sin embargo, cada organización decide si permite o no esta trazabilidad abierta (ej. UNOCACE sí, Fortaleza del Valle no).
+
+### 24.2 Implementación
+1. **Migración Flyway:** `src/main/resources/db/migration/V10__add_public_delivery_receipt_config.sql`:
+   - Habilita `enablePublicDeliveryReceipt: true` en el JSONB `configuration` de todas las organizaciones de UNOCACE.
+   - Purga la clave `enablePublicDeliveryReceipt` de Fortaleza del Valle para mantener el acceso privado por defecto.
+2. **Controlador Público:** `PublicController.java`:
+   - Endpoint: `GET /api/public/delivery-receipt/{id}` marcado con `@PermitAll` / sin interceptor de seguridad Bearer.
+   - Invoca `StockOrderService.getPublicDeliveryReceipt(id, language)`.
+3. **Validación de Seguridad y Tenant Gate:**
+   - `StockOrderService` recupera la orden y consulta la empresa propietaria:
+     ```java
+     if (!DeliveryReceiptTools.isPublicDeliveryReceiptEnabled(stockOrder.getCompany().getConfiguration())) {
+         throw new ApiException(ApiStatus.FORBIDDEN, "Public delivery receipt is disabled for this organization");
+     }
+     ```
+   - Si la empresa tiene deshabilitado el acceso público, el endpoint rechaza con `403 Forbidden`.
+   - El payload retornado (`ApiStockOrder`) sanitiza información sensible interna y sólo expone los datos necesarios para el comprobante (productor, lote, peso bruto/tara/neto, humedad, precio, fecha).
+
+---
+
+## 25. Estimación de Producción en Parcelas (`UserCustomerPlot.maxProductionQuantity`): Unidad Quintales (qq) (2026-10-08)
+
+### 25.1 Problema
+En el formulario del agricultor, el campo "Estimación de producción" se guardaba como un número plano (`maxProductionQuantity`) sin unidad visible. Los usuarios asumían que eran sacos de 69 kg o kilogramos, cuando en el modelo de cacao ecuatoriano las entregas de acopio y cupo se operan en quintales (1 qq = 100 libras).
+
+### 25.2 Convención y Reglas de Negocio
+1. **Unidad Canónica:** El campo numérico `maxProductionQuantity` en `UserCustomerPlot` y `Plot` representa **Quintales (qq)**.
+2. **Relación con Cupo de Entrega:**
+   $$\text{Cupo disponible en libras} = \text{maxProductionQuantity (qq)} \times 100\text{ lb/qq}$$
+3. **Exportaciones Excel/CSV:** Los reportes y exportadores de datos de parcelas y agricultores deben utilizar explícitamente el encabezado:
+   `Estimación de producción (qq)` para evitar ambigüedad con kilogramos o sacos.
+
+---
+
+## 26. Consultas de Paginación y Conteo sin ORDER BY (Prevención de `UnexpectedRollbackException`) (2026-10-08)
+
+### 26.1 Problema
+Al paginar listados ordenados por columnas específicas (ej. lotes o entregas ordenadas por fecha/código), las consultas de conteo (`count(*)`) generadas por Torpedo / Spring Data arrastraban la cláusula `ORDER BY`. En PostgreSQL, un `ORDER BY` en una consulta de conteo con agregaciones o proyecciones complejas genera un error de sintaxis SQL que marca la transacción como rollback-only, lanzando un `UnexpectedRollbackException: Transaction silently rolled back`.
+
+### 26.2 Solución en `PaginationTools.java` y `TorpedoProjector.java`
+- Se normalizó el generador de consultas de conteo para despojar rigurosamente toda cláusula `ORDER BY` antes de ejecutar el `count(*)`:
+  ```java
+  // PaginationTools limpia la consulta antes de contar
+  query = stripOrderBy(query);
+  ```
+- **Regla Anti-Regresión:** Toda nueva consulta paginada que utilice `TorpedoQuery` o HQL/JPQL nativo debe validar que el `countQuery` no contenga cláusula `ORDER BY`. Ver tests unitarios en `PaginationToolsTest.java`.
+
 
 
