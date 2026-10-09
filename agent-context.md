@@ -1465,3 +1465,77 @@ definir una secuencia lógica de captura para los operarios.
    - `ProcessingActionService.java`: al guardar/actualizar la acción de proceso, persiste el valor de
      `sortOrder` en cada relación `ProcessingActionPEF`.
 
+---
+
+## 21. Trazabilidad EUDR: Grafo de Lotes vs. Parcelas, TRACES-NT y Automatización QR
+
+### 21.1 Distinción Ontológica Estricta: `Plot` vs `StockOrder`
+En el lenguaje coloquial rural se suele denominar "lote de terreno" a la finca o predio. En el backend de INATrace esta confusión genera defectos severos de integridad:
+- **`Plot` (Parcela / Predio agrícola):** Entidad `com.abelium.inatrace.db.entities.common.Plot`. Representa la tierra física donde se cultiva el cacao. Contiene coordenadas WGS84 (`List<PlotCoordinate>`), área en hectáreas (`size`), agricultor dueño (`UserCustomer`), `geoId` de AgStack y análisis satelital (`PlotDeforestationAnalysis`). **Una parcela nunca se vende ni se ensaca directamente.**
+- **`StockOrder` (Lote físico / comercial):** Entidad `com.abelium.inatrace.db.entities.stockorder.StockOrder`. Representa el cacao acopiado o procesado (ej. 200 sacos de cacao seco fermentado listo para exportar). Contiene peso neto (`amount`), unidad (`MeasureUnitType`), tipo de producto (`ProductType`), almacén (`Facility`) e identificador público (`qrCodeTag`). **Un lote de salida es casi siempre una mezcla agregada de múltiples parcelas.**
+
+### 21.2 Grafo de Trazabilidad (DAG) y Reconstrucción Retrospectiva
+La trazabilidad en INATrace es un Grafo Acíclico Dirigido:
+$$\text{Plot} \longleftrightarrow \text{Transaction} \longleftrightarrow \text{ProcessingOrder} \longleftrightarrow \text{StockOrder}$$
+Para emitir una Declaración de Debida Diligencia (DDS) en TRACES-UE o generar la vista B2C, el backend debe navegar el grafo hacia atrás (*backward trace*) desde el `StockOrder` final pasando por las órdenes de procesamiento intermedias hasta obtener la lista exhaustiva de `Plot` y productores involucrados.
+
+### 21.3 Automatización del Identificador de Lote (`qrCodeTag`)
+- **Problema histórico verificado:** El 100% de los lotes auditados (911 de 911 en UNOCACE y Fortaleza del Valle) tenían `qrCodeTag = null` porque el sistema dependía de ingreso manual.
+- **Regla técnica:** Al crear o cerrar un `StockOrder` de salida en `ProcessingOrderService` (etapa final de secado o ensacado), el backend debe autogenerar un UUID v4 determinista si el campo está vacío:
+  ```java
+  if (StringUtils.isBlank(stockOrder.getQrCodeTag())) {
+      stockOrder.setQrCodeTag(UUID.randomUUID().toString());
+  }
+  ```
+- **Doble propósito:**
+  1. **B2B / Regulatorio:** Clave de correlación unívoca e inmutable para TRACES-NT / aduanas europeas (DDS).
+  2. **B2C / Consumidor Final:** Genera el código QR público que se imprime en sacos/empaques y redirige al portal `/b2c` sin autenticación.
+
+### 21.4 Contrato Regulatorio EUDR (Reglamento UE 2023/1115)
+- **Fecha de corte de no deforestación:** **31 de diciembre de 2020**. Tierras deforestadas con posterioridad a esta fecha no pueden exportar cacao a la Unión Europea.
+- **Geolocalización en Datum WGS84 (EPSG:4326):**
+  - Predios $\le 4.0$ ha: se permite centroide (punto latitud/longitud con al menos 6 decimales).
+  - Predios $> 4.0$ ha: **estrictamente obligatorio** polígono cerrado (`PlotGeometryTools.closedRing()`).
+- **Interoperabilidad TRACES-NT:** El conector debe generar esquemas **JSON-LD** para la API de DG SANTE con: RUC exportador, UUID del lote (`qrCodeTag`), peso neto en kg, código territorial DPA INEC de 6 dígitos y lista georreferenciada de parcelas.
+
+### 21.5 Integración Satelital Whisp / AgStack (Activos Preexistentes)
+- **Persistencia en BD:** Ya existe la tabla `plotdeforestationanalysis` y la entidad `PlotDeforestationAnalysis.java` con índices (`V2026_08_27_10_00__Add_Plot_Deforestation_Analysis.java`).
+- **Servicio:** `WhispAnalysisService.java` implementa la consulta y refresco de jobs asíncronos contra la API de Whisp.
+- **Regla anti-regresión:** **NO** crear tablas duplicadas ni alterar la entidad existente. La tarea pendiente del nuevo alcance es acoplar estos dictámenes al reporte DDS de TRACES-UE y mostrarlos en el frontend.
+
+### 21.6 Límite Contractual: GS1 EPCIS 2.0 vs. TRACES-NT
+- GS1 EPCIS 2.0 es **únicamente un marco conceptual de eventos (Quién, Qué, Dónde, Cuándo, Por qué)**.
+- **PROHIBIDO** comprometer o implementar un servidor GS1 EPCIS 2.0 en el backend o imponer membresías GLN/GTIN a las cooperativas. Las únicas salidas formales son **JSON-LD para TRACES-NT** y **CSV delimitado por ';' con UTF-8 BOM para Agrocalidad GUIA** (`bi.rpt_cacao_agrocalidad_guia`, ADR-BI-001).
+
+### 21.7 Invariantes de Arquitectura (ADRs Obligatorios)
+- **ADR-007:** Una instancia física y una base de datos PostgreSQL 16 por organización (Fortaleza en ESPAM/CEDIA; UNOCACE en Hetzner).
+- **ADR-008:** Solo Flyway modifica el esquema. `spring.jpa.hibernate.ddl-auto = validate` obligatorio en todos los ambientes.
+- **ADR-010:** Una sola canalización CI/CD y artefacto Docker estándar parametrizado por `org.env`.
+- **ADR-016:** `shrimpMfe` y `ms-shrimp` están estrictamente excluidos de los despliegues de cacao.
+
+---
+
+## 22. Dominio UNOCACE: Control de Cupo Anual, Umbral Configurable y Salvaguarda Multi-Tenant
+
+### 22.1 Aislamiento Multi-Tenant mediante `company.configuration`
+- **Principio:** Ninguna funcionalidad de UNOCACE debe afectar las operaciones ni bases de datos de Fortaleza del Valle.
+- Las capacidades de UNOCACE se gobiernan por claves en `public.company.configuration`:
+  - `enableDeliveryReceipt`: habilita correlativo numérico secuencial a 4 dígitos ("0001", "0002", ...).
+  - `simplifySemiProductToCacao`: simplifica el nombre a "Cacao" en vistas estándar.
+  - `enableQuotaBalance`: activa cálculo y validación de saldo de cupo.
+  - `quotaAlertThresholdPercent`: porcentaje de alerta preventiva (default: `80.00`).
+- **Nivel Instalación:** `facility.displayquotabalance` (`true` en UNOCACE, `false` en FV).
+- **Lógica en Backend:** `DeliveryReceiptTools.quotaBalanceEnabled(company.getConfiguration())`. Si devuelve `false` (caso Fortaleza del Valle), `getQuotaBalance()` retorna DTO inactivo sin cómputos, y `validateQuotaBalanceForPurchaseOrder()` no realiza ninguna validación ni bloqueo.
+
+### 22.2 Reglas de Negocio del Cupo Anual
+1. **Ventana Temporal Estricta:** El cupo aplica únicamente al **año calendario de la fecha de producción/entrega** (`01/01/{yr}` a `31/12/{yr}`). NUNCA cruzar períodos anuales.
+2. **Cálculo de Consumo:** Se totalizan las entregas activas tipo `PURCHASE_ORDER` del productor para ese año calendario y empresa, restándolas del cupo inicial asignado en quintales ($1\text{ qq} = 100\text{ lb}$).
+3. **Alerta Preventiva Dinámica:** Si `(totalDelivered + currentDelivery) / initialQuota >= quotaAlertThresholdPercent / 100`, el backend marca `isNearLimit: true`. No bloquea la entrega.
+4. **Bloqueo Mandatorio al 100%:** Si `currentDelivery > remainingBalance` o `remainingBalance <= 0`, `validateQuotaBalanceForPurchaseOrder(...)` lanza `ApiException(ApiStatus.VALIDATION_ERROR, ...)` bloqueando la persistencia en base de datos.
+
+### 22.3 Migraciones Flyway y Parser Test
+- Migraciones relacionadas: `V4` (columna `deliveryreceipt`), `V5` (correlativos y config UNOCACE), `V6` (columna `displayquotabalance` y `enableQuotaBalance`), `V8` (umbral al 80% y purga explícita en FV).
+- **Regla Anti-Regresión:** Toda migración SQL en `src/main/resources/db/migration/` debe registrarse en `FlywayMigrationParseTest.java` y pasar en verde.
+
+
+
