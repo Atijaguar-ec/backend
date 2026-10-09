@@ -68,12 +68,8 @@ public class TorpedoProjector<P, T> {
 	}
 	
 	public long count(EntityManager em) {
-		try {
-			return Torpedo.select(Torpedo.count(proxy)).get(em).orElse(0L);
-		} catch (Exception e) {
-			// Fallback: TorpedoQuery may generate invalid SQL (ORDER BY in COUNT).
-			return 0L;
-		}
+		PaginationTools.clearOrderBy(proxy);
+		return Torpedo.select(Torpedo.count(proxy)).get(em).orElse(0L);
 	}
 		
 	private T createResultItem(Object[] values) {

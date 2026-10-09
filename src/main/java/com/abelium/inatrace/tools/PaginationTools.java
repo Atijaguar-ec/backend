@@ -13,8 +13,25 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
+import org.torpedoquery.jakarta.jpa.internal.TorpedoProxy;
+import org.torpedoquery.jakarta.jpa.internal.utils.TorpedoMethodHandler;
+
 public class PaginationTools 
 {
+    public static void clearOrderBy(Object proxy) {
+        if (proxy == null) return;
+        Object rawProxy = proxy;
+        if (rawProxy instanceof org.torpedoquery.jakarta.jpa.Function<?> func) {
+            rawProxy = func.getProxy();
+        }
+        if (rawProxy instanceof TorpedoProxy tp) {
+            TorpedoMethodHandler handler = tp.getTorpedoMethodHandler();
+            if (handler != null && handler.getRoot() != null) {
+                handler.getRoot().setOrderBy(null);
+            }
+        }
+    }
+
     public static <T> ApiPaginatedList<T> createPaginatedResponse(PaginatedRequestType  type, 
             Supplier<List<T>> itemListSupplier, Supplier<Long> countSupplier) {
         List<T> items = (type == null || type == PaginatedRequestType.FETCH) ? 
@@ -39,19 +56,12 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            // Re-execute the supplier to rebuild the WHERE clause, then count
-            try {
-                count = Torpedo.select(Torpedo.count(proxyObjectSupplier.get())).get(em)
-                        .orElse(0L);
-            } catch (Exception e) {
-                // Fallback: if count query fails, estimate from items
-                // If items.size() < limit, we know we're on the last page
-                if (items.size() < request.limit) {
-                    count = request.offset + items.size();
-                } else {
-                    // Estimate: we don't know the exact count, set a high value to enable pagination
-                    count = request.offset + items.size() + 1;
-                }
+            if (request.requestType != PaginatedRequestType.COUNT && items.size() < request.limit) {
+                count = request.offset + items.size();
+            } else {
+                DBT countProxy = proxyObjectSupplier.get();
+                clearOrderBy(countProxy);
+                count = Torpedo.select(Torpedo.count(countProxy)).get(em).orElse(0L);
             }
         }
         return new ApiPaginatedList<>(items, count);
@@ -72,11 +82,12 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            // Improved fallback count estimation
-            if (items.size() < request.limit) {
+            if (request.requestType != PaginatedRequestType.COUNT && items.size() < request.limit) {
                 count = request.offset + items.size();
             } else {
-                count = request.offset + items.size() + 1;
+                org.torpedoquery.jakarta.jpa.Function<DBT> countProxy = proxyObjectSupplier.get();
+                clearOrderBy(countProxy);
+                count = Torpedo.select(Torpedo.count(countProxy)).get(em).orElse(0L);
             }
         }
         return new ApiPaginatedList<>(items, count);
@@ -94,11 +105,10 @@ public class PaginationTools
         if (request.requestType == PaginatedRequestType.FETCH) {
             count = 0;
         } else {
-            // Improved fallback count estimation
-            if (items.size() < request.limit) {
+            if (request.requestType != PaginatedRequestType.COUNT && items.size() < request.limit) {
                 count = request.offset + items.size();
             } else {
-                count = request.offset + items.size() + 1;
+                count = projectorSupplier.get().count(em);
             }
         }
 
