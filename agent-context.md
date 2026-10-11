@@ -1615,5 +1615,34 @@ Al paginar listados ordenados por columnas específicas (ej. lotes o entregas or
   ```
 - **Regla Anti-Regresión:** Toda nueva consulta paginada que utilice `TorpedoQuery` o HQL/JPQL nativo debe validar que el `countQuery` no contenga cláusula `ORDER BY`. Ver tests unitarios en `PaginationToolsTest.java`.
 
+---
+
+## 27. Interoperabilidad con ERP Contable, Báscula y Trazabilidad Pública QR (Fortaleza del Valle — 2026-10-09)
+
+### 27.1 Contexto
+Fortaleza del Valle (Empresa ID: 5) integra su sistema contable y de báscula externa directamente con los endpoints REST de INATrace para registrar liquidaciones de compra de Cacao en Baba (`PUT /api/chain/stock-order`), consultar saldos de cupo anual (`GET /api/chain/stock-order/quota-balance`) y permitir la consulta pública de comprobantes mediante códigos QR en tickets térmicos (`GET /api/public/delivery-receipt/{id}`).
+
+### 27.2 Reglas Técnicas y de Negocio
+1. **Parcela Obligatoria (`parcelLotFreeText = false`):**
+   - Configuración en `company.configuration`: `"parcelLotFreeText": false`.
+   - `StockOrderService` valida que el campo `parcelLot` coincida exactamente con el nombre de una parcela registrada en `Plot` para el agricultor en la empresa. No se admiten strings genéricos ("1", "Lote 1", etc.). Si el socio no tiene parcelas o no coincide, rechaza con `400 VALIDATION_ERROR`.
+2. **Unidad Oficial: Libras (`PESOLIBRA`):**
+   - Para Cacao en Baba (`semiProduct.id = 1`), los pesajes cuantitativos viajan en Libras.
+   - Si la báscula física lee en kilogramos, debe convertirse en origen: $\text{libras} = \text{round}(\text{kg} \times 2.20462, 2)$.
+3. **Control de Cupo Anual de Producción (`enableQuotaBalance = true`):**
+   - Se evalúa contra el año calendario de la entrega (`01/01/{año}` a `31/12/{año}`).
+   - La estimación de la parcela está en Quintales ($1\text{ qq} = 100\text{ lb}$). Se multiplica por 100 para evaluar el saldo en libras.
+   - Si `totalDelivered + currentDelivery > initialQuotaInUnit`, rechaza con `400 VALIDATION_ERROR`.
+4. **Seguridad OAuth2 y Cuentas Técnicas en Base de Datos:**
+   - `KeycloakJwtAuthenticationConverter` extrae el `preferred_username` del JWT y exige que el usuario exista en la tabla `"User"` de PostgreSQL y posea rol `COMPANY_ADMIN` en `companyuser` para la empresa 5.
+   - Cuentas aprovisionadas: `service-account-inatrace-backend` y `service-account-erp-contable`.
+5. **Idempotencia y Conciliación SRI en `comments`:**
+   - Toda compra lleva: `LC:{estab}-{pto}-{secuencial}|CA:{clave_acceso_49d}|ERP:{id_interno_erp}`.
+   - Permite consultar `GET /api/chain/stock-order/list/company/5` para evitar duplicar pesajes ante caídas de red.
+6. **Trazabilidad Pública QR sin Login:**
+   - `company.configuration` en Empresa 5 contiene `"enableDeliveryReceipt": true` y `"enablePublicDeliveryReceipt": true`.
+   - Permite la lectura anónima en `GET /api/public/delivery-receipt/{id}` (`@PermitAll`).
+
+
 
 
