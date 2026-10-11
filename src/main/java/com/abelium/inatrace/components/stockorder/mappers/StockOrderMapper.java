@@ -246,6 +246,10 @@ public class StockOrderMapper {
         apiStockOrder.setCreationTimestamp(entity.getCreationTimestamp());
 
         apiStockOrder.setTotalQuantity(entity.getTotalQuantity());
+        apiStockOrder.setTotalGrossQuantity(entity.getTotalGrossQuantity());
+        apiStockOrder.setTare(entity.getTare());
+        apiStockOrder.setDamagedWeightDeduction(entity.getDamagedWeightDeduction());
+        apiStockOrder.setDamagedPriceDeduction(entity.getDamagedPriceDeduction());
         apiStockOrder.setMeasureUnitType(
                 MeasureUnitTypeMapper.toApiMeasureUnitType(entity.getMeasurementUnitType()));
 
@@ -308,6 +312,8 @@ public class StockOrderMapper {
                     UserCustomerMapper.toApiUserCustomerBase(entity.getRepresentativeOfProducerUserCustomer()));
 
             apiStockOrder.setCurrency(entity.getCurrency());
+            apiStockOrder.setPricePerUnit(entity.getPricePerUnit());
+            apiStockOrder.setPriceDeterminedLater(entity.getPriceDeterminedLater());
             apiStockOrder.setCost(entity.getCost());
             apiStockOrder.setPaid(entity.getPaid());
             apiStockOrder.setBalance(entity.getBalance());
