@@ -749,7 +749,7 @@ class StockOrderServiceTest {
         assertNotNull(result);
         assertEquals(new BigDecimal("0.00"), result.getRemainingBalance());
         assertEquals(new BigDecimal("0.00"), result.getInitialQuota());
-        assertFalse(result.getIsExceeded());
+        assertTrue(result.getIsExceeded());
     }
 
     @Test

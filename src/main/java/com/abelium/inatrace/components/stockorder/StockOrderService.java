@@ -2218,7 +2218,7 @@ public class StockOrderService extends BaseService {
             response.setInitialQuotaInUnit(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             response.setRemainingBalance(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
             response.setRemainingBalanceInQq(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
-            response.setIsExceeded(false);
+            response.setIsExceeded(true);
             response.setIsNearLimit(false);
         }
 
@@ -2248,14 +2248,14 @@ public class StockOrderService extends BaseService {
         Long excludeStockOrderId = entity.getId();
 
         ApiQuotaBalance balance = getQuotaBalance(companyId, farmerId, parcelLot, semiProductId, deliveryDate, excludeStockOrderId, user, null);
-        if (balance == null || balance.getInitialQuota() == null || balance.getInitialQuota().compareTo(BigDecimal.ZERO) <= 0) {
+        if (balance == null) {
             return;
         }
 
         BigDecimal remaining = balance.getRemainingBalance() != null ? balance.getRemainingBalance() : BigDecimal.ZERO;
         if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ApiException(ApiStatus.VALIDATION_ERROR,
-                    "El agricultor ha alcanzado o superado el cupo permitido para este año calendario.");
+                    "El agricultor no tiene saldo de cupo disponible para este año calendario.");
         }
 
         BigDecimal currentQuantity = entity.getTotalGrossQuantity() != null ? entity.getTotalGrossQuantity() :
