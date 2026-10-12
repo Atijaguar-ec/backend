@@ -25,6 +25,11 @@ public class OpenAPIConfiguration {
 						.name("inatrace-accessToken")
 						.bearerFormat("JWT")
 						.scheme("Bearer"))
+				.schemaRequirement("Bearer Authentication", new SecurityScheme()
+						.type(SecurityScheme.Type.HTTP)
+						.in(SecurityScheme.In.HEADER)
+						.bearerFormat("JWT")
+						.scheme("bearer"))
 				.specVersion(SpecVersion.V31);
 	}
 
