@@ -922,4 +922,187 @@ class StockOrderServiceTest {
 
         assertTrue(ex.getMessage().contains("already been processed or consumed"));
     }
+
+    @Test
+    @DisplayName("validateQuotaBalance: passes when enableQuotaBalance is disabled on company")
+    void validateQuotaBalance_disabledConfig_passes() {
+        StockOrder entity = new StockOrder();
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 1L);
+        company.setConfiguration(Collections.emptyMap());
+        entity.setCompany(company);
+
+        assertDoesNotThrow(() ->
+                ReflectionTestUtils.invokeMethod(stockOrderService, "validateQuotaBalanceForPurchaseOrder", entity, null, null)
+        );
+    }
+
+    @Test
+    @DisplayName("validateQuotaBalance: throws exception when farmer has zero remaining quota balance")
+    void validateQuotaBalance_zeroRemaining_throwsException() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 5L);
+        company.setConfiguration(Map.of("enableQuotaBalance", true));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(5L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 123L);
+        farmer.setPlots(Set.of());
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(123L))).thenReturn(farmer);
+
+        TypedQuery<BigDecimal> mockQuery = mock(TypedQuery.class);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        when(mockQuery.getSingleResult()).thenReturn(BigDecimal.ZERO);
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class))).thenReturn(mockQuery);
+
+        StockOrder entity = new StockOrder();
+        entity.setCompany(company);
+        entity.setProducerUserCustomer(farmer);
+        entity.setTotalGrossQuantity(new BigDecimal("100.00"));
+
+        Throwable thrown = assertThrows(Throwable.class, () ->
+                ReflectionTestUtils.invokeMethod(stockOrderService, "validateQuotaBalanceForPurchaseOrder", entity, null, null)
+        );
+        Throwable cause = thrown.getCause() != null ? thrown.getCause() : thrown;
+        assertTrue(cause instanceof ApiException);
+        assertTrue(cause.getMessage().contains("no tiene saldo de cupo disponible"));
+    }
+
+    @Test
+    @DisplayName("validateQuotaBalance: throws exception when delivery quantity exceeds remaining balance")
+    void validateQuotaBalance_exceedsRemaining_throwsException() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 5L);
+        company.setConfiguration(Map.of("enableQuotaBalance", true));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(5L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 123L);
+
+        com.abelium.inatrace.db.entities.common.Plot plot = new com.abelium.inatrace.db.entities.common.Plot();
+        plot.setPlotName("Finca San Antonio");
+        plot.setProductionEstimate(new BigDecimal("45.00")); // 4500 lb
+        farmer.setPlots(Set.of(plot));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(123L))).thenReturn(farmer);
+
+        TypedQuery<BigDecimal> mockQuery = mock(TypedQuery.class);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        // Delivered 4000 lb, remaining is 500 lb
+        when(mockQuery.getSingleResult()).thenReturn(new BigDecimal("4000.00"));
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class))).thenReturn(mockQuery);
+
+        StockOrder entity = new StockOrder();
+        entity.setCompany(company);
+        entity.setProducerUserCustomer(farmer);
+        entity.setParcelLot("Finca San Antonio");
+        entity.setTotalGrossQuantity(new BigDecimal("600.00")); // 600 > 500 remaining!
+
+        Throwable thrown = assertThrows(Throwable.class, () ->
+                ReflectionTestUtils.invokeMethod(stockOrderService, "validateQuotaBalanceForPurchaseOrder", entity, null, null)
+        );
+        Throwable cause = thrown.getCause() != null ? thrown.getCause() : thrown;
+        assertTrue(cause instanceof ApiException);
+        assertTrue(cause.getMessage().contains("supera el saldo de cupo disponible"));
+    }
+
+    @Test
+    @DisplayName("validateQuotaBalance: passes when delivery quantity is within remaining balance")
+    void validateQuotaBalance_withinRemaining_passes() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 5L);
+        company.setConfiguration(Map.of("enableQuotaBalance", true));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.company.Company.class), eq(5L))).thenReturn(company);
+
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer, "id", 123L);
+
+        com.abelium.inatrace.db.entities.common.Plot plot = new com.abelium.inatrace.db.entities.common.Plot();
+        plot.setPlotName("Finca San Antonio");
+        plot.setProductionEstimate(new BigDecimal("45.00")); // 4500 lb
+        farmer.setPlots(Set.of(plot));
+        when(entityManager.find(eq(com.abelium.inatrace.db.entities.common.UserCustomer.class), eq(123L))).thenReturn(farmer);
+
+        TypedQuery<BigDecimal> mockQuery = mock(TypedQuery.class);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        // Delivered 4000 lb, remaining is 500 lb
+        when(mockQuery.getSingleResult()).thenReturn(new BigDecimal("4000.00"));
+        when(entityManager.createQuery(anyString(), eq(BigDecimal.class))).thenReturn(mockQuery);
+
+        StockOrder entity = new StockOrder();
+        entity.setCompany(company);
+        entity.setProducerUserCustomer(farmer);
+        entity.setParcelLot("Finca San Antonio");
+        entity.setTotalGrossQuantity(new BigDecimal("230.00")); // 230 <= 500 remaining!
+
+        assertDoesNotThrow(() ->
+                ReflectionTestUtils.invokeMethod(stockOrderService, "validateQuotaBalanceForPurchaseOrder", entity, null, null)
+        );
+    }
+
+    @Test
+    @DisplayName("getPublicDeliveryReceipt: throws INVALID_REQUEST when ID is null")
+    void getPublicDeliveryReceipt_nullId_throwsException() {
+        ApiException ex = assertThrows(ApiException.class, () ->
+                stockOrderService.getPublicDeliveryReceipt(null, null)
+        );
+        assertEquals("ID de orden de entrega requerido", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("getPublicDeliveryReceipt: throws NOT_FOUND when order does not exist")
+    void getPublicDeliveryReceipt_notFound_throwsException() {
+        when(entityManager.find(eq(StockOrder.class), eq(999L))).thenReturn(null);
+
+        ApiException ex = assertThrows(ApiException.class, () ->
+                stockOrderService.getPublicDeliveryReceipt(999L, null)
+        );
+        assertEquals("Comprobante de entrega no encontrado", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("getPublicDeliveryReceipt: throws UNAUTHORIZED when public delivery receipt is disabled")
+    void getPublicDeliveryReceipt_disabledConfig_throwsUnauthorized() {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 5L);
+        company.setConfiguration(Map.of("enablePublicDeliveryReceipt", false));
+
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 3242L);
+        stockOrder.setCompany(company);
+
+        when(entityManager.find(eq(StockOrder.class), eq(3242L))).thenReturn(stockOrder);
+
+        ApiException ex = assertThrows(ApiException.class, () ->
+                stockOrderService.getPublicDeliveryReceipt(3242L, null)
+        );
+        assertTrue(ex.getMessage().contains("no está habilitada"));
+    }
+
+    @Test
+    @DisplayName("getPublicDeliveryReceipt: returns public stock order when enabled on company")
+    void getPublicDeliveryReceipt_enabled_returnsOrder() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 5L);
+        company.setName("Fortaleza del Valle");
+        company.setConfiguration(Map.of(
+                "enableDeliveryReceipt", true,
+                "enablePublicDeliveryReceipt", true
+        ));
+
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 3242L);
+        stockOrder.setCompany(company);
+        stockOrder.setDeliveryReceipt("0042");
+        stockOrder.setTotalQuantity(new BigDecimal("230.00"));
+        stockOrder.setStatus(StockOrderStatus.ACTIVE);
+
+        when(entityManager.find(eq(StockOrder.class), eq(3242L))).thenReturn(stockOrder);
+
+        ApiStockOrder result = stockOrderService.getPublicDeliveryReceipt(3242L, null);
+
+        assertNotNull(result);
+        assertEquals(3242L, result.getId());
+        assertEquals("0042", result.getDeliveryReceipt());
+        assertEquals(StockOrderStatus.ACTIVE, result.getStatus());
+    }
 }
