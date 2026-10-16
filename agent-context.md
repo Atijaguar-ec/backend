@@ -1646,3 +1646,72 @@ Fortaleza del Valle (Empresa ID: 5) integra su sistema contable y de báscula ex
 
 
 
+
+---
+
+## 28. Aislamiento de Configuración por Tenant: Nunca Decidir el Tenant por el Nombre de la Empresa (2026-10-16)
+
+### 28.1 Problema
+Las migraciones `V4` a `V10` identificaban al tenant con una coincidencia de texto sobre `company.name` / `company.abbreviation`, bajo la premisa *"toda empresa que no se llame FORTALEZA es UNOCACE"*:
+
+```sql
+WHERE NOT (upper(name) LIKE '%FORTALEZA%' OR upper(abbreviation) LIKE '%FDV%' ...)
+```
+
+Esa premisa es falsa. Backend y frontend son un único código desplegado a **dos servidores y bases independientes** (`inatrace_unocace` e `inatrace_fortaleza`), cada uno con su propia lógica y sus propios datos. Cada base contiene a su organización matriz **y a todas sus organizaciones socias**, que no repiten el nombre de la matriz. En la base de Fortaleza del Valle el resultado fue un daño simétrico:
+
+| Empresa en la base de FV | Efecto del `LIKE` |
+| :--- | :--- |
+| `ASOCIACION AGRICOLA VALLE DEL CARRIZAL`, `ASOCIACIÓN AGRÍCOLA RÍO GRANDE`, `ASOCIACIÓN AGRÍCOLA AROMA DE QUIROGA` | Tratadas como UNOCACE: recibieron `simplifySemiProductToCacao`, `quotaAlertThresholdPercent` y correlativos de comprobante en sus compras históricas (`V5` paso 3). |
+| `FORTALEZA DEL VALLE`, `Corporación Fortaleza del Valle`, `ASOCIACIÓN AGRÍCOLA FORTALEZA DE GUARUMAL` | Tratadas como "a excluir": se les **borraron** `enableQuotaBalance`, `enableDeliveryReceipt` y `enablePublicDeliveryReceipt`, que el libro maestro de FV exige en `true`, y se apagó `displayquotabalance` en sus centros de acopio. |
+
+### 28.2 Regla
+1. **Cada tenant es un servidor y una base independientes, y maneja su propia lógica y sus propios datos.** UNOCACE y sus 21 asociaciones filiales viven en el servidor de UNOCACE con la matriz de UNOCACE; Fortaleza del Valle y todas sus organizaciones viven en el servidor de FV con la matriz de FV. Ninguna regla ni configuración de un tenant aplica al otro. El esquema (DDL) es lo único común.
+2. **Está prohibido el patrón `WHERE NOT (name LIKE '%<otro tenant>%')`** para delimitar el alcance de una migración. Las organizaciones socias no repiten el nombre de su matriz, así que el `LIKE` las clasifica en el tenant equivocado.
+3. **Una migración de datos de un tenant no se delimita, se aísla físicamente.** El alcance lo da la carpeta, no un `WHERE`:
+
+| Carpeta | Se aplica a | Rango de versiones | Se activa con |
+| :--- | :--- | :--- | :--- |
+| `classpath:db/migration` | Las dos bases | `V1`–`V10xx` | Siempre |
+| `classpath:db/tenant/fv` | Solo Fortaleza del Valle | `V1101`, `V1102`, ... | Perfil `fortaleza` |
+| `classpath:db/tenant/unocace` | Solo UNOCACE | `V1201`, `V1202`, ... | Perfil `unocace` |
+
+   Los rangos no se solapan, así que las dos carpetas comparten `schema_version` sin colisionar y `out-of-order = false` sigue siendo válido. `spring.flyway.fail-on-missing-locations = false` evita que una carpeta ausente rompa el arranque. Detalle en `src/main/resources/db/tenant/README.md`.
+
+4. **Requisito de despliegue:** el perfil del tenant debe estar activo o su carpeta no entra en `locations` y sus migraciones se omiten en silencio (no fallan). Hoy **ningún despliegue activa el perfil de su tenant**: `ci/unocace/docker-compose.yml` usa `SPRING_PROFILES_ACTIVE=prod` y `ci/fortaleza/docker-compose.yml` usa `${SPRING_PROFILES_ACTIVE:-default}`. Para habilitar el aislamiento hay que pasar a `prod,unocace` y `prod,fortaleza` respectivamente, y verificar en el log de Flyway las migraciones aplicadas tras cada despliegue.
+5. Mientras el perfil no esté activo, una reparación urgente sobre la base de un tenant puede ir en `db/migration` con detección de tenant en tiempo de ejecución, abortando si no está en la base esperada (es el caso de `V11`, ver 28.4):
+
+```sql
+SELECT EXISTS (SELECT 1 FROM public.company
+               WHERE upper(abbreviation) IN ('FDV','CFV')
+                  OR upper(name) LIKE '%FORTALEZA DEL VALLE%') INTO is_fv_db;
+SELECT EXISTS (SELECT 1 FROM public.company
+               WHERE upper(name) LIKE '%UNOCACE%'
+                  OR upper(abbreviation) LIKE '%UNOCACE%') INTO is_unocace_db;
+IF NOT is_fv_db OR is_unocace_db THEN RAISE NOTICE '...'; RETURN; END IF;
+```
+
+   Esta detección es un puente, no el mecanismo preferido: si falla (una empresa de prueba con "UNOCACE" en el nombre dentro de la base de FV) la migración se omite sin error y hay que verlo en el `NOTICE` del log.
+6. Las claves con dos nombres aceptados por `DeliveryReceiptTools` deben tratarse en pareja: `enableDeliveryReceipt` / `deliveryReceiptSequence` y `simplifySemiProductToCacao` / `genericCacaoDisplay`.
+7. **Base limpia:** en una instalación nueva no hay empresas cuando corren las migraciones, así que ninguna matriz de tenant se escribe sola. La configuración inicial de la organización es parte del alta, no de Flyway (ver `docs/tecnico/guia-instalacion-base-limpia.md`).
+
+### 28.3 Matriz de Configuración por Tenant
+
+| Clave | UNOCACE | Fortaleza del Valle |
+| :--- | :--- | :--- |
+| `enableDeliveryReceipt` | `true` | `true` |
+| `enablePublicDeliveryReceipt` | `true` | `true` |
+| `enableQuotaBalance` | `true` | `true` |
+| `simplifySemiProductToCacao` | `true` (exclusivo) | **prohibido** |
+| `quotaAlertThresholdPercent` | `80.0` | ausente (default del código: `80.00`) |
+| `parcelLotFreeText` | `true` (texto libre) | `false` (parcela estricta) |
+| `numericVarietyOptions` | `true` (`1` / `2`) | ausente (100% Nacional) |
+| `onlyNacionalVariety` | ausente | `true` |
+
+### 28.4 Corrección: `V11__align_fv_tenant_configuration.sql`
+Repara la base de FV sin tocar la de UNOCACE y sin modificar `V4`-`V10` (Flyway valida sus checksums). Es idempotente y actúa en tres pasos:
+1. Retira de toda la base de FV las claves exclusivas de UNOCACE (`simplifySemiProductToCacao`, `genericCacaoDisplay`, `numericVarietyOptions`, `quotaAlertThresholdPercent`).
+2. Garantiza la matriz de FV en todas sus organizaciones con el operador `||`, que conserva el resto de la configuración existente (p. ej. `onlyOrganicProduction`).
+3. Restituye `facility.displayquotabalance = true` en los centros de acopio de las empresas con cupo activo.
+
+**Pendiente deliberadamente fuera de la migración:** los correlativos que `V5` escribió en `stockorder.deliveryreceipt` de las compras históricas de las asociaciones de FV. `generateNextDeliveryReceipt` asigna `MAX(deliveryreceipt) + 1` por empresa, de modo que un relleno retroactivo de las empresas que quedaron sin numerar (ids 1, 5 y 7 en la base de stage) duplicaría números si ya se emitió alguno en caliente. Requiere decisión funcional sobre si se renumera por completo o se numera a continuación del máximo actual.

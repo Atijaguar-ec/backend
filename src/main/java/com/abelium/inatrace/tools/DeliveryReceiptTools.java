@@ -15,9 +15,11 @@ import java.util.Map;
  * - {@code quotaAlertThresholdPercent}: umbral de alerta de cupo (default: 80%)
  *
  * Ambas opciones están DESACTIVADAS por defecto (ausente o false = inactivo).
- * Para UNOCACE se activan vía configuración, y para Fortaleza del Valle (FV)
- * u otras organizaciones quedan desactivadas salvo que un usuario funcional
- * las habilite expresamente desde la configuración de la organización.
+ * Cada tenant define su propia matriz y ninguna regla de un tenant aplica al otro:
+ * UNOCACE y sus asociaciones filiales activan comprobante, cupo y simplificación a
+ * "Cacao"; Fortaleza del Valle y sus organizaciones activan comprobante y cupo, y
+ * tienen PROHIBIDA la simplificación a "Cacao". Ver los libros maestros en
+ * docs/unocace/ y docs/fv/ antes de cambiar una configuración o escribir una migración.
  */
 public final class DeliveryReceiptTools {
 

@@ -29,7 +29,8 @@ class FlywayMigrationParseTest {
             "db/migration/V7__add_sortorder_to_processingactionpef.sql",
             "db/migration/V8__configure_unocace_quota_alert_threshold.sql",
             "db/migration/V9__add_stockorder_cancellation.sql",
-            "db/migration/V10__add_public_delivery_receipt_config.sql"
+            "db/migration/V10__add_public_delivery_receipt_config.sql",
+            "db/migration/V11__align_fv_tenant_configuration.sql"
         };
 
         for (String file : files) {
