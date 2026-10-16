@@ -145,29 +145,7 @@ public class ProcessingOrderService extends BaseService {
                     throw new ApiException(ApiStatus.INVALID_REQUEST, "At least one input Transaction has to be provided!");
                 }
 
-                // When processing action is of type TRANSFER, source StockOrders (contained within each input Transaction)
-                // will be mapped to target StockOrders, so their size should be the same.
-                if (apiProcessingOrder.getInputTransactions().size() != apiProcessingOrder.getTargetStockOrders().size())
-                    throw new ApiException(ApiStatus.INVALID_REQUEST, "When ProcessingActionType is 'TRANSFER', " +
-                            "size of 'inputTransactions' has to match the size of 'targetStockOrders'!");
-
-                // Source StockOrders from inputTransactions must match with targetStockOrders.
-                // Target StockOrders represent new/modified source StockOrder.
-                for (int i = 0; i < apiProcessingOrder.getInputTransactions().size(); i++) {
-
-                    ApiStockOrder targetStockOrder = apiProcessingOrder.getTargetStockOrders().get(i);
-                    ApiStockOrder sourceStockOrder = apiProcessingOrder.getInputTransactions().get(i).getSourceStockOrder();
-
-                    // Each input Transaction must contain a source StockOrder
-                    if (sourceStockOrder == null || sourceStockOrder.getId() == null)
-                        throw new ApiException(ApiStatus.VALIDATION_ERROR,
-                                "Each input Transaction must contain a valid source StockOrder.");
-
-                    // If target StockOrder contains ID, then there must be matching source StockOrder
-                    if (targetStockOrder.getId() != null && !targetStockOrder.getId().equals(sourceStockOrder.getId()))
-                        throw new ApiException(ApiStatus.VALIDATION_ERROR,
-                                "For each existing target StockOrder there has to be a source StockOrder with the same ID.");
-                }
+                validateTransferTargetStockOrders(entity, apiProcessingOrder);
                 break;
 
             default:
@@ -217,8 +195,9 @@ public class ProcessingOrderService extends BaseService {
 
             if (processingAction.getType() == ProcessingActionType.TRANSFER) {
 
-                // In TRANSFER the target StockOrder is the source StockOrder itself (same ID), so it must never be
-                // deleted here: removing the input Transaction already reverts it
+                // En TRANSFER la salida es una StockOrder propia, creada a partir de la de origen (su ID
+                // es distinto: ver la validacion de mas arriba). No se borra aqui: quitar la Transaction
+                // de entrada ya revierte la transferencia.
 
                 // Before deleting, verify that deletion is possible
                 for (StockOrder targetStockOrder : targetStockOrdersToBeDeleted) {
@@ -359,6 +338,44 @@ public class ProcessingOrderService extends BaseService {
         }
 
         return new ApiBaseEntity(entity);
+    }
+
+    /**
+     * Validaciones propias de una accion de tipo TRANSFER.
+     *
+     * Cada Transaction de entrada se empareja por posicion con una StockOrder de salida. La salida es
+     * una StockOrder propia, creada a partir de la de origen, de modo que su ID NO coincide con el de
+     * esta: en la orden 316 de Fortaleza del Valle, por ejemplo, las salidas son 7077-7083 y los
+     * origenes 6431-6437. Una version anterior exigia que coincidieran, lo que hacia imposible editar
+     * una transferencia ya guardada: toda edicion respondia 400 VALIDATION_ERROR. Lo que si se
+     * comprueba es que una salida que llega con ID ya pertenezca a esta orden de procesamiento.
+     */
+    private void validateTransferTargetStockOrders(ProcessingOrder entity,
+                                                   ApiProcessingOrder apiProcessingOrder) throws ApiException {
+
+        if (apiProcessingOrder.getInputTransactions().size() != apiProcessingOrder.getTargetStockOrders().size())
+            throw new ApiException(ApiStatus.INVALID_REQUEST, "When ProcessingActionType is 'TRANSFER', " +
+                    "size of 'inputTransactions' has to match the size of 'targetStockOrders'!");
+
+        for (int i = 0; i < apiProcessingOrder.getInputTransactions().size(); i++) {
+
+            ApiStockOrder targetStockOrder = apiProcessingOrder.getTargetStockOrders().get(i);
+            ApiStockOrder sourceStockOrder = apiProcessingOrder.getInputTransactions().get(i).getSourceStockOrder();
+
+            // Each input Transaction must contain a source StockOrder
+            if (sourceStockOrder == null || sourceStockOrder.getId() == null)
+                throw new ApiException(ApiStatus.VALIDATION_ERROR,
+                        "Each input Transaction must contain a valid source StockOrder.");
+
+            if (targetStockOrder.getId() != null
+                    && (entity.getId() == null
+                        || entity.getTargetStockOrders() == null
+                        || entity.getTargetStockOrders().stream()
+                                .noneMatch(existing -> targetStockOrder.getId().equals(existing.getId()))))
+                throw new ApiException(ApiStatus.VALIDATION_ERROR,
+                        "Target StockOrder with ID '" + targetStockOrder.getId()
+                                + "' does not belong to this Processing order.");
+        }
     }
 
     private ApiBaseEntity createOrUpdateQuoteOrder(ProcessingOrder entity, ApiProcessingOrder apiProcessingOrder, CustomUserDetails user, Language language) throws ApiException {
