@@ -558,12 +558,82 @@ public class StockOrderService extends BaseService {
         }
 
         ApiStockOrder apiStockOrder = StockOrderMapper.toApiStockOrder(stockOrder, null, language, false);
+        restrictToPublicReceiptFields(apiStockOrder);
 
         if (DeliveryReceiptTools.simplifySemiProductEnabled(company.getConfiguration()) && apiStockOrder.getSemiProduct() != null) {
             apiStockOrder.getSemiProduct().setName("Cacao");
         }
 
         return apiStockOrder;
+    }
+
+    /**
+     * El comprobante publico se consulta sin sesion y solo con el ID de la orden. Por eso se
+     * devuelve unicamente lo que muestra la vista publica (public-delivery-receipt): se quitan
+     * usuarios internos, pagos, evidencias, ubicaciones y la configuracion completa de la empresa
+     * (solo se conserva la marca de colores por semana). Del agricultor solo viaja su nombre.
+     */
+    private void restrictToPublicReceiptFields(ApiStockOrder api) {
+        api.setCreatedBy(null);
+        api.setUpdatedBy(null);
+        api.setCreatorId(null);
+        api.setRepresentativeOfProducerUserCustomer(null);
+        api.setProductionLocation(null);
+        api.setActivityProofs(null);
+        api.setRequiredEvidenceFieldValues(null);
+        api.setRequiredEvidenceTypeValues(null);
+        api.setOtherEvidenceDocuments(null);
+        api.setFinalProduct(null);
+        api.setProductOrder(null);
+        api.setProcessingOrder(null);
+        api.setPayments(null);
+        api.setComments(null);
+        api.setPreferredWayOfPayment(null);
+        api.setQuoteFacility(null);
+        api.setQuoteCompany(null);
+        api.setConsumerCompanyCustomer(null);
+        api.setQrCodeTag(null);
+        api.setQrCodeTagFinalProduct(null);
+        api.setWomenShare(null);
+        api.setSacNumber(null);
+        api.setPricePerUnitForEndCustomer(null);
+
+        com.abelium.inatrace.components.company.api.ApiUserCustomer farmer = api.getProducerUserCustomer();
+        if (farmer != null) {
+            com.abelium.inatrace.components.company.api.ApiUserCustomer reducedFarmer =
+                    new com.abelium.inatrace.components.company.api.ApiUserCustomer();
+            reducedFarmer.setName(farmer.getName());
+            reducedFarmer.setSurname(farmer.getSurname());
+            api.setProducerUserCustomer(reducedFarmer);
+        }
+
+        com.abelium.inatrace.components.company.api.ApiCompany company = api.getCompany();
+        if (company != null) {
+            com.abelium.inatrace.components.company.api.ApiCompany reducedCompany =
+                    new com.abelium.inatrace.components.company.api.ApiCompany();
+            reducedCompany.setName(company.getName());
+            Map<String, Object> publicConfiguration = new HashMap<>();
+            if (company.getConfiguration() != null
+                    && company.getConfiguration().containsKey(WeekNumberTools.COLOR_CONFIG_KEY)) {
+                publicConfiguration.put(WeekNumberTools.COLOR_CONFIG_KEY,
+                        company.getConfiguration().get(WeekNumberTools.COLOR_CONFIG_KEY));
+            }
+            reducedCompany.setConfiguration(publicConfiguration);
+            api.setCompany(reducedCompany);
+        }
+
+        ApiFacility facility = api.getFacility();
+        if (facility != null) {
+            ApiFacility reducedFacility = new ApiFacility();
+            reducedFacility.setName(facility.getName());
+            if (facility.getCompany() != null) {
+                com.abelium.inatrace.components.company.api.ApiCompany facilityCompany =
+                        new com.abelium.inatrace.components.company.api.ApiCompany();
+                facilityCompany.setName(facility.getCompany().getName());
+                reducedFacility.setCompany(facilityCompany);
+            }
+            api.setFacility(reducedFacility);
+        }
     }
 
     private List<ApiPayment> getProducerPayments(ApiStockOrderHistory stockOrderHistory, List<Company> producers) {

@@ -104,6 +104,22 @@ services:
       - INATRACE_KEYCLOAK_ADMIN_REALM=${KEYCLOAK_ADMIN_REALM:-inatrace_fortaleza}
       - INATRACE_KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-inatrace-backend}
       - INATRACE_KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-backend-secret-123}
+      # Mail (SMTP) & URLs de notificación / confirmación
+      - SPRING_MAIL_HOST=${SPRING_MAIL_HOST:-mail.atijaguar.com}
+      - SPRING_MAIL_PORT=${SPRING_MAIL_PORT:-465}
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME:-desarrollo@atijaguar.com}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD:-}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=${SPRING_MAIL_SMTP_AUTH:-true}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=${SPRING_MAIL_SMTP_SSL_ENABLE:-true}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=${SPRING_MAIL_STARTTLS_ENABLE:-false}
+      - INATRACE_MAIL_TEMPLATE_FROM=${INATRACE_MAIL_TEMPLATE_FROM:-desarrollo@atijaguar.com}
+      - INATRACE_MAIL_REDIRECT=${INATRACE_MAIL_REDIRECT:-}
+      - INATRACE_MAIL_SENDINGENABLED=${INATRACE_MAIL_SENDING_ENABLED:-false}
+      - INATRACE_LOGINMANAGER_MAIL=${INATRACE_LOGINMANAGER_MAIL:-desarrollo@atijaguar.com}
+      - INATRACE_INFO_MAIL=${INATRACE_INFO_MAIL:-desarrollo@atijaguar.com}
+      - INATRACE_FE_URL=${FE_URL:-https://testinatrace.espam.edu.ec}
+      - INATRACE_EMAILCONFIRMATION_URL=${FE_CONFIRM_URL:-https://testinatrace.espam.edu.ec/es/confirm-email/}
+      - INATRACE_PASSWORDRESET_URL=${FE_RESET_URL:-https://testinatrace.espam.edu.ec/es/reset-password/}
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health | grep -E '200|401' > /dev/null || exit 1"]
       interval: 10s

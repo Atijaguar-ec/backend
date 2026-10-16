@@ -1105,4 +1105,41 @@ class StockOrderServiceTest {
         assertEquals("0042", result.getDeliveryReceipt());
         assertEquals(StockOrderStatus.ACTIVE, result.getStatus());
     }
+
+    @Test
+    @DisplayName("getPublicDeliveryReceipt: returns only the fields shown by the public view")
+    void getPublicDeliveryReceipt_enabled_hidesInternalData() throws Exception {
+        com.abelium.inatrace.db.entities.company.Company company = new com.abelium.inatrace.db.entities.company.Company();
+        ReflectionTestUtils.setField(company, "id", 5L);
+        company.setName("Fortaleza del Valle");
+        company.setEmail("interno@empresa.com");
+        company.setConfiguration(Map.of(
+                "enableDeliveryReceipt", true,
+                "enablePublicDeliveryReceipt", true,
+                "enableQuotaBalance", true,
+                "weekColorCodes", true
+        ));
+
+        StockOrder stockOrder = new StockOrder();
+        ReflectionTestUtils.setField(stockOrder, "id", 3243L);
+        stockOrder.setCompany(company);
+        stockOrder.setDeliveryReceipt("0043");
+        stockOrder.setTotalQuantity(new BigDecimal("100.00"));
+        stockOrder.setStatus(StockOrderStatus.ACTIVE);
+
+        when(entityManager.find(eq(StockOrder.class), eq(3243L))).thenReturn(stockOrder);
+
+        ApiStockOrder result = stockOrderService.getPublicDeliveryReceipt(3243L, null);
+
+        assertEquals("0043", result.getDeliveryReceipt());
+        assertNotNull(result.getCompany());
+        assertEquals("Fortaleza del Valle", result.getCompany().getName());
+        assertNull(result.getCompany().getEmail(), "company email must not be public");
+        assertEquals(Map.of("weekColorCodes", true), result.getCompany().getConfiguration(),
+                "only the week color flag may be exposed from the company configuration");
+        assertNull(result.getPayments());
+        assertNull(result.getCreatedBy());
+        assertNull(result.getUpdatedBy());
+        assertNull(result.getCreatorId());
+    }
 }

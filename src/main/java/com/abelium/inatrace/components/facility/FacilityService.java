@@ -131,9 +131,16 @@ public class FacilityService extends BaseService {
 		entity.setDisplayWomenOnly(apiFacility.getDisplayWomenOnly() != null ? apiFacility.getDisplayWomenOnly() : Boolean.FALSE);
 		entity.setIsDeactivated(BooleanUtils.isTrue(apiFacility.getDeactivated()));
 		entity.setDisplayPriceDeterminedLater(BooleanUtils.isTrue(apiFacility.getDisplayPriceDeterminedLater()));
-		entity.setDisplayFinalPriceDiscount(BooleanUtils.isTrue(apiFacility.getDisplayFinalPriceDiscount()));
-		entity.setDisplayMoisturePercentage(BooleanUtils.isTrue(apiFacility.getDisplayMoisturePercentage()));
-		entity.setLevel(apiFacility.getLevel());
+		// Si el cliente no envia estos campos (app movil, integraciones) se conserva el valor guardado
+		entity.setDisplayFinalPriceDiscount(apiFacility.getDisplayFinalPriceDiscount() != null
+				? apiFacility.getDisplayFinalPriceDiscount()
+				: BooleanUtils.isTrue(entity.getDisplayFinalPriceDiscount()));
+		entity.setDisplayMoisturePercentage(apiFacility.getDisplayMoisturePercentage() != null
+				? apiFacility.getDisplayMoisturePercentage()
+				: BooleanUtils.isTrue(entity.getDisplayMoisturePercentage()));
+		if (apiFacility.getLevel() != null) {
+			entity.setLevel(apiFacility.getLevel());
+		}
 
 		facilityLocation.setLatitude(apiFacility.getFacilityLocation().getLatitude());
 		facilityLocation.setLongitude(apiFacility.getFacilityLocation().getLongitude());

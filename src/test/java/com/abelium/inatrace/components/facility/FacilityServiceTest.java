@@ -132,4 +132,76 @@ class FacilityServiceTest {
         assertTrue(existingFacility.getDisplayMoisturePercentage(), "displayMoisturePercentage should be persisted as true");
         assertEquals(1, existingFacility.getLevel(), "level should be persisted as 1");
     }
+
+    @Test
+    @DisplayName("createOrUpdateFacility: keeps stored displayFinalPriceDiscount, displayMoisturePercentage and level when the client does not send them")
+    void createOrUpdateFacility_keepsStoredFlagsWhenNotSent() throws Exception {
+        Long facilityId = 12L;
+        Long companyId = 2L;
+
+        Company company = new Company();
+        ReflectionTestUtils.setField(company, "id", companyId);
+
+        User userEntity = new User();
+        ReflectionTestUtils.setField(userEntity, "id", 100L);
+
+        CompanyUser companyUser = new CompanyUser();
+        companyUser.setUser(userEntity);
+        companyUser.setCompany(company);
+        companyUser.setRole(CompanyUserRole.COMPANY_ADMIN);
+        company.setUsers(Set.of(companyUser));
+
+        Facility existingFacility = new Facility();
+        ReflectionTestUtils.setField(existingFacility, "id", facilityId);
+        existingFacility.setCompany(company);
+        existingFacility.setDisplayFinalPriceDiscount(true);
+        existingFacility.setDisplayMoisturePercentage(true);
+        existingFacility.setLevel(3);
+
+        FacilityLocation existingLocation = new FacilityLocation();
+        Address existingAddress = new Address();
+        existingLocation.setAddress(existingAddress);
+        existingFacility.setFacilityLocation(existingLocation);
+
+        when(entityManager.find(eq(Facility.class), eq(facilityId))).thenReturn(existingFacility);
+
+        Country country = new Country();
+        ReflectionTestUtils.setField(country, "id", 65L);
+        when(entityManager.find(eq(Country.class), eq(65L))).thenReturn(country);
+
+        FacilityType facilityType = new FacilityType();
+        ReflectionTestUtils.setField(facilityType, "id", 1L);
+        when(entityManager.find(eq(FacilityType.class), eq(1L))).thenReturn(facilityType);
+
+        CustomUserDetails userDetails = mock(CustomUserDetails.class);
+        when(userDetails.getUserId()).thenReturn(100L);
+
+        ApiFacility apiFacility = new ApiFacility();
+        apiFacility.setId(facilityId);
+        apiFacility.setName("Centro de Acopio 2 de Mayo");
+        apiFacility.setIsCollectionFacility(true);
+        apiFacility.setIsPublic(false);
+        apiFacility.setTranslations(new ArrayList<>());
+        apiFacility.setFacilitySemiProductList(new ArrayList<>());
+        apiFacility.setFacilityFinalProducts(new ArrayList<>());
+        apiFacility.setFacilityValueChains(new ArrayList<>());
+
+        ApiFacilityType apiFacilityType = new ApiFacilityType();
+        apiFacilityType.setId(1L);
+        apiFacility.setFacilityType(apiFacilityType);
+
+        ApiFacilityLocation apiLocation = new ApiFacilityLocation();
+        ApiAddress apiAddress = new ApiAddress();
+        ApiCountry apiCountry = new ApiCountry();
+        apiCountry.setId(65L);
+        apiAddress.setCountry(apiCountry);
+        apiLocation.setAddress(apiAddress);
+        apiFacility.setFacilityLocation(apiLocation);
+
+        facilityService.createOrUpdateFacility(apiFacility, userDetails);
+
+        assertTrue(existingFacility.getDisplayFinalPriceDiscount(), "displayFinalPriceDiscount must keep its stored value");
+        assertTrue(existingFacility.getDisplayMoisturePercentage(), "displayMoisturePercentage must keep its stored value");
+        assertEquals(3, existingFacility.getLevel(), "level must keep its stored value");
+    }
 }
