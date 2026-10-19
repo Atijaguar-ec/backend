@@ -168,7 +168,12 @@ pipeline {
           env.GIT_AUTHOR = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
           // Configurar variables según entorno
           env.IMAGE_REPOSITORY = env.REGISTRY.toLowerCase() + '/' + (env.REPO_FULL_NAME + '-inatrace').toLowerCase()
-          env.DEPLOY_TAG = params.BRANCH == 'main' ? 'latest' : "test-${env.GIT_SHORT_SHA}"
+          // Producción despliega por tag INMUTABLE (`prod-<sha>`), no por `latest`.
+          // `latest` se sigue publicando más abajo como alias móvil para quien lo
+          // consuma, pero el .env del servidor apunta al tag fijo: sin eso no hay
+          // a qué volver en un rollback, porque `latest` ya apunta a la versión
+          // nueva y la anterior queda solo como imagen colgante sin nombre.
+          env.DEPLOY_TAG = params.BRANCH == 'main' ? "prod-${env.GIT_SHORT_SHA}" : "test-${env.GIT_SHORT_SHA}"
           env.FORTALEZA_ENV = params.BRANCH == 'main' ? 'prod' : 'test'
           env.HEALTHCHECK_URL = params.BRANCH == 'main' ? 
             params.PROD_HEALTH_URL_PRIMARY : 
@@ -669,11 +674,33 @@ echo "🔗 Verificando red Docker..."
 docker network inspect inatrace-backend-network >/dev/null 2>&1 || \
   docker network create inatrace-backend-network
 
-echo "📥 Descargando última imagen..."
-docker compose pull || true
+# ── Punto de retorno ────────────────────────────────────────────────────────
+# Antes de traer nada, fijamos un nombre a la imagen que está corriendo AHORA.
+# Sin esto, tras el `pull` la versión anterior queda como imagen colgante sin
+# tag y el rollback depende de recordar un sha256. El tag `:rollback` siempre
+# apunta a la última versión buena conocida.
+echo "🔖 Marcando la versión en curso como punto de retorno..."
+CURRENT_IMAGE="$(docker inspect inatrace-be --format '{{.Config.Image}}' 2>/dev/null || true)"
+if [ -n "${CURRENT_IMAGE}" ]; then
+  ROLLBACK_REF="${CURRENT_IMAGE%:*}:rollback"
+  docker tag "${CURRENT_IMAGE}" "${ROLLBACK_REF}"
+  echo "   ${CURRENT_IMAGE} → ${ROLLBACK_REF}"
+  echo "   Para volver atrás: TAG=rollback en .env + docker compose up -d --no-deps --force-recreate inatrace-backend"
+else
+  echo "   ⚠️ No hay contenedor inatrace-be en ejecución: sin punto de retorno previo"
+fi
 
-echo "🔄 Desplegando servicios..."
-docker compose up -d --remove-orphans --force-recreate
+echo "📥 Descargando última imagen..."
+docker compose pull inatrace-backend || true
+
+# --no-deps + nombre de servicio: el despliegue de aplicación toca SOLO el
+# backend. Sin esto, `up -d --force-recreate` recreaba también inatrace-postgres
+# y inatrace-kc-test-fortaleza, es decir la base de datos y la autenticación de
+# producción, aplicando de paso cualquier cambio de imagen o de arranque que
+# trajera el compose y que nunca se probó (staging solo recrea el backend).
+# Los cambios de motor de BD y de Keycloak van en su propia ventana.
+echo "🔄 Desplegando backend (sin tocar base de datos ni Keycloak)..."
+docker compose up -d --no-deps --force-recreate inatrace-backend
 
 echo "📊 Estado inicial de contenedores:"
 docker compose ps

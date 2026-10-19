@@ -12,16 +12,25 @@ version: '3.8'
 services:
 
   inatrace-postgres:
-    image: postgres:16.14-alpine
+    # ⚠️ NO cambiar a `postgres:16.14-alpine` desde aquí. La actualización a
+    # 16.14 es HU-20 y tiene su propio protocolo y su propia ventana
+    # (README_POSTGRES_UPGRADE.md). Traerla al compose la metía en CADA
+    # despliegue de aplicación, y el salto de la variante Debian (glibc) a la
+    # Alpine (musl) sobre el directorio de datos existente no es inocuo: estas
+    # bases se inicializaron con `Locale Provider: libc, Collate: en_US.utf8`,
+    # locale que no existe en musl. Ver README_POSTGRES_UPGRADE.md §6.
+    # Esta línea describe lo que REALMENTE corre en staging y producción
+    # (verificado con `docker ps` el 2026-10-18).
+    image: postgres:16.10
     container_name: inatrace-postgres
-    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    # El afinado de `postgresql.conf` también es HU-20: montarlo exige recrear
+    # el contenedor, y eso no puede pasar en un despliegue de aplicación.
     environment:
       - POSTGRES_PASSWORD=${DB_ROOT_PASSWORD}
       - POSTGRES_DB=${DATABASE_NAME}
       - POSTGRES_USER=${DATASOURCE_USERNAME}
     volumes:
       - ${DB_VOLUME}:/var/lib/postgresql/data
-      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
     # NOTA: el contenedor real en staging/prod NO publica el puerto 5432 al
     # host (verificado con `docker ps`/`ss -tlnp`). Solo es alcanzable dentro
     # de la red Docker `backend`. No agregar `ports:` aquí sin verificar antes
@@ -31,17 +40,38 @@ services:
     restart: always
 
   inatrace-keycloak:
-    image: quay.io/keycloak/keycloak:26.0.0
+    # ⚠️ `start --optimized` (HU-03) NO funciona con esta imagen estándar.
+    #
+    # Reproducido el 2026-10-18 levantando la imagen: con `--optimized`, si una
+    # opción de TIEMPO DE COMPILACIÓN llega por entorno con un valor distinto al
+    # horneado, Keycloak se niega a arrancar y sale con código 2:
+    #
+    #   ERROR: The following build time options have values that differ from
+    #   what is persisted ... : kc.http-relative-path
+    #
+    # Es justo el caso de `KC_HTTP_RELATIVE_PATH: /auth` de más abajo. El
+    # `deploy/keycloak/Dockerfile` ya fue corregido para hornearla, y con esa
+    # imagen el arranque sí funciona (`Profile prod activated`, 12,5 s), pero
+    # NINGÚN pipeline la construye ni la publica todavía.
+    #
+    # Por eso el default sigue siendo `start-dev` sobre la imagen estándar, que
+    # es lo que realmente corre hoy en staging y en producción. Para pasar a
+    # modo producción: publicar la imagen optimizada, apuntar KC_IMAGE a ella,
+    # poner KC_COMMAND="start --optimized" y PROBARLO EN STAGING ANTES.
+    # Ver deploy/keycloak/README.md. No es parte de un despliegue de aplicación.
+    image: ${KC_IMAGE:-quay.io/keycloak/keycloak:26.0.0}
     container_name: inatrace-kc-test-fortaleza
     restart: unless-stopped
-    command: start --optimized
+    command: ${KC_COMMAND:-start-dev}
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://inatrace-postgres:5432/inatrace_keycloak
       KC_DB_USERNAME: ${DATASOURCE_USERNAME}
       KC_DB_PASSWORD: ${DATASOURCE_PASSWORD}
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-${KC_BOOTSTRAP_ADMIN_USERNAME:-}}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}
+      # El .env de producción define KEYCLOAK_ADMIN_USER/PASSWORD (no KC_ADMIN_*):
+      # sin este nombre en la cadena, el bootstrap admin quedaba vacío.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-${KEYCLOAK_ADMIN_USER:-${KC_BOOTSTRAP_ADMIN_USERNAME:-}}}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-${KC_BOOTSTRAP_ADMIN_PASSWORD:-}}}
       KC_FEATURES: organization
       KC_HTTP_PORT: 8080
       KC_HOSTNAME_STRICT: 'false'

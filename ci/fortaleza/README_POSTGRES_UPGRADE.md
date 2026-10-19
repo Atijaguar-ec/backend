@@ -108,3 +108,74 @@ docker logs -f inatrace-be
 - `Flyway: Successfully applied 2 migrations to schema "public"` (V2__envers_audit_tables, V3__add_fk_indexes)
 - `HHH000227: Running hbm2ddl schema validation`
 - `Started INATraceBackendApplication in X.XXX seconds`
+
+---
+
+## 4. Por qué esta actualización NO viaja en el despliegue de aplicación
+
+> Añadido el **2026-10-18** tras revisar los servidores reales.
+
+Entre Sprint 2 y el 2026-10-18, `ci/fortaleza/docker-compose.yml` declaraba
+`postgres:16.14-alpine` y montaba el `postgresql.conf` afinado. Como el stage de
+despliegue a producción del `Jenkinsfile` ejecutaba
+`docker compose up -d --force-recreate` **sin `--no-deps` y sin nombre de
+servicio**, cada despliegue de aplicación recreaba también la base de datos y
+Keycloak, aplicando esta actualización sin ventana, sin respaldo específico y
+sin las verificaciones de la sección 3.
+
+Nada de esto se había ejercitado: el despliegue de **staging** usa
+`up -d --no-deps --force-recreate inatrace-backend`, así que solo toca el
+backend. El cambio de imagen de la base nunca corrió en ningún entorno.
+
+Desde el 2026-10-18:
+- el compose declara `postgres:16.10`, que es lo que realmente corre;
+- el despliegue a producción usa `--no-deps inatrace-backend`;
+- esta actualización se ejecuta **solo** siguiendo este protocolo, en su ventana.
+
+---
+
+## 5. Advertencia no cubierta por la sección 1: glibc → musl
+
+La sección 1 es correcta en que 16.10 → 16.14 es una actualización **menor** y
+que los archivos del directorio de datos son compatibles. Pero el salto que
+propone no es solo de versión: es de **variante de imagen**.
+
+| | `postgres:16.10` | `postgres:16.14-alpine` |
+|:---|:---|:---|
+| Base | Debian | Alpine |
+| libc | glibc | **musl** |
+| Locales disponibles | `en_US.utf8` entre muchos | prácticamente solo `C` y `C.UTF-8` |
+
+Las bases de Fortaleza se inicializaron con `Locale Provider: libc`,
+`Collate: en_US.utf8` (verificado con `\l` el 2026-10-18). Ese locale **no
+existe en musl**. Las dos consecuencias:
+
+1. **Arranque:** PostgreSQL puede negarse a iniciar o registrar
+   `FATAL: ... locale "en_US.utf8" ... not available` al abrir una base cuyo
+   collation no existe en el sistema.
+2. **Índices:** si arranca, el orden de las cadenas cambia respecto al que se
+   usó para construir los índices B-tree sobre columnas de texto. Los índices
+   quedan silenciosamente inconsistentes: búsquedas que no encuentran filas que
+   sí existen. **No da error**, que es lo peligroso.
+
+### Opciones
+
+- **(a) Quedarse en la variante Debian.** Actualizar a `postgres:16.14`
+  (sin `-alpine`). Es la misma versión del motor, mantiene glibc y el
+  `en_US.utf8` de las bases. **Recomendada.**
+- **(b) Ir a Alpine con recarga lógica.** `pg_dumpall` → `initdb` nuevo con un
+  collation disponible en musl → `pg_restore`. Es una migración completa, no un
+  cambio de imagen, y cambia el orden de las cadenas en toda la plataforma.
+- **(c) Ir a Alpine sobre el directorio existente.** **No hacer.** Es el camino
+  que describía el Paso 3 antes de esta nota.
+
+Si se toma (b), verificar después: `REINDEX DATABASE` completo y
+`SELECT datcollate, datctype FROM pg_database;` con el collation esperado.
+
+---
+
+## 6. Referencia desde el compose
+
+`ci/fortaleza/docker-compose.yml` apunta a esta sección en el comentario del
+servicio `inatrace-postgres`. Si se cambia la numeración de este documento,
+actualizar también ese comentario.
