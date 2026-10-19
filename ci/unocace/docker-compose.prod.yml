@@ -1,6 +1,18 @@
 # ============================================================================
 # INATrace — UNOCACE PRODUCCION (arquitectura nueva: PostgreSQL + Keycloak)
 #
+# CONVIVE CON EL SISTEMA HEREDADO EN LA MISMA MAQUINA (116.203.108.253).
+# La estrategia acordada es reemplazar todo menos el MySQL, que se conserva
+# un tiempo para consultas de comprobacion. Por eso:
+#   - El backend se llama inatrace-api-prod-unocace, NO inatrace-be-prod-unocace:
+#     ese nombre ya lo ocupa el backend heredado y Docker no admite dos
+#     contenedores con el mismo nombre.
+#   - Los puertos 8082 y 8083 estan libres: el heredado usa 8080 (backend) y
+#     8081 (frontend).
+#   - Los volumenes de archivos son LOS MISMOS que usa el heredado, a proposito:
+#     los documentos e imagenes ya subidos viven ahi y las filas migradas los
+#     referencian. Apuntar a carpetas nuevas dejaria todos los adjuntos rotos.
+#
 # Este archivo NO describe nada que este corriendo hoy. La produccion actual de
 # UNOCACE (inatrace.unocace.com, 116.203.108.253) sigue siendo el sistema
 # heredado: MySQL, sin Keycloak, frontend de diciembre de 2025. Esto es la
@@ -100,7 +112,9 @@ services:
 
   inatrace-backend:
     image: ${IMAGE_NAME:-ghcr.io/atijaguar-ec/backend-inatrace}:${TAG}
-    container_name: inatrace-be-prod-unocace
+    # NO usar inatrace-be-prod-unocace: ese nombre es del backend heredado, que
+    # sigue en la maquina hasta el corte.
+    container_name: ${BE_CONTAINER_NAME:-inatrace-api-prod-unocace}
     restart: always
     environment:
       # --- Base de datos ---
