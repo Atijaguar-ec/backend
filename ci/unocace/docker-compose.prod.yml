@@ -1,0 +1,197 @@
+# ============================================================================
+# INATrace — UNOCACE PRODUCCION (arquitectura nueva: PostgreSQL + Keycloak)
+#
+# Este archivo NO describe nada que este corriendo hoy. La produccion actual de
+# UNOCACE (inatrace.unocace.com, 116.203.108.253) sigue siendo el sistema
+# heredado: MySQL, sin Keycloak, frontend de diciembre de 2025. Esto es la
+# definicion del entorno de destino del corte.
+#
+# Que lo diferencia del docker-compose.yml de staging, y por que:
+#
+#   1. postgres:16.10 variante DEBIAN, no -alpine. Staging corre Alpine, y alli
+#      es consistente porque la base nacio ahi. Para una base que se restaura
+#      desde otro origen conviene glibc: musl no trae locales, acepta cualquier
+#      nombre sin error y ordena por bytes. Verificado el 2026-10-18 en el
+#      staging de UNOCACE: declara en_US.utf8 y `locale -a` esta vacio.
+#
+#   2. Keycloak con imagen optimizada y `start --optimized`, no `start-dev`.
+#      Requiere la imagen que publica .github/workflows/build-keycloak-image.yml
+#      del repositorio deploy. Si todavia no esta publicada, dejar KC_IMAGE y
+#      KC_COMMAND sin definir: los defaults vuelven a la imagen estandar con
+#      start-dev, que funciona.
+#
+#   3. TODAS las variables de correo y de URL del frontend enumeradas. El
+#      compose de staging no las trae, y el perfil `prod` de Spring arrastra
+#      valores del upstream (INATrace.fe.url = https://inatrace.com) que solo se
+#      corrigen sobreescribiendolos aqui. Sin esto, los correos de confirmacion
+#      y los QR apuntarian a un dominio ajeno.
+#
+#   4. Ningun puerto publicado en 0.0.0.0. En este servidor Docker inserta sus
+#      reglas antes que UFW y el firewall no los bloquea.
+# ============================================================================
+
+services:
+
+  inatrace-postgres:
+    image: postgres:16.10
+    container_name: inatrace-pg-prod-unocace
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Fija el collation de la base nueva. Debe coincidir con el del origen.
+      POSTGRES_INITDB_ARGS: "--locale=en_US.utf8 --encoding=UTF8"
+      # Lo lee el script de initdb para crear la base de Keycloak.
+      KC_DB_NAME: ${KC_DB_NAME:-inatrace_keycloak_unocace}
+    volumes:
+      - ${PG_DATA_VOL:-/opt/inatrace/postgresql_data}:/var/lib/postgresql/data
+      # Crea la base de Keycloak en el primer arranque. Sin esto Keycloak entra
+      # en bucle de reinicio: el contenedor de postgres solo crea POSTGRES_DB.
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    networks: [inatrace-prod-network]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  inatrace-keycloak:
+    # Sin KC_IMAGE definido cae a la imagen estandar; sin KC_COMMAND, a start-dev.
+    # Para modo produccion: publicar la imagen optimizada y definir ambas.
+    image: ${KC_IMAGE:-quay.io/keycloak/keycloak:26.0.0}
+    container_name: inatrace-kc-prod-unocace
+    restart: unless-stopped
+    command: ${KC_COMMAND:-start-dev}
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://inatrace-postgres:5432/${KC_DB_NAME:-inatrace_keycloak_unocace}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Solo se usan en el primer arranque, para crear el administrador.
+      # Retirarlas del .env una vez creado.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-}
+      KC_FEATURES: organization
+      KC_HTTP_ENABLED: 'true'          # TLS lo termina el nginx del host
+      KC_HTTP_RELATIVE_PATH: /auth     # coincide con lo horneado en la imagen
+      KC_HOSTNAME: ${PUBLIC_URL:-https://inatrace.unocace.com}/auth
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: 'true'
+      KC_PROXY_HEADERS: xforwarded
+    volumes:
+      - ${KC_THEME_VOL:-/opt/inatrace/keycloak-theme/inatrace}:/opt/keycloak/themes/inatrace:ro
+    ports:
+      - '127.0.0.1:8083:8080'
+    networks: [inatrace-prod-network]
+    depends_on:
+      inatrace-postgres:
+        condition: service_healthy
+    healthcheck:
+      # Con start-dev el puerto 9000 no expone /health; el TCP sirve para ambos
+      # modos. Con la imagen optimizada conviene cambiarlo por
+      # :9000/auth/health/ready (ver deploy/keycloak/README.md).
+      test: ['CMD-SHELL', 'exec 3<>/dev/tcp/127.0.0.1/8080 || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  inatrace-backend:
+    image: ${IMAGE_NAME:-ghcr.io/atijaguar-ec/backend-inatrace}:${TAG}
+    container_name: inatrace-be-prod-unocace
+    restart: always
+    environment:
+      # --- Base de datos ---
+      - INATRACE_DATABASE_NAME=${POSTGRES_DB}
+      - INATRACE_DATABASE_HOSTNAME=inatrace-postgres
+      - INATRACE_DATABASE_PORT=5432
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://inatrace-postgres:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+
+      # --- Perfil ---
+      # `prod` arrastra del upstream INATrace.fe.url=https://inatrace.com y un
+      # issuer de auth.ixo-agro.com. Ambos se sobreescriben mas abajo; si algun
+      # dia se limpia application-prod.properties, revisar esto.
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=8080
+      - INATRACE_PRODUCT_TYPE=COCOA
+      - INATRACE_ENV=PROD
+
+      # --- Keycloak ---
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${PUBLIC_URL:-https://inatrace.unocace.com}/auth/realms/${KC_REALM:-unocace}
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://inatrace-keycloak:8080/auth/realms/${KC_REALM:-unocace}/protocol/openid-connect/certs
+      - INATRACE_KEYCLOAK_ADMIN_SERVER_URL=http://inatrace-keycloak:8080/auth
+      - INATRACE_KEYCLOAK_ADMIN_REALM=${KC_REALM:-unocace}
+      - INATRACE_KEYCLOAK_ADMIN_CLIENT_ID=inatrace-backend
+      - INATRACE_KEYCLOAK_ADMIN_CLIENT_SECRET=${KC_BACKEND_CLIENT_SECRET}
+
+      # --- URLs del frontend (sin esto apuntan a inatrace.com) ---
+      - INATRACE_FE_URL=${PUBLIC_URL:-https://inatrace.unocace.com}
+      - INATRACE_EMAILCONFIRMATION_URL=${PUBLIC_URL:-https://inatrace.unocace.com}/confirm-email/
+      - INATRACE_PASSWORDRESET_URL=${PUBLIC_URL:-https://inatrace.unocace.com}/reset-password/
+
+      # --- Correo (hoy solo existe en la produccion heredada: NO perderlo) ---
+      - SPRING_MAIL_HOST=${SPRING_MAIL_HOST}
+      - SPRING_MAIL_PORT=${SPRING_MAIL_PORT}
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=${SPRING_MAIL_SMTP_AUTH:-true}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=${SPRING_MAIL_STARTTLS_ENABLE:-true}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=${SPRING_MAIL_SMTP_SSL_ENABLE:-false}
+      - INATRACE_MAIL_SENDINGENABLED=${INATRACE_MAIL_SENDING_ENABLED:-true}
+      - INATRACE_MAIL_TEMPLATE_FROM=${INATRACE_MAIL_TEMPLATE_FROM}
+      - INATRACE_MAIL_REDIRECT=${INATRACE_MAIL_REDIRECT:-}
+      - INATRACE_LOGINMANAGER_MAIL=${INATRACE_LOGINMANAGER_MAIL}
+      - INATRACE_INFO_MAIL=${INATRACE_INFO_MAIL}
+
+      # --- Administrador inicial ---
+      - INATRACE_ADMIN_EMAIL=${INATRACE_ADMIN_EMAIL}
+      - INATRACE_ADMIN_PASSWORD=${INATRACE_ADMIN_PASSWORD}
+      - INATRACE_ADMIN_NAME=${INATRACE_ADMIN_NAME:-Administrador}
+      - INATRACE_ADMIN_SURNAME=${INATRACE_ADMIN_SURNAME:-Unocace}
+      - INATRACE_ADMIN_COMPANY_NAME=${INATRACE_ADMIN_COMPANY_NAME:-UNOCACE}
+
+      # --- Almacenamiento ---
+      - INATRACE_FILESTORAGE_ROOT=/app/files
+      - INATRACE_IMPORT_PATH=/app/import
+      - INATRACE_DOCUMENTS_ROOT=/app/documents
+
+      # --- Flyway ---
+      # El esquema lo crean V1..V11 sobre base vacia. OJO: las migraciones de
+      # datos (V4,V5,V8,V10,V11) corren en vacio y quedan marcadas como
+      # aplicadas, asi que la matriz de configuracion por empresa hay que
+      # reponerla DESPUES de cargar los datos. Ver el procedimiento ensayado.
+      - INATRACE_FLYWAY_REPAIR_ON_STARTUP=${INATRACE_FLYWAY_REPAIR_ON_STARTUP:-false}
+
+      # --- Integraciones ---
+      - INATRACE_WHISP_APIKEY=${WHISP_API_KEY:-}
+      - INATRACE_AGSTACK_EMAIL=${AGSTACK_EMAIL:-}
+      - INATRACE_AGSTACK_PASSWORD=${AGSTACK_PASSWORD:-}
+      - INATRACE_AGSTACK_BASEURL=${AGSTACK_BASE_URL:-}
+      - INATRACE_AGSTACK_LOGINBASEURL=${AGSTACK_LOGIN_BASE_URL:-}
+
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication
+    volumes:
+      - ${FILE_STORAGE_VOL:-/opt/inatrace/uploads}:/app/files
+      - ${IMPORT_VOL:-/opt/inatrace/import}:/app/import
+      - ${DOCUMENTS_VOL:-/opt/inatrace/documents}:/app/documents
+    ports:
+      - '127.0.0.1:8082:8080'
+    networks: [inatrace-prod-network]
+    depends_on:
+      inatrace-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health | grep -E '200|401' > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
+networks:
+  inatrace-prod-network:
+    name: inatrace-prod-network
+    driver: bridge
