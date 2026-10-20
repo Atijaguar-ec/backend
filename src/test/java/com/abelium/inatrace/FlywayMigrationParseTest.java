@@ -30,7 +30,8 @@ class FlywayMigrationParseTest {
             "db/migration/V8__configure_unocace_quota_alert_threshold.sql",
             "db/migration/V9__add_stockorder_cancellation.sql",
             "db/migration/V10__add_public_delivery_receipt_config.sql",
-            "db/migration/V11__align_fv_tenant_configuration.sql"
+            "db/migration/V11__align_fv_tenant_configuration.sql",
+            "db/migration/V12__disable_quota_balance_for_fv.sql"
         };
 
         for (String file : files) {
