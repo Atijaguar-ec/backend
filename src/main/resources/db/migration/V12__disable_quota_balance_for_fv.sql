@@ -1,15 +1,18 @@
 -- ============================================================================
 -- V12__disable_quota_balance_for_fv.sql
 --
--- Fortaleza del Valle (FV): Desactivar control de cupo y restituir parcelLotFreeText.
+-- Fortaleza del Valle (FV): Desactivar control de cupo, restituir parcelLotFreeText
+-- y depurar cualquier configuración exclusiva de UNOCACE.
 --
 -- REGLA DE NEGOCIO:
--- El control y saldo de cupos anuales (enableQuotaBalance) y displayquotabalance en
--- centros de acopio es una funcionalidad exclusiva de UNOCACE. En Fortaleza del Valle
--- los productores no gestionan cupos anuales en el sistema, y las entregas operan
--- con parcelas en modo texto libre (parcelLotFreeText = true).
+-- El control y saldo de cupos anuales (enableQuotaBalance), la simplificación a 'Cacao'
+-- (simplifySemiProductToCacao), opciones numéricas de variedad (numericVarietyOptions)
+-- y displayquotabalance en centros de acopio son funcionalidades exclusivas de UNOCACE.
+-- En Fortaleza del Valle los productores no gestionan cupos anuales en el sistema,
+-- acopian 100% Cacao en Baba y las entregas operan con parcelas en modo texto libre
+-- (parcelLotFreeText = true).
 -- V11 erróneamente activó enableQuotaBalance y parcelLotFreeText = false para FV.
--- Esta migración corrige dicha configuración en bases de FV.
+-- Esta migración sanea definitivamente la base de datos de FV.
 -- ============================================================================
 
 DO $$
@@ -38,23 +41,22 @@ BEGIN
         RETURN;
     END IF;
 
-    -- 1. Eliminar enableQuotaBalance y establecer parcelLotFreeText = true para Fortaleza del Valle
+    -- 1. Eliminar cualquier clave exclusiva de UNOCACE y asegurar parcelLotFreeText = true en TODA la base de FV
     UPDATE public.company
-    SET configuration = (COALESCE(configuration, '{}'::jsonb) - 'enableQuotaBalance') || '{"parcelLotFreeText": true}'::jsonb
-    WHERE upper(name) LIKE '%FORTALEZA%'
-       OR upper(abbreviation) IN ('FDV', 'CFV');
+    SET configuration = (COALESCE(configuration, '{}'::jsonb)
+        - 'enableQuotaBalance'
+        - 'simplifySemiProductToCacao'
+        - 'genericCacaoDisplay'
+        - 'numericVarietyOptions'
+        - 'quotaAlertThresholdPercent'
+    ) || '{"parcelLotFreeText": true}'::jsonb;
     GET DIAGNOSTICS updated_companies = ROW_COUNT;
 
-    -- 2. Desactivar displayquotabalance en instalaciones de acopio de Fortaleza del Valle
+    -- 2. Desactivar displayquotabalance en todas las instalaciones de la base de FV
     UPDATE public.facility
-    SET displayquotabalance = false
-    WHERE company_id IN (
-        SELECT id FROM public.company
-        WHERE upper(name) LIKE '%FORTALEZA%'
-           OR upper(abbreviation) IN ('FDV', 'CFV')
-    );
+    SET displayquotabalance = false;
     GET DIAGNOSTICS updated_facilities = ROW_COUNT;
 
-    RAISE NOTICE 'V12: Fortaleza del Valle configurada correctamente. % empresas actualizadas (enableQuotaBalance removido, parcelLotFreeText=true), % instalaciones con displayquotabalance=false.',
+    RAISE NOTICE 'V12: Base de Fortaleza del Valle saneada con éxito. % empresas actualizadas (claves UNOCACE depuradas, parcelLotFreeText=true), % instalaciones con displayquotabalance=false.',
         updated_companies, updated_facilities;
 END $$;
