@@ -212,33 +212,6 @@ pipeline {
         }
         
         script {
-          def pgContainer = 'inatrace-postgres-ci'
-          sh """
-            set -e
-            echo "🧹 Preparando contenedor PostgreSQL temporal..."
-            docker rm -f ${pgContainer} >/dev/null 2>&1 || true
-            docker run -d --name ${pgContainer} \
-              -e POSTGRES_PASSWORD=inatrace \
-              -e POSTGRES_DB=inatrace \
-              -e POSTGRES_USER=inatrace \
-              -p 5432:5432 \
-              postgres:16-alpine
-          """
-
-          sh '''
-            set +e
-            echo "⏳ Esperando disponibilidad de PostgreSQL temporal..."
-            for i in $(seq 1 12); do
-              if docker exec inatrace-postgres-ci pg_isready -U inatrace -d inatrace >/dev/null 2>&1; then
-                exit 0
-              fi
-              echo "Intento ${i}/12..."
-              sleep 5
-            done
-            echo "❌ PostgreSQL temporal no disponible" >&2
-            exit 1
-          '''
-
           dir('.') {
             sh """
               set -e
@@ -248,12 +221,6 @@ pipeline {
               fi
 
               echo "📊 Ejecutando Maven verify..."
-              SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/inatrace" \
-              SPRING_DATASOURCE_USERNAME="inatrace" \
-              SPRING_DATASOURCE_PASSWORD="inatrace" \
-              INATRACE_DATABASE_HOSTNAME="127.0.0.1" \
-              INATRACE_DATABASE_PORT="5432" \
-              INATRACE_DATABASE_NAME="inatrace" \
               mvn -B clean verify \
                 -Dspring.profiles.active=test \
                 -Dmaven.test.failure.ignore=false \
@@ -267,7 +234,6 @@ pipeline {
       post {
         always {
           junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-          sh 'docker rm -f inatrace-postgres-ci >/dev/null 2>&1 || true'
         }
         failure {
           echo "❌ Las pruebas fallaron. Abortando despliegue."
