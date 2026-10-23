@@ -2,7 +2,9 @@ package com.abelium.inatrace.components.company.plotimport;
 
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.company.types.PlotGeoJsonImportIssueType;
+import com.abelium.inatrace.types.Language;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.ResourceBundleMessageSource;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -106,6 +108,48 @@ class PlotGeoJsonReaderTest {
 		assertTrue(error.getMessage().contains("EPSG::32717"));
 	}
 
+	/**
+	 * The UNOCACE operators work in Spanish and the toast shows this text verbatim, so
+	 * the message has to arrive translated, with the offending system named.
+	 */
+	@Test
+	void shouldReportFileProblemsInTheLanguageOfTheRequest() {
+
+		String utm17s = """
+				{"type":"FeatureCollection",
+				 "crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:EPSG::32717"}},
+				 "features":[]}
+				""";
+
+		assertEquals(
+				"Sistema de coordenadas no admitido «urn:ogc:def:crs:EPSG::32717»: "
+						+ "exporte la capa en WGS 84 (EPSG:4326)",
+				assertThrows(ApiException.class, () -> read(utm17s, Language.ES)).getMessage());
+
+		// The apostrophes of the English text survive MessageFormat unchanged.
+		assertEquals(
+				"Unsupported coordinate reference system 'urn:ogc:def:crs:EPSG::32717': "
+						+ "export the layer as WGS 84 (EPSG:4326)",
+				assertThrows(ApiException.class, () -> read(utm17s, Language.EN)).getMessage());
+
+		assertEquals("El archivo no es un JSON válido",
+				assertThrows(ApiException.class, () -> read("not json", Language.ES)).getMessage());
+		assertEquals("El archivo no es un FeatureCollection de GeoJSON",
+				assertThrows(ApiException.class, () -> read("[]", Language.ES)).getMessage());
+	}
+
+	/** The reasons listed in the "cannot be stored as plots" message of uploadGeoData. */
+	@Test
+	void shouldTranslateEveryGeometryIssue() {
+
+		PlotImportMessages spanish = messages(Language.ES);
+
+		assertEquals("La geometría no es un polígono", spanish.issue(PlotGeoJsonImportIssueType.UNSUPPORTED_GEOMETRY));
+		assertEquals("El polígono tiene varias partes", spanish.issue(PlotGeoJsonImportIssueType.MULTIPART_GEOMETRY));
+		assertEquals("El polígono tiene huecos", spanish.issue(PlotGeoJsonImportIssueType.POLYGON_WITH_HOLES));
+		assertEquals("Coordenadas no válidas", spanish.issue(PlotGeoJsonImportIssueType.INVALID_COORDINATES));
+	}
+
 	@Test
 	void shouldRejectFilesThatAreNotFeatureCollections() {
 
@@ -135,7 +179,21 @@ class PlotGeoJsonReaderTest {
 	}
 
 	private static List<PlotGeoJsonFeature> read(String json) throws ApiException {
-		return PlotGeoJsonReader.read(json.getBytes(StandardCharsets.UTF_8));
+		return read(json, Language.EN);
+	}
+
+	private static List<PlotGeoJsonFeature> read(String json, Language language) throws ApiException {
+		return PlotGeoJsonReader.read(json.getBytes(StandardCharsets.UTF_8), messages(language));
+	}
+
+	/**
+	 * The real bundle, not a stub: what is asserted is the text UNOCACE reads in the
+	 * toast, so a missing or mistyped key has to fail the test.
+	 */
+	private static PlotImportMessages messages(Language language) {
+		ResourceBundleMessageSource source = new ResourceBundleMessageSource();
+		source.setBasenames("i18n/messages");
+		return new PlotImportMessages(source, language);
 	}
 
 }

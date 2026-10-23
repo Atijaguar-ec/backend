@@ -17,10 +17,12 @@ import com.abelium.inatrace.db.entities.common.Plot;
 import com.abelium.inatrace.db.entities.common.PlotCoordinate;
 import com.abelium.inatrace.db.entities.common.UserCustomer;
 import com.abelium.inatrace.security.service.CustomUserDetails;
+import com.abelium.inatrace.types.Language;
 import com.abelium.inatrace.types.UserCustomerType;
 import com.mapbox.geojson.Point;
 import jakarta.annotation.PreDestroy;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +64,8 @@ public class PlotGeoJsonImportService extends BaseService {
 
 	private final TransactionTemplate transactionTemplate;
 
+	private final MessageSource messageSource;
+
 	private final ExecutorService geoIdExecutor = Executors.newSingleThreadExecutor(runnable -> {
 		Thread thread = new Thread(runnable, "plot-geoid-backfill");
 		thread.setDaemon(true);
@@ -70,10 +74,12 @@ public class PlotGeoJsonImportService extends BaseService {
 
 	public PlotGeoJsonImportService(CompanyQueries companyQueries,
 	                                PlotGeoIdGenerator plotGeoIdGenerator,
-	                                PlatformTransactionManager transactionManager) {
+	                                PlatformTransactionManager transactionManager,
+	                                MessageSource messageSource) {
 		this.companyQueries = companyQueries;
 		this.plotGeoIdGenerator = plotGeoIdGenerator;
 		this.transactionTemplate = new TransactionTemplate(transactionManager);
+		this.messageSource = messageSource;
 	}
 
 	@PreDestroy
@@ -84,6 +90,8 @@ public class PlotGeoJsonImportService extends BaseService {
 	/**
 	 * @param expectedPlotsToDelete required when applying: the preview's {@code plotsToDelete}
 	 * @param expectedPlotsToCreate required when applying: the preview's {@code plotsToCreate}
+	 * @param language the language of the request: file problems are reported to the
+	 *                 operator as text, so they are translated before leaving here
 	 */
 	@Transactional(rollbackFor = Exception.class)
 	public ApiPlotGeoJsonImportResponse importPlots(CustomUserDetails authUser,
@@ -93,13 +101,16 @@ public class PlotGeoJsonImportService extends BaseService {
 	                                                boolean apply,
 	                                                boolean skipInvalidFeatures,
 	                                                Long expectedPlotsToDelete,
-	                                                Integer expectedPlotsToCreate) throws ApiException {
+	                                                Integer expectedPlotsToCreate,
+	                                                Language language) throws ApiException {
+
+		PlotImportMessages messages = new PlotImportMessages(messageSource, language);
 
 		if (scope == null) {
-			throw new ApiException(ApiStatus.INVALID_REQUEST, "The import scope is required");
+			throw new ApiException(ApiStatus.INVALID_REQUEST, messages.get("plotImport.error.scopeRequired"));
 		}
 
-		List<PlotGeoJsonFeature> features = PlotGeoJsonReader.read(content);
+		List<PlotGeoJsonFeature> features = PlotGeoJsonReader.read(content, messages);
 		companyQueries.fetchCompany(companyId);
 
 		List<Long> scopeCompanyIds = new ArrayList<>();
@@ -115,7 +126,7 @@ public class PlotGeoJsonImportService extends BaseService {
 
 		int geoIdsPending = 0;
 		if (apply) {
-			checkApplicable(plan, skipInvalidFeatures, expectedPlotsToDelete, expectedPlotsToCreate);
+			checkApplicable(plan, skipInvalidFeatures, expectedPlotsToDelete, expectedPlotsToCreate, messages);
 			geoIdsPending = apply(plan);
 			logger.info("Plot GeoJSON import by user {} on company {} ({}): deleted {} plots in companies {}, created {}, skipped {} features",
 					authUser.getUserId(), companyId, scope, plan.plotsToDelete(), plan.companiesToReplace(),
@@ -128,21 +139,21 @@ public class PlotGeoJsonImportService extends BaseService {
 	private void checkApplicable(Plan plan,
 	                             boolean skipInvalidFeatures,
 	                             Long expectedPlotsToDelete,
-	                             Integer expectedPlotsToCreate) throws ApiException {
+	                             Integer expectedPlotsToCreate,
+	                             PlotImportMessages messages) throws ApiException {
 
 		if (plan.plots().isEmpty()) {
-			throw new ApiException(ApiStatus.VALIDATION_ERROR, "The file has no feature that can be imported");
+			throw new ApiException(ApiStatus.VALIDATION_ERROR, messages.get("plotImport.error.noImportableFeature"));
 		}
 		if (!plan.issues().isEmpty() && !skipInvalidFeatures) {
 			throw new ApiException(ApiStatus.VALIDATION_ERROR,
-					plan.issues().size() + " features cannot be imported; fix them or skip them explicitly");
+					messages.get("plotImport.error.issuesNotSkipped", plan.issues().size()));
 		}
 		if (expectedPlotsToDelete == null || expectedPlotsToCreate == null
 				|| expectedPlotsToDelete != plan.plotsToDelete()
 				|| expectedPlotsToCreate != plan.plots().size()) {
 			throw new ApiException(ApiStatus.VALIDATION_ERROR,
-					"The data changed since the preview (now " + plan.plotsToDelete() + " plots to delete and "
-							+ plan.plots().size() + " to create); preview the file again");
+					messages.get("plotImport.error.dataChanged", plan.plotsToDelete(), plan.plots().size()));
 		}
 	}
 

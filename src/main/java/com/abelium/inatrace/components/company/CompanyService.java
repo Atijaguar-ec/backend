@@ -12,6 +12,7 @@ import com.abelium.inatrace.components.company.mappers.PlotMapper;
 import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonFeature;
 import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonImportPlanner;
 import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonReader;
+import com.abelium.inatrace.components.company.plotimport.PlotImportMessages;
 import com.abelium.inatrace.components.company.types.CompanyAction;
 import com.abelium.inatrace.components.product.ProductTypeMapper;
 import com.abelium.inatrace.components.product.api.ApiFarmPlantInformation;
@@ -1359,36 +1360,42 @@ public class CompanyService extends BaseService {
 	}
 
 	@Transactional
-	public void uploadUserCustomerGeoData(CustomUserDetails authUser, Long id, MultipartFile file) throws ApiException {
+	public void uploadUserCustomerGeoData(CustomUserDetails authUser, Long id, MultipartFile file, Language language) throws ApiException {
 
 		UserCustomer userCustomer = fetchUserCustomer(id);
 		PermissionsUtil.checkUserIfCompanyEnrolledOrSystemAdmin(userCustomer.getCompany().getUsers().stream().toList(), authUser);
+
+		// The frontend shows this endpoint's errorMessage verbatim in a toast, so every
+		// message below has to come out in the operator's language.
+		PlotImportMessages messages = new PlotImportMessages(messageSource, language);
 
 		byte[] content;
 		try {
 			content = file.getBytes();
 		} catch (IOException e) {
 			logger.error("Error while reading GeoJSON file", e);
-			throw new ApiException(ApiStatus.ERROR, "Error while reading GeoJSON file");
+			throw new ApiException(ApiStatus.ERROR, messages.get("plotImport.error.readingFile"));
 		}
 
-		List<PlotGeoJsonFeature> features = PlotGeoJsonReader.read(content);
+		List<PlotGeoJsonFeature> features = PlotGeoJsonReader.read(content, messages);
 
 		// Reject the whole file instead of silently dropping what cannot be stored
 		// (multipolygons used to be skipped without a word).
 		String invalidFeatures = features.stream()
 				.filter(f -> f.geometryIssue() != null)
-				.map(f -> "#" + f.number() + " " + f.geometryIssue())
+				.map(f -> "#" + f.number() + " " + messages.issue(f.geometryIssue()))
 				.collect(Collectors.joining(", "));
 		if (!invalidFeatures.isEmpty()) {
-			throw new ApiException(ApiStatus.VALIDATION_ERROR, "Features that cannot be stored as plots: " + invalidFeatures);
+			throw new ApiException(ApiStatus.VALIDATION_ERROR,
+					messages.get("plotImport.error.unstorableFeatures", invalidFeatures));
 		}
 
 		ApiProductType crop = new ApiProductType();
 		crop.setId(userCustomer.getProductTypes().stream()
 				.map(t -> t.getProductType().getId())
 				.min(Comparator.naturalOrder())
-				.orElseThrow(() -> new ApiException(ApiStatus.VALIDATION_ERROR, "The farmer has no product type")));
+				.orElseThrow(() -> new ApiException(ApiStatus.VALIDATION_ERROR,
+						messages.get("plotImport.error.farmerWithoutProductType"))));
 
 		int plotIndex = 1;
 		int pointIndex = 1;

@@ -10,7 +10,9 @@ import com.abelium.inatrace.components.company.plotimport.PlotGeoJsonImportPlann
 import com.abelium.inatrace.components.company.types.PlotGeoJsonImportIssueType;
 import com.abelium.inatrace.components.company.types.PlotGeoJsonImportScope;
 import com.abelium.inatrace.types.CocoaVariety;
+import com.abelium.inatrace.types.Language;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.ResourceBundleMessageSource;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -155,7 +157,10 @@ class PlotGeoJsonImportPlannerTest {
 
 	private static Plan plan(PlotGeoJsonImportScope scope, String... features) throws ApiException {
 		String json = "{\"type\":\"FeatureCollection\",\"features\":[" + String.join(",", features) + "]}";
-		List<PlotGeoJsonFeature> read = PlotGeoJsonReader.read(json.getBytes(StandardCharsets.UTF_8));
+		ResourceBundleMessageSource source = new ResourceBundleMessageSource();
+		source.setBasenames("i18n/messages");
+		List<PlotGeoJsonFeature> read = PlotGeoJsonReader.read(json.getBytes(StandardCharsets.UTF_8),
+				new PlotImportMessages(source, Language.EN));
 		return PlotGeoJsonImportPlanner.plan(read, COMPANIES, FARMERS, PRODUCT_TYPES, scope);
 	}
 

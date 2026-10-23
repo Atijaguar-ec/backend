@@ -1424,6 +1424,28 @@ quedaron pendientes (`geoIdsPending`) y el log cierra con
 transacción (§14.5): 100 llamadas HTTP tardan minutos. Si el contenedor se reinicia en
 medio, los que falten se generan desde el mapa (*Actualizar*).
 
+### 19.4-bis Los mensajes de error van traducidos
+
+> Añadido el **2026-10-22**, tras el reporte de UNOCACE («no puedo cargar polígonos»):
+> el aviso salía en inglés y al operador no le decía nada.
+
+Un problema **del archivo entero** viaja como `ApiException`, que lleva texto plano y
+no una clave, y el frontend lo pinta tal cual en el toast. Por eso se traduce aquí,
+con las claves `plotImport.*` de `i18n/messages_{en,es,de,rw}.properties` y el
+envoltorio `plotimport/PlotImportMessages` (`MessageSource` + `Language`). Las
+incidencias **por elemento** no: viajan como `PlotGeoJsonImportIssueType` y las
+traduce el frontend (`issueLabel()`).
+
+- `uploadGeoData` e `import-geojson` leen la cabecera `language`; el
+  `LanguageInterceptor` del frontend la manda en toda petición (`ES` por defecto).
+- El bundle se lee como **ISO-8859-1**: `CustomLanguageConfiguration` no fija
+  `defaultEncoding`, y hay líneas antiguas en Latin-1 que se romperían si se cambiara.
+  Escribe los acentos como `\uXXXX`, nunca el carácter crudo.
+- Con argumentos, el valor pasa por `MessageFormat`: un apóstrofo literal se escribe
+  doble (`''`), como en la clave `plotImport.error.unsupportedCrs` del inglés.
+- El rechazo por CRS es el que más se ve: QGIS exportando en UTM 17S (EPSG:32717)
+  en vez de WGS 84. Ahora lo dice en castellano y nombra el sistema.
+
 ### 19.5 Arreglos en la subida por agricultor (`uploadGeoData`)
 
 - Ignoraba en silencio todo `MultiPolygon`: con el archivo de UNOCACE respondía OK y
@@ -1439,8 +1461,12 @@ medio, los que falten se generan desde el mapa (*Actualizar*).
 mvn -q -o test -Dtest='PlotGeoJson*Test' -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-14 tests (lector 8, planificador 6). Los JPQL solo se prueban contra una base real:
-el procedimiento con una copia de la BD y un túnel SSH está en el plan de `docs/`.
+16 tests (lector 10, planificador 6). Dos de los del lector comprueban la traducción
+(§19.4-bis) contra el bundle real, no un doble: afirman el texto exacto en castellano
+y en inglés, así que una clave que falte o esté mal escrita los pone en rojo.
+
+Los JPQL solo se prueban contra una base real: el procedimiento con una copia de la BD
+y un túnel SSH está en el plan de `docs/`.
 
 ---
 

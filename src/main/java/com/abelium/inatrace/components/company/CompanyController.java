@@ -222,9 +222,10 @@ public class CompanyController {
     public ApiDefaultResponse uploadUserCustomerGeoData(
             @AuthenticationPrincipal CustomUserDetails authUser,
             @Valid @Parameter(description = "User customer ID", required = true) @PathVariable("id") Long id,
+            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
             @RequestParam("file") MultipartFile file) throws ApiException {
 
-        companyService.uploadUserCustomerGeoData(authUser, id, file);
+        companyService.uploadUserCustomerGeoData(authUser, id, file, language);
 
         return new ApiDefaultResponse();
     }
@@ -339,6 +340,7 @@ public class CompanyController {
     public ApiResponse<ApiPlotGeoJsonImportResponse> importPlotsGeoJson(
             @AuthenticationPrincipal CustomUserDetails authUser,
             @Parameter(description = "Company ID", required = true) @PathVariable("id") Long id,
+            @RequestHeader(value = "language", defaultValue = "EN", required = false) Language language,
             @RequestParam("file") MultipartFile file,
             @Parameter(description = "Which existing plots are replaced", required = true)
             @RequestParam("scope") PlotGeoJsonImportScope scope,
@@ -352,7 +354,7 @@ public class CompanyController {
             @RequestParam(value = "expectedPlotsToCreate", required = false) Integer expectedPlotsToCreate
     ) throws ApiException, IOException {
         return new ApiResponse<>(plotGeoJsonImportService.importPlots(authUser, id, file.getBytes(), scope, apply,
-                skipInvalidFeatures, expectedPlotsToDelete, expectedPlotsToCreate));
+                skipInvalidFeatures, expectedPlotsToDelete, expectedPlotsToCreate, language));
     }
 
     @GetMapping(value = "/{id}/value-chains")

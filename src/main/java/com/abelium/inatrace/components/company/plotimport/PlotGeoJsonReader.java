@@ -41,10 +41,10 @@ public final class PlotGeoJsonReader {
 	private PlotGeoJsonReader() {
 	}
 
-	public static List<PlotGeoJsonFeature> read(byte[] content) throws ApiException {
+	public static List<PlotGeoJsonFeature> read(byte[] content, PlotImportMessages messages) throws ApiException {
 
-		JsonObject collection = parseCollection(content);
-		checkCoordinateReferenceSystem(collection);
+		JsonObject collection = parseCollection(content, messages);
+		checkCoordinateReferenceSystem(collection, messages);
 
 		JsonArray features = collection.getAsJsonArray("features");
 		List<PlotGeoJsonFeature> result = new ArrayList<>(features.size());
@@ -54,20 +54,20 @@ public final class PlotGeoJsonReader {
 		return result;
 	}
 
-	private static JsonObject parseCollection(byte[] content) throws ApiException {
+	private static JsonObject parseCollection(byte[] content, PlotImportMessages messages) throws ApiException {
 
 		JsonElement root;
 		try {
 			root = JsonParser.parseString(new String(content, StandardCharsets.UTF_8));
 		} catch (JsonParseException e) {
-			throw new ApiException(ApiStatus.VALIDATION_ERROR, "The file is not valid JSON");
+			throw new ApiException(ApiStatus.VALIDATION_ERROR, messages.get("plotImport.error.fileNotJson"));
 		}
 
 		if (!root.isJsonObject()
 				|| !"FeatureCollection".equals(textMember(root.getAsJsonObject(), "type"))
 				|| !root.getAsJsonObject().has("features")
 				|| !root.getAsJsonObject().get("features").isJsonArray()) {
-			throw new ApiException(ApiStatus.VALIDATION_ERROR, "The file is not a GeoJSON FeatureCollection");
+			throw new ApiException(ApiStatus.VALIDATION_ERROR, messages.get("plotImport.error.notFeatureCollection"));
 		}
 		return root.getAsJsonObject();
 	}
@@ -77,7 +77,7 @@ public final class PlotGeoJsonReader {
 	 * carry a {@code crs} member. A projected one (UTM, for example) would be stored as
 	 * nonsense coordinates, so it is refused instead of silently reprojected.
 	 */
-	private static void checkCoordinateReferenceSystem(JsonObject collection) throws ApiException {
+	private static void checkCoordinateReferenceSystem(JsonObject collection, PlotImportMessages messages) throws ApiException {
 
 		JsonElement crs = collection.get("crs");
 		if (crs == null || crs.isJsonNull()) {
@@ -93,7 +93,7 @@ public final class PlotGeoJsonReader {
 		String normalized = name == null ? "" : name.toUpperCase(Locale.ROOT);
 		if (!normalized.endsWith("CRS84") && !normalized.endsWith("EPSG::4326") && !normalized.endsWith("EPSG:4326")) {
 			throw new ApiException(ApiStatus.VALIDATION_ERROR,
-					"Unsupported coordinate reference system '" + name + "': export the layer as WGS 84 (EPSG:4326)");
+					messages.get("plotImport.error.unsupportedCrs", name));
 		}
 	}
 
