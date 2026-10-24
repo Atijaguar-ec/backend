@@ -1741,3 +1741,59 @@ Repara la base de FV sin tocar la de UNOCACE y sin modificar `V4`-`V10` (Flyway 
 3. Restituye `facility.displayquotabalance = true` en los centros de acopio de las empresas con cupo activo.
 
 **Pendiente deliberadamente fuera de la migración:** los correlativos que `V5` escribió en `stockorder.deliveryreceipt` de las compras históricas de las asociaciones de FV. `generateNextDeliveryReceipt` asigna `MAX(deliveryreceipt) + 1` por empresa, de modo que un relleno retroactivo de las empresas que quedaron sin numerar (ids 1, 5 y 7 en la base de stage) duplicaría números si ya se emitió alguno en caliente. Requiere decisión funcional sobre si se renumera por completo o se numera a continuación del máximo actual.
+
+---
+
+## 29. Secuencias de Hibernate tras la migración MySQL → PostgreSQL: el caso `revinfo` (2026-10-24)
+
+### 29.1 Síntoma
+
+Desde el 2026-10-22, en la producción nueva de UNOCACE:
+
+```
+DataIntegrityViolationException: duplicate key value violates unique constraint "revinfo_pkey"
+  Detail: Key (rev)=(1) already exists.   ... luego (2), (3), (4) ...
+```
+
+20 peticiones murieron con un 500. Los controladores afectados, por frecuencia:
+`CompanyController.updateUserCustomer` (9), `CompanyController.uploadUserCustomerGeoData`
+(8) y `StockOrderController.createOrUpdateStockOrder` (3). Es decir: **editar un
+agricultor, subir polígonos y guardar una entrega**. El reporte de campo fue «no puedo
+cargar polígonos»; el CRS del archivo no tenía nada que ver.
+
+### 29.2 Causa
+
+`CustomRevisionEntity` extiende `DefaultRevisionEntity`, cuyo id lo asigna el
+`OrderedSequenceGenerator` de Envers con el optimizador *pooled*. Ese optimizador
+interpreta el valor que devuelve `nextval` como el **techo** del bloque y reparte
+`(valor - incremento, valor]`.
+
+En producción la secuencia quedó así tras migrar los datos:
+
+| | |
+|---|---|
+| `revinfo_seq` | `start=1`, `increment_by=50`, `last_value=51` |
+| `revinfo` | 36 filas, `rev` de 1 a 36, la más nueva de 2026-03-13 (migrada de MySQL) |
+
+Con `nextval = 51` el bloque repartido es `(1, 51]`, o sea 2…51. Los primeros 35 ya
+existían. No es que la secuencia estuviera *atrasada* —51 > 36—: es que el **bloque**
+empieza dentro del rango ocupado.
+
+### 29.3 Arreglo
+
+```sql
+SELECT setval('revinfo_seq', (SELECT COALESCE(MAX(rev),0) FROM revinfo) + 50, true);
+```
+
+Y **reiniciar el backend**: el bloque vive en memoria del JVM y sin reinicio sigue
+chocando aunque la secuencia ya esté bien.
+
+### 29.4 Qué revisar en la próxima migración
+
+- El barrido de secuencias desfasadas (`last_value < max(columna)`) **no detecta esto**:
+  la secuencia iba por delante. Hay que comparar contra el **inicio del bloque**
+  (`last_value - increment_by`), no contra `last_value`.
+- `plot_aud` llegó **vacía** de la migración: no hay histórico de auditoría de parcelas
+  anterior al 2026-10-19. El respaldo es la única vía de recuperación de esos datos.
+- La tabla de historial de Flyway se llama **`schema_version`**
+  (`spring.flyway.table`), no `flyway_schema_history`.
