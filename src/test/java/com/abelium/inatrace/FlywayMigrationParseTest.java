@@ -31,7 +31,8 @@ class FlywayMigrationParseTest {
             "db/migration/V9__add_stockorder_cancellation.sql",
             "db/migration/V10__add_public_delivery_receipt_config.sql",
             "db/migration/V11__align_fv_tenant_configuration.sql",
-            "db/migration/V12__disable_quota_balance_for_fv.sql"
+            "db/migration/V12__disable_quota_balance_for_fv.sql",
+            "db/migration/V13__grant_mcp_ro_bi_schema.sql"
         };
 
         for (String file : files) {
