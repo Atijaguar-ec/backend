@@ -1331,8 +1331,13 @@ UNOCACE. La copia está en la máquina de Álvaro y el procedimiento, en el plan
 - Es idempotente y aborta si no existe la empresa `UNOCACE`. **Nunca en Fortaleza.**
 - Hay que correrlo **después** de desplegar este código: con el catálogo nuevo y el
   código viejo, el combo de entregas no orgánicas queda vacío.
-- Ejecutado en pruebas el 2026-09-16. Respaldo en el servidor:
+- Ejecutado en pruebas el 2026-09-16. Respaldo en el servidor de staging:
   `/root/respaldos/antes-catalogo-certificaciones-20260916_133707.dump`.
+- Replicado y ejecutado en producción el 2026-10-29 con respaldo previo:
+  `/root/respaldos/inatrace_prod_unocace_antes_certificaciones_20261029_112555.dump`.
+  Se actualizaron `certificationtype`, `certificationtypetranslation` (ES: 'Comercio Justo convencional'),
+  `stockorder` (entregas y variedad a 1/2) y `company.configuration` desactivando `parcelLotFreeText`
+  para restaurar el selector de parcela y auto-completado de variedad y certificación.
 
 ### 18.5 Antes de tocar esto, revisá
 
