@@ -173,6 +173,22 @@ class PlotGeoJsonReaderTest {
 		assertNull(feature.text("MISSING"));
 	}
 
+	@Test
+	void shouldResolveFirstTextAndFirstNumberCaseInsensitively() throws ApiException {
+
+		PlotGeoJsonFeature feature = read("""
+				{"type":"FeatureCollection","features":[{"type":"Feature",
+				 "properties":{"cod_lote":"LOTE-1","cultivopri":"CACAO CCN51","hectarea":"2.75"},
+				 "geometry":{"type":"Point","coordinates":[-79.5,-2.2]}}]}
+				""").get(0);
+
+		assertEquals("LOTE-1", feature.firstText("COD_LOTE", "LOTE"));
+		assertEquals("CACAO CCN51", feature.firstText("CULTIVOPRI", "CULTIVO"));
+		assertEquals(2.75, feature.firstNumber("HECTAREA", "HA"));
+		assertNull(feature.firstText("UNKNOWN", "NON_EXISTING"));
+		assertNull(feature.firstNumber("UNKNOWN", "NON_EXISTING"));
+	}
+
 	private static String collection(String geometry) {
 		return "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":"
 				+ geometry + "}]}";

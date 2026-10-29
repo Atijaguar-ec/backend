@@ -62,4 +62,52 @@ public record PlotGeoJsonFeature(int number,
 		}
 	}
 
+	/**
+	 * Returns the first non-blank text property found among candidate names.
+	 * Checks exact name match first, then case-insensitively across property keys.
+	 */
+	public String firstText(String... candidateNames) {
+		for (String name : candidateNames) {
+			String val = text(name);
+			if (val != null) {
+				return val;
+			}
+		}
+		for (String candidate : candidateNames) {
+			for (String key : properties.keySet()) {
+				if (key.equalsIgnoreCase(candidate)) {
+					String val = text(key);
+					if (val != null) {
+						return val;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Returns the first valid number property found among candidate names.
+	 * Checks exact name match first, then case-insensitively across property keys.
+	 */
+	public Double firstNumber(String... candidateNames) {
+		for (String name : candidateNames) {
+			Double val = number(name);
+			if (val != null) {
+				return val;
+			}
+		}
+		for (String candidate : candidateNames) {
+			for (String key : properties.keySet()) {
+				if (key.equalsIgnoreCase(candidate)) {
+					Double val = number(key);
+					if (val != null) {
+						return val;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
 }

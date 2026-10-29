@@ -212,7 +212,7 @@ public final class PlotGeoJsonImportPlanner {
 	 * Variety 1 is stored as {@code ORGANICO} and shown as "Nacional" to UNOCACE; see
 	 * {@link CocoaVariety} and agent-context §18.
 	 */
-	static CocoaVariety cocoaVariety(String crop) {
+	public static CocoaVariety cocoaVariety(String crop) {
 		String normalized = normalizeName(crop);
 		if (normalized == null) {
 			return null;
@@ -233,7 +233,7 @@ public final class PlotGeoJsonImportPlanner {
 		return value.trim().toUpperCase(Locale.ROOT);
 	}
 
-	static String normalizeName(String value) {
+	public static String normalizeName(String value) {
 		if (value == null || value.isBlank()) {
 			return null;
 		}

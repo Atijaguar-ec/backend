@@ -8,7 +8,7 @@
 > naming, reglas de migraciones). Para infraestructura y despliegue específicos
 > de cada una, ver:
 > - `backend/scripts/fortaleza/agent-context.md` (Jenkins, servidores ESPAM/CEDIA)
-> - `backend/scripts/unocace/agent-context.md` (GitHub Actions, servidor 95.217.182.220)
+> - `backend/scripts/unocace/agent-context.md` (GitHub Actions, servidor staging UNOCACE)
 > - `ina-docs/despliegue/matriz-fortaleza-unocace.md` (qué difiere entre ambas)
 
 ---
@@ -446,7 +446,7 @@ Antes de hacer commit de cualquier cambio en el backend, verificar:
 ## 11. Despliegue a Producción Fortaleza — Trampas Verificadas en Vivo
 
 > Extraído el **2026-08-06/07** durante el primer despliegue real a producción
-> (`gizpro`, `10.10.102.26` interno / `190.15.143.192` público) tras la
+> (`<PROD_HOST_NAME>`, `<PROD_INTERNAL_IP>` interno / `<PROD_PUBLIC_IP>` público) tras la
 > migración a PostgreSQL 16 + Keycloak 26. Todo lo de abajo fue **verificado
 > contra los servidores**, no inferido leyendo archivos. Varias afirmaciones
 > aquí **contradicen** versiones anteriores de la documentación: cuando eso
@@ -454,9 +454,9 @@ Antes de hacer commit de cualquier cambio en el backend, verificar:
 
 ### 11.1 Los dos entornos de Fortaleza NO son intercambiables
 
-| | Staging `190.15.143.254` | Producción `10.10.102.26` |
+| | Staging `<STAGING_HOST>` | Producción `<PROD_INTERNAL_HOST>` |
 |---|---|---|
-| Usuario SSH | `giz` | `administrador` |
+| Usuario SSH | `${SSH_STAGING_USER}` | `${SSH_PROD_USER}` |
 | Base de datos app | `inatrace_fortaleza_stage` | `inatrace_prod_fortaleza` |
 | Usuario de BD | `inatrace` | `inatrace_prod_fortaleza` |
 | **Realm de Keycloak** | **`fortaleza`** | **`inatrace_fortaleza`** |
@@ -488,7 +488,7 @@ ningún error visible**. Antes de cualquier deploy a `main`, correr:
 
 ```bash
 python3 backend/scripts/fortaleza/preflight_prod.py \
-    --ssh administrador@190.15.143.192 -i ~/.ssh/cedia_key --backup
+    --ssh ${SSH_PROD_USER}@<PROD_PUBLIC_IP> -i <PATH_TO_SSH_KEY> --backup
 ```
 
 Ese script (solo lectura salvo `--backup`) compara el `DB_VOLUME` del `.env`
@@ -580,7 +580,7 @@ Hibernate, no contra el JPQL del código.
 
 ### 11.8 Infraestructura del agente Jenkins
 
-Jenkins corre en el servidor de **staging** (`190.15.143.254`), no en uno
+Jenkins corre en el servidor de **staging** (`<STAGING_HOST>`), no en uno
 dedicado. Dos jobs: `Deploy-Backend` y `Deploy-Frontend`, ambos manuales con
 parámetro `BRANCH` (`staging` o `main`) — no hay trigger automático por push.
 
@@ -1454,6 +1454,11 @@ traduce el frontend (`issueLabel()`).
 - Calculaba el área como `m² / 1000`: los tamaños salían **10 veces** más grandes.
   Ahora `m² / 10 000`. Los lotes subidos antes por esa vía conservan el tamaño malo.
 - Si el agricultor no tenía tipo de producto, fallaba con `IndexOutOfBounds`.
+- **Reconocimiento de propiedades GIS (2026-10-29):**
+  - `plotName`: extrae `COD_LOTE` (o variantes `LOTE`, `CODIGO_LOTE`, `ID_DE_UN`, `NAME`, `NOMBRE`, `PLOT_NAME` de forma insensible a mayúsculas), con fallback a `"Plot " + index`.
+  - `crop` y `cocoaVariety`: extrae `CULTIVOPRI` (o variantes `CULTIVOGEN`, `CULTIVO`, `CROP`, `VARIEDAD`, `VARIETY`), mapea contra el catálogo de `ProductType` (ej. `CACAO CCN51`, `CACAO NACIONAL`) y asigna `cocoaVariety` (`CCN51` / `ORGANICO`) usando `PlotGeoJsonImportPlanner.cocoaVariety`.
+  - `size`: extrae `HECTAREA` (o variantes `HA`, `AREA`, `SIZE`, `SUPERFICIE`) si es $> 0$, con fallback al área geodésica.
+  - `createUserCustomerPlot` ahora persiste `cocoaVariety`, `productionEstimate` y `certificationType`.
 
 ### 19.6 Pruebas
 

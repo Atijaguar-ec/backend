@@ -1390,19 +1390,45 @@ public class CompanyService extends BaseService {
 					messages.get("plotImport.error.unstorableFeatures", invalidFeatures));
 		}
 
-		ApiProductType crop = new ApiProductType();
-		crop.setId(userCustomer.getProductTypes().stream()
+		Long defaultCropId = userCustomer.getProductTypes().stream()
 				.map(t -> t.getProductType().getId())
 				.min(Comparator.naturalOrder())
 				.orElseThrow(() -> new ApiException(ApiStatus.VALIDATION_ERROR,
-						messages.get("plotImport.error.farmerWithoutProductType"))));
+						messages.get("plotImport.error.farmerWithoutProductType")));
+
+		Map<String, Long> productTypeIdByName = new HashMap<>();
+		em.createQuery("SELECT p.id, p.name FROM ProductType p", Object[].class)
+				.getResultList()
+				.stream()
+				.filter(row -> row[1] != null && PlotGeoJsonImportPlanner.normalizeName((String) row[1]) != null)
+				.sorted(Comparator.comparing(row -> (Long) row[0]))
+				.forEach(row -> productTypeIdByName.putIfAbsent(
+						PlotGeoJsonImportPlanner.normalizeName((String) row[1]), (Long) row[0]));
 
 		int plotIndex = 1;
 		int pointIndex = 1;
 		for (PlotGeoJsonFeature feature : features) {
 
+			String cropText = feature.firstText(
+					PlotGeoJsonImportPlanner.CROP_PROPERTY,
+					"CULTIVOGEN", "CULTIVO", "CROP", "VARIEDAD", "VARIETY");
+			String normalizedCrop = PlotGeoJsonImportPlanner.normalizeName(cropText);
+			CocoaVariety variety = PlotGeoJsonImportPlanner.cocoaVariety(cropText);
+
+			Long cropId = (normalizedCrop != null && productTypeIdByName.containsKey(normalizedCrop))
+					? productTypeIdByName.get(normalizedCrop)
+					: (variety == CocoaVariety.CCN51 && productTypeIdByName.containsKey("CACAO CCN51")
+					? productTypeIdByName.get("CACAO CCN51")
+					: (variety == CocoaVariety.ORGANICO && productTypeIdByName.containsKey("CACAO NACIONAL")
+					? productTypeIdByName.get("CACAO NACIONAL")
+					: defaultCropId));
+
+			ApiProductType crop = new ApiProductType();
+			crop.setId(cropId);
+
 			ApiPlot apiPlot = new ApiPlot();
 			apiPlot.setCrop(crop);
+			apiPlot.setCocoaVariety(variety);
 			apiPlot.setCoordinates(feature.ring().stream().map(lngLat -> {
 				ApiPlotCoordinate coordinate = new ApiPlotCoordinate();
 				coordinate.setLongitude(lngLat.longitude());
@@ -1410,12 +1436,28 @@ public class CompanyService extends BaseService {
 				return coordinate;
 			}).collect(Collectors.toList()));
 
-			if (feature.isPolygon()) {
+			String plotName = feature.firstText(
+					PlotGeoJsonImportPlanner.PLOT_NAME_PROPERTY,
+					"LOTE", "CODIGO_LOTE", "ID_DE_UN", "NAME", "NOMBRE", "PLOT_NAME");
+
+			if (plotName != null && !plotName.isBlank()) {
+				apiPlot.setPlotName(plotName.trim());
+			} else if (feature.isPolygon()) {
 				apiPlot.setPlotName("Plot " + plotIndex++);
-				apiPlot.setSize(Math.floor(feature.areaHectares() * 100) / 100);
-				apiPlot.setUnit(PlotGeoJsonImportPlanner.HECTARE_UNIT);
 			} else {
 				apiPlot.setPlotName("Point " + pointIndex++);
+			}
+
+			Double surveyedSize = feature.firstNumber(
+					PlotGeoJsonImportPlanner.SIZE_PROPERTY,
+					"HA", "AREA", "SIZE", "SUPERFICIE");
+
+			if (surveyedSize != null && surveyedSize > 0) {
+				apiPlot.setSize(surveyedSize);
+				apiPlot.setUnit(PlotGeoJsonImportPlanner.HECTARE_UNIT);
+			} else if (feature.isPolygon()) {
+				apiPlot.setSize(Math.floor(feature.areaHectares() * 100) / 100);
+				apiPlot.setUnit(PlotGeoJsonImportPlanner.HECTARE_UNIT);
 			}
 
 			createUserCustomerPlot(id, authUser, Language.EN, apiPlot);
@@ -1446,6 +1488,11 @@ public class CompanyService extends BaseService {
 		plot.setNumberOfPlants(request.getNumberOfPlants());
 		plot.setUnit(request.getUnit());
 		plot.setSize(request.getSize());
+		plot.setProductionEstimate(request.getProductionEstimate());
+		if (request.getCertificationType() != null) {
+			plot.setCertificationType(fetchPlotCertificationType(request.getCertificationType()));
+		}
+		plot.setCocoaVariety(request.getCocoaVariety());
 		plot.setOrganicStartOfTransition(request.getOrganicStartOfTransition());
 		plot.setFarmer(userCustomer);
 		plot.setLastUpdated(new Date());
