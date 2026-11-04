@@ -35,10 +35,19 @@ public class OpenAPIConfiguration {
 	}
 
 	@Bean
+	public GroupedOpenApi mieruCacaoOpenApi() {
+		return GroupedOpenApi.builder()
+				.group("mieru-cacao")
+				.displayName("1. Interoperabilidad Mieru Cacao (Japón / JICA - UNOCACE)")
+				.pathsToMatch("/**/integration/v1/**")
+				.build();
+	}
+
+	@Bean
 	public GroupedOpenApi erpOpenApi() {
 		return GroupedOpenApi.builder()
 				.group("erp-interoperabilidad")
-				.displayName("1. Interoperabilidad ERP Contable & Báscula (Fortaleza del Valle)")
+				.displayName("2. Interoperabilidad ERP Contable & Báscula (Fortaleza del Valle)")
 				.pathsToMatch(
 						"/**/company/userCustomers/**/plots",
 						"/**/company/userCustomers/**/FARMER",
@@ -56,7 +65,7 @@ public class OpenAPIConfiguration {
 	public GroupedOpenApi allOpenApi() {
 		return GroupedOpenApi.builder()
 				.group("sistema-completo")
-				.displayName("2. Sistema Completo INATrace (Todos los módulos)")
+				.displayName("3. Sistema Completo INATrace (Todos los módulos)")
 				.pathsToMatch("/**")
 				.build();
 	}

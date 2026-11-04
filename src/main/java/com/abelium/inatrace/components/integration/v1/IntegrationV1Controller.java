@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/integration/v1", "/integration/v1"})
+@RequestMapping("/integration/v1")
 @Tag(name = "Integration V1 - Mieru Cacao", description = "Read-only REST Integration API for Mieru Cacao platform")
 public class IntegrationV1Controller {
 

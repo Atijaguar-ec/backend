@@ -24,7 +24,7 @@ springdoc.default-produces-media-type = application/json
 springdoc.api-docs.path = /api/v3/api-docs
 springdoc.swagger-ui.path = /api/swagger-ui.html
 springdoc.swagger-ui.groups-order = ASC
-springdoc.swagger-ui.urls-primary-name = erp-interoperabilidad
+springdoc.swagger-ui.urls-primary-name = mieru-cacao
 
 # DataSource settings
 INATrace.database.name =
