@@ -7,6 +7,7 @@ import com.abelium.inatrace.components.integration.v1.services.IntegrationV1Serv
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,6 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/integration/v1")
+@SecurityRequirement(name = "Bearer Authentication")
 @Tag(name = "Integration V1 - Mieru Cacao", description = "Read-only REST Integration API for Mieru Cacao platform")
 public class IntegrationV1Controller {
 
