@@ -11,6 +11,11 @@ ALTER TABLE public.usercustomer
     ADD COLUMN IF NOT EXISTS creationtimestamp timestamp(6) with time zone NULL,
     ADD COLUMN IF NOT EXISTS updatetimestamp timestamp(6) with time zone NULL;
 
+UPDATE public.usercustomer
+SET creationtimestamp = COALESCE(creationtimestamp, statusupdatetimestamp, NOW()),
+    updatetimestamp = COALESCE(updatetimestamp, statusupdatetimestamp, NOW())
+WHERE creationtimestamp IS NULL OR updatetimestamp IS NULL;
+
 ALTER TABLE public.usercustomer_aud
     ADD COLUMN IF NOT EXISTS creationtimestamp timestamp(6) with time zone NULL,
     ADD COLUMN IF NOT EXISTS updatetimestamp timestamp(6) with time zone NULL;

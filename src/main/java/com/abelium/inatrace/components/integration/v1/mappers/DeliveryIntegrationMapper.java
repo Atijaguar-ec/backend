@@ -2,6 +2,7 @@ package com.abelium.inatrace.components.integration.v1.mappers;
 
 import com.abelium.inatrace.components.integration.v1.dto.ApiDeliveryIntegration;
 import com.abelium.inatrace.components.integration.v1.dto.ApiDeliveryIntegration.*;
+import com.abelium.inatrace.db.entities.codebook.MeasureUnitType;
 import com.abelium.inatrace.db.entities.common.Plot;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
 
@@ -12,6 +13,25 @@ import java.util.List;
 public class DeliveryIntegrationMapper {
 
     private static final BigDecimal LB_KG_FACTOR = new BigDecimal("0.45359237");
+    private static final BigDecimal QQ_KG_FACTOR = new BigDecimal("45.359237");
+
+    public static UnitDto resolveNormalizedUnit(MeasureUnitType mut, String defaultCode, BigDecimal defaultFactor) {
+        if (mut == null) {
+            return new UnitDto(defaultCode, defaultFactor);
+        }
+        String rawCode = mut.getCode() != null ? mut.getCode().trim().toUpperCase() : defaultCode;
+        if ("PESOLIBRA".equals(rawCode) || "LB".equals(rawCode) || "LIBRA".equals(rawCode) || "LIBRAS".equals(rawCode)) {
+            return new UnitDto("LB", LB_KG_FACTOR);
+        }
+        if ("PESOKG".equals(rawCode) || "PESOKILO".equals(rawCode) || "KG".equals(rawCode) || "KILO".equals(rawCode)) {
+            return new UnitDto("KG", BigDecimal.ONE);
+        }
+        if ("QUINTALES".equals(rawCode) || "QUINTAL".equals(rawCode) || "QQ".equals(rawCode)) {
+            return new UnitDto("QQ", QQ_KG_FACTOR);
+        }
+        BigDecimal factor = mut.getWeight() != null ? mut.getWeight() : defaultFactor;
+        return new UnitDto(mut.getCode() != null ? mut.getCode() : defaultCode, factor);
+    }
 
     public static ApiDeliveryIntegration toDto(StockOrder order) {
         return toDto(order, null);
@@ -31,7 +51,7 @@ public class DeliveryIntegrationMapper {
         }
 
         if (order.getFacility() != null) {
-            dto.setFacility(new IdNameDto(order.getFacility().getId(), order.getFacility().getName()));
+            dto.setFacility(new IdNameDto(order.getFacility().getId(), FacilityIntegrationMapper.resolveFacilityName(order.getFacility())));
         }
 
         if (order.getProducerUserCustomer() != null) {
@@ -42,7 +62,7 @@ public class DeliveryIntegrationMapper {
         dto.setDeliveryDate(order.getDeliveryTime() != null ? order.getDeliveryTime() : order.getProductionDate());
 
         if (order.getSemiProduct() != null) {
-            dto.setSemiProduct(new IdNameDto(order.getSemiProduct().getId(), order.getSemiProduct().getName()));
+            dto.setSemiProduct(new IdNameDto(order.getSemiProduct().getId(), FacilityIntegrationMapper.resolveSemiProductName(order.getSemiProduct())));
         } else {
             dto.setSemiProduct(new IdNameDto(1L, "Cacao en baba"));
         }
@@ -92,14 +112,7 @@ public class DeliveryIntegrationMapper {
         dto.setOrganic(Boolean.TRUE.equals(order.getOrganic()));
 
         // Unit
-        if (order.getMeasurementUnitType() != null) {
-            String unitCode = order.getMeasurementUnitType().getCode();
-            BigDecimal factor = order.getMeasurementUnitType().getWeight() != null ?
-                    order.getMeasurementUnitType().getWeight() : LB_KG_FACTOR;
-            dto.setUnit(new UnitDto(unitCode != null ? unitCode : "LB", factor));
-        } else {
-            dto.setUnit(new UnitDto("LB", LB_KG_FACTOR));
-        }
+        dto.setUnit(resolveNormalizedUnit(order.getMeasurementUnitType(), "LB", LB_KG_FACTOR));
 
         // Weights
         BigDecimal gross = order.getTotalGrossQuantity() != null ? order.getTotalGrossQuantity() : order.getTotalQuantity();

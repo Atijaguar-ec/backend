@@ -700,4 +700,91 @@ class IntegrationV1ControllerTest {
         // Base = 100 - 5 = 95. Moisture = 95 * 10% = 9.50. Net = 95 - 2 - 9.50 = 83.50
         assertEquals(new BigDecimal("83.50"), dto.getNetQuantity());
     }
+
+    @Test
+    @DisplayName("QA Anti-Regression: PESOLIBRA (weight 2.20 in legacy DB) normalizes to LB with 0.45359237 kg factor")
+    void testMeasureUnitTypeNormalization() {
+        MeasureUnitType pesolibra = new MeasureUnitType("PESOLIBRA", "Libra", new BigDecimal("2.20"));
+        StockOrder order = new StockOrder();
+        ReflectionTestUtils.setField(order, "id", 88300L);
+        order.setMeasurementUnitType(pesolibra);
+
+        ApiDeliveryIntegration dto = DeliveryIntegrationMapper.toDto(order);
+        assertNotNull(dto);
+        assertEquals("LB", dto.getUnit().getCode());
+        assertEquals(new BigDecimal("0.45359237"), dto.getUnit().getKgFactor());
+
+        MeasureUnitType pesokg = new MeasureUnitType("PESOKG", "kg", new BigDecimal("1.00"));
+        order.setMeasurementUnitType(pesokg);
+        ApiDeliveryIntegration dtoKg = DeliveryIntegrationMapper.toDto(order);
+        assertEquals("KG", dtoKg.getUnit().getCode());
+        assertEquals(BigDecimal.ONE, dtoKg.getUnit().getKgFactor());
+
+        MeasureUnitType quintales = new MeasureUnitType("QUINTALES", "QUINTALES", new BigDecimal("68.04"));
+        order.setMeasurementUnitType(quintales);
+        ApiDeliveryIntegration dtoQq = DeliveryIntegrationMapper.toDto(order);
+        assertEquals("QQ", dtoQq.getUnit().getCode());
+        assertEquals(new BigDecimal("45.359237"), dtoQq.getUnit().getKgFactor());
+    }
+
+    @Test
+    @DisplayName("QA Anti-Regression: Facility and SemiProduct resolve names from ES translations when root name is null")
+    void testFacilityAndSemiProductTranslationNameFallback() {
+        Facility facility = new Facility();
+        ReflectionTestUtils.setField(facility, "id", 12L);
+        facility.setName(null);
+        com.abelium.inatrace.db.entities.facility.FacilityTranslation ftEs = new com.abelium.inatrace.db.entities.facility.FacilityTranslation();
+        ftEs.setLanguage(com.abelium.inatrace.types.Language.ES);
+        ftEs.setName("Centro de Acopio Naranjal");
+        ReflectionTestUtils.setField(facility, "facilityTranslations", new HashSet<>(Collections.singletonList(ftEs)));
+
+        ApiFacilityIntegration fDto = com.abelium.inatrace.components.integration.v1.mappers.FacilityIntegrationMapper.toDto(facility);
+        assertNotNull(fDto);
+        assertEquals("Centro de Acopio Naranjal", fDto.getName());
+
+        SemiProduct sp = new SemiProduct();
+        ReflectionTestUtils.setField(sp, "id", 16L);
+        sp.setName(null);
+        com.abelium.inatrace.db.entities.codebook.SemiProductTranslation stEs = new com.abelium.inatrace.db.entities.codebook.SemiProductTranslation();
+        stEs.setLanguage(com.abelium.inatrace.types.Language.ES);
+        stEs.setName("Cacao Seco Ccn51 Org");
+        sp.setSemiProductTranslations(new HashSet<>(Collections.singletonList(stEs)));
+
+        assertEquals("Cacao Seco Ccn51 Org", com.abelium.inatrace.components.integration.v1.mappers.FacilityIntegrationMapper.resolveSemiProductName(sp));
+    }
+
+    @Test
+    @DisplayName("QA Anti-Regression: LotCompositionService excludes CANCELED purchase orders")
+    void testCompositionExcludesCanceledDeliveries() {
+        StockOrder activeDelivery = new StockOrder();
+        ReflectionTestUtils.setField(activeDelivery, "id", 5001L);
+        activeDelivery.setOrderType(OrderType.PURCHASE_ORDER);
+        activeDelivery.setStatus(StockOrderStatus.ACTIVE);
+        activeDelivery.setTotalQuantity(new BigDecimal("100.00"));
+
+        StockOrder canceledDelivery = new StockOrder();
+        ReflectionTestUtils.setField(canceledDelivery, "id", 5002L);
+        canceledDelivery.setOrderType(OrderType.PURCHASE_ORDER);
+        canceledDelivery.setStatus(StockOrderStatus.CANCELED);
+        canceledDelivery.setTotalQuantity(new BigDecimal("150.00"));
+
+        Transaction tx1 = new Transaction();
+        tx1.setSourceStockOrder(activeDelivery);
+        Transaction tx2 = new Transaction();
+        tx2.setSourceStockOrder(canceledDelivery);
+
+        ProcessingOrder po = new ProcessingOrder();
+        ReflectionTestUtils.setField(po, "id", 3001L);
+        po.setInputTransactions(new HashSet<>(Arrays.asList(tx1, tx2)));
+
+        StockOrder shipment = new StockOrder();
+        ReflectionTestUtils.setField(shipment, "id", 9001L);
+        shipment.setOrderType(OrderType.GENERAL_ORDER);
+        shipment.setProcessingOrder(po);
+
+        ApiCompositionIntegration comp = lotCompositionService.getComposition(shipment);
+        assertNotNull(comp);
+        assertEquals(1, comp.getSourceDeliveries().size());
+        assertEquals(5001L, comp.getSourceDeliveries().get(0).getDeliveryId());
+    }
 }

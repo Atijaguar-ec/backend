@@ -119,7 +119,15 @@ public class FarmerIntegrationMapper {
                 PlotDto pDto = new PlotDto();
                 pDto.setId(plot.getId());
                 pDto.setName(plot.getPlotName());
-                pDto.setCrop(plot.getCrop() != null ? plot.getCrop().getName() : "COCOA");
+                String cropName = "COCOA";
+                if (plot.getCrop() != null) {
+                    if (plot.getCrop().getName() != null && !plot.getCrop().getName().isBlank()) {
+                        cropName = plot.getCrop().getName();
+                    } else if (plot.getCrop().getCode() != null && !plot.getCrop().getCode().isBlank()) {
+                        cropName = plot.getCrop().getCode();
+                    }
+                }
+                pDto.setCrop(cropName);
                 pDto.setSize(plot.getSize());
                 pDto.setSizeUnit(plot.getUnit() != null ? plot.getUnit() : "ha");
                 pDto.setNumberOfPlants(plot.getNumberOfPlants());
@@ -180,8 +188,10 @@ public class FarmerIntegrationMapper {
         plotDtos.sort(Comparator.comparing(PlotDto::getId, Comparator.nullsLast(Comparator.naturalOrder())));
         dto.setPlots(plotDtos);
 
-        dto.setCreatedAt(farmer.getCreationTimestamp());
-        dto.setUpdatedAt(farmer.getUpdateTimestamp());
+        var createdTs = farmer.getCreationTimestamp() != null ? farmer.getCreationTimestamp() : farmer.getStatusUpdateTimestamp();
+        var updatedTs = farmer.getUpdateTimestamp() != null ? farmer.getUpdateTimestamp() : createdTs;
+        dto.setCreatedAt(createdTs);
+        dto.setUpdatedAt(updatedTs);
 
         return dto;
     }

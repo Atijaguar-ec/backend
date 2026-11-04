@@ -172,13 +172,14 @@ public class IntegrationV1Service {
         List<SemiProductDto> spDtos = new ArrayList<>();
         if (semiProducts != null && !semiProducts.isEmpty()) {
             for (SemiProduct sp : semiProducts) {
+                String spName = FacilityIntegrationMapper.resolveSemiProductName(sp);
                 String code = "SEMI_" + sp.getId();
-                if (sp.getId() == 1 || (sp.getName() != null && sp.getName().toLowerCase().contains("baba"))) {
+                if (sp.getId() == 1 || (spName != null && spName.toLowerCase().contains("baba"))) {
                     code = "BABA";
-                } else if (sp.getId() == 2 || (sp.getName() != null && sp.getName().toLowerCase().contains("seco"))) {
+                } else if (sp.getId() == 2 || (spName != null && spName.toLowerCase().contains("seco"))) {
                     code = "SECO";
                 }
-                spDtos.add(new SemiProductDto(sp.getId(), code, sp.getName()));
+                spDtos.add(new SemiProductDto(sp.getId(), code, spName));
             }
         } else {
             spDtos.add(new SemiProductDto(1L, "BABA", "Cacao en Baba"));
@@ -489,6 +490,7 @@ public class IntegrationV1Service {
                 "LEFT JOIN FETCH so.consumerCompanyCustomer " +
                 "LEFT JOIN FETCH so.quoteCompany " +
                 "LEFT JOIN FETCH so.semiProduct " +
+                "LEFT JOIN FETCH so.finalProduct " +
                 "LEFT JOIN FETCH so.measurementUnitType " +
                 whereClause + " ORDER BY so.id ASC";
         TypedQuery<StockOrder> dataQuery = entityManager.createQuery(dataHql, StockOrder.class);

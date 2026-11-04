@@ -2,8 +2,10 @@ package com.abelium.inatrace.components.integration.v1.services;
 
 import com.abelium.inatrace.components.integration.v1.dto.ApiCompositionIntegration;
 import com.abelium.inatrace.components.integration.v1.dto.ApiCompositionIntegration.*;
+import com.abelium.inatrace.components.integration.v1.mappers.DeliveryIntegrationMapper;
 import com.abelium.inatrace.db.entities.processingorder.ProcessingOrder;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
+import com.abelium.inatrace.db.entities.stockorder.StockOrderStatus;
 import com.abelium.inatrace.db.entities.stockorder.Transaction;
 import com.abelium.inatrace.db.entities.stockorder.enums.OrderType;
 import jakarta.persistence.EntityManager;
@@ -39,12 +41,8 @@ public class LotCompositionService {
 
         // Build shipment dto
         LotCodesDto lotCodes = new LotCodesDto(shipment.getInternalLotNumber(), shipment.getQrCodeTag());
-        UnitDto shipmentUnit = new UnitDto(
-                shipment.getMeasurementUnitType() != null && shipment.getMeasurementUnitType().getCode() != null
-                        ? shipment.getMeasurementUnitType().getCode() : "KG",
-                shipment.getMeasurementUnitType() != null && shipment.getMeasurementUnitType().getWeight() != null
-                        ? shipment.getMeasurementUnitType().getWeight() : KG_FACTOR
-        );
+        var normShipmentUnit = DeliveryIntegrationMapper.resolveNormalizedUnit(shipment.getMeasurementUnitType(), "KG", KG_FACTOR);
+        UnitDto shipmentUnit = new UnitDto(normShipmentUnit.getCode(), normShipmentUnit.getKgFactor());
         CompositionShipmentDto shipmentDto = new CompositionShipmentDto(
                 shipment.getId(),
                 lotCodes,
@@ -79,12 +77,8 @@ public class LotCompositionService {
             }
             dDto.setNetQuantity(net);
 
-            UnitDto unit = new UnitDto(
-                    so.getMeasurementUnitType() != null && so.getMeasurementUnitType().getCode() != null
-                            ? so.getMeasurementUnitType().getCode() : "LB",
-                    so.getMeasurementUnitType() != null && so.getMeasurementUnitType().getWeight() != null
-                            ? so.getMeasurementUnitType().getWeight() : LB_KG_FACTOR
-            );
+            var normUnit = DeliveryIntegrationMapper.resolveNormalizedUnit(so.getMeasurementUnitType(), "LB", LB_KG_FACTOR);
+            UnitDto unit = new UnitDto(normUnit.getCode(), normUnit.getKgFactor());
             dDto.setUnit(unit);
             deliveryDtos.add(dDto);
         }
@@ -100,7 +94,7 @@ public class LotCompositionService {
                                  Set<Long> visitedPoIds,
                                  Set<Long> visitedSoIds,
                                  int currentDepth) {
-        if (stockOrder == null || currentDepth > MAX_DEPTH) {
+        if (stockOrder == null || currentDepth > MAX_DEPTH || stockOrder.getStatus() == StockOrderStatus.CANCELED) {
             return;
         }
 

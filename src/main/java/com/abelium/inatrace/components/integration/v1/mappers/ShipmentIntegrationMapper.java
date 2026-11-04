@@ -38,7 +38,7 @@ public class ShipmentIntegrationMapper {
         }
 
         if (order.getFacility() != null) {
-            dto.setFromFacility(new IdNameDto(order.getFacility().getId(), order.getFacility().getName()));
+            dto.setFromFacility(new IdNameDto(order.getFacility().getId(), FacilityIntegrationMapper.resolveFacilityName(order.getFacility())));
         }
 
         if (order.getConsumerCompanyCustomer() != null) {
@@ -48,19 +48,15 @@ public class ShipmentIntegrationMapper {
         }
 
         if (order.getSemiProduct() != null) {
-            dto.setSemiProduct(new IdNameDto(order.getSemiProduct().getId(), order.getSemiProduct().getName()));
+            dto.setSemiProduct(new IdNameDto(order.getSemiProduct().getId(), FacilityIntegrationMapper.resolveSemiProductName(order.getSemiProduct())));
+        } else if (order.getFinalProduct() != null) {
+            dto.setSemiProduct(new IdNameDto(order.getFinalProduct().getId(), order.getFinalProduct().getName()));
         }
 
         dto.setQuantity(order.getTotalQuantity());
 
-        if (order.getMeasurementUnitType() != null) {
-            String code = order.getMeasurementUnitType().getCode();
-            BigDecimal factor = order.getMeasurementUnitType().getWeight() != null ?
-                    order.getMeasurementUnitType().getWeight() : KG_FACTOR;
-            dto.setUnit(new UnitDto(code != null ? code : "KG", factor));
-        } else {
-            dto.setUnit(new UnitDto("KG", KG_FACTOR));
-        }
+        var normUnit = DeliveryIntegrationMapper.resolveNormalizedUnit(order.getMeasurementUnitType(), "KG", KG_FACTOR);
+        dto.setUnit(new UnitDto(normUnit.getCode(), normUnit.getKgFactor()));
 
         dto.setOrganic(Boolean.TRUE.equals(order.getOrganic()));
         dto.setUpdatedAt(order.getUpdateTimestamp());
