@@ -32,7 +32,9 @@ class FlywayMigrationParseTest {
             "db/migration/V10__add_public_delivery_receipt_config.sql",
             "db/migration/V11__align_fv_tenant_configuration.sql",
             "db/migration/V12__disable_quota_balance_for_fv.sql",
-            "db/migration/V13__grant_mcp_ro_bi_schema.sql"
+            "db/migration/V13__grant_mcp_ro_bi_schema.sql",
+            "db/migration/V14__backfill_final_product_qrcodetag.sql",
+            "db/migration/V15__add_usercustomer_timestamps.sql"
         };
 
         for (String file : files) {

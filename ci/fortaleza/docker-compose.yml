@@ -3,9 +3,9 @@ version: '3.8'
 # ============================================================================
 # INATrace — Fortaleza del Valle (Staging + Producción, ESPAM/CEDIA)
 # Verificado contra servidores reales el 2026-07-28:
-#   - Staging: 190.15.143.254 (contenedores: inatrace-postgres, inatrace-be,
+#   - Staging: <STAGING_FORTALEZA_HOST> (contenedores: inatrace-postgres, inatrace-be,
 #     inatrace-kc-test-fortaleza, inatrace-frontend)
-#   - Producción: 10.10.102.26 (mismos nombres de contenedor)
+#   - Producción: <PROD_INTERNAL_HOST> (mismos nombres de contenedor)
 # Usado por backend/ci/Jenkinsfile (pipeline exclusivo de Fortaleza).
 # ============================================================================
 
@@ -124,8 +124,8 @@ services:
       - INATRACE_KEYCLOAK_ADMIN_SERVER_URL=${KEYCLOAK_ADMIN_SERVER_URL:-http://inatrace-kc-test-fortaleza:8080/auth}
       # ⚠️ El realm difiere por entorno (verificado 2026-08-06 consultando la
       # tabla `realm` de cada servidor):
-      #   - staging  190.15.143.254 -> master, inatrace, fortaleza
-      #   - producción 10.10.102.26 -> master, inatrace_fortaleza
+      #   - staging  <STAGING_FORTALEZA_HOST> -> master, inatrace, fortaleza
+      #   - producción <PROD_INTERNAL_HOST> -> master, inatrace_fortaleza
       # Por eso este default `inatrace_fortaleza` es CORRECTO para producción
       # (el .env de prod no define KEYCLOAK_ADMIN_REALM y usa el default) y
       # equivocado para staging, donde el .env sí debe definirlo como

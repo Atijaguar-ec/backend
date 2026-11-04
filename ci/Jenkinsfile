@@ -42,12 +42,12 @@ pipeline {
     // Parámetros producción
     string(
       name: 'PROD_HOST_PRIMARY',
-      defaultValue: '10.10.102.26',
-      description: 'IP interna del servidor de producción ESPAM/CEDIA'
+      defaultValue: env.PROD_HOST_PRIMARY ?: '',
+      description: 'IP interna del servidor de producción ESPAM/CEDIA (inyectada por entorno o secret)'
     )
     string(
       name: 'PROD_USER_PRIMARY',
-      defaultValue: 'administrador',
+      defaultValue: env.PROD_USER_PRIMARY ?: '',
       description: 'Usuario SSH para el servidor de producción (usa credencial usuario-prod-ssh)'
     )
     string(

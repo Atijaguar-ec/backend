@@ -4,6 +4,7 @@ import com.abelium.inatrace.db.entities.common.PlotCoordinate;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -73,6 +74,47 @@ public class PlotGeometryTools {
 		// A triangle stored with its first vertex already repeated only has three points
 		// and is not a valid ring; both APIs reject it with an opaque 400.
 		return ring.size() >= MIN_CLOSED_RING_SIZE ? ring : null;
+	}
+
+	/**
+	 * Determines if a linear ring of coordinates is oriented counter-clockwise (CCW),
+	 * satisfying the RFC 7946 right-hand rule for exterior polygon rings.
+	 *
+	 * Uses the Shoelace formula (Green's theorem).
+	 *
+	 * @param ring closed list of coordinates (minimum 4 points where first equals last)
+	 * @return true if counter-clockwise, false if clockwise or degenerate
+	 */
+	public static boolean isCounterClockwise(List<PlotCoordinate> ring) {
+		if (ring == null || ring.size() < MIN_CLOSED_RING_SIZE) {
+			return false;
+		}
+		double areaSum = 0.0;
+		for (int i = 0; i < ring.size() - 1; i++) {
+			PlotCoordinate curr = ring.get(i);
+			PlotCoordinate next = ring.get(i + 1);
+			if (curr == null || next == null || curr.getLongitude() == null || curr.getLatitude() == null
+					|| next.getLongitude() == null || next.getLatitude() == null) {
+				return false;
+			}
+			areaSum += (next.getLongitude() - curr.getLongitude()) * (next.getLatitude() + curr.getLatitude());
+		}
+		return areaSum < 0;
+	}
+
+	/**
+	 * Returns a closed linear ring oriented counter-clockwise according to the RFC 7946
+	 * right-hand rule, or {@code null} if the coordinates cannot form a valid polygon ring.
+	 */
+	public static List<PlotCoordinate> closedCounterClockwiseRing(List<PlotCoordinate> plotCoordinates) {
+		List<PlotCoordinate> ring = closedRing(plotCoordinates);
+		if (ring == null) {
+			return null;
+		}
+		if (!isCounterClockwise(ring)) {
+			Collections.reverse(ring);
+		}
+		return ring;
 	}
 
 	/**

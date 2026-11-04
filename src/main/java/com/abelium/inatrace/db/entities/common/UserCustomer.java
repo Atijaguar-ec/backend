@@ -1,7 +1,7 @@
 package com.abelium.inatrace.db.entities.common;
 
 import com.abelium.inatrace.api.types.Lengths;
-import com.abelium.inatrace.db.base.BaseEntity;
+import com.abelium.inatrace.db.base.TimestampEntity;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.db.entities.product.Product;
 import com.abelium.inatrace.types.Gender;
@@ -29,7 +29,7 @@ import java.util.Set;
 	@NamedQuery(name = "UserCustomer.getUserCustomerWithPlotsById",
 			    query = "SELECT DISTINCT u FROM UserCustomer u LEFT JOIN FETCH u.plots WHERE u.id = :id")
 })
-public class UserCustomer extends BaseEntity {
+public class UserCustomer extends TimestampEntity {
 
 	/**
 	 * product this collector belongs to

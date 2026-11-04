@@ -1,5 +1,5 @@
 # ============================================================================
-# INATrace — UNOCACE (Staging, servidor 95.217.182.220)
+# INATrace — UNOCACE (Staging, servidor <STAGING_UNOCACE_HOST>)
 # Capturado desde /opt/inatrace-test/docker-compose.yml el 2026-07-28
 # (Fase 0/1 de saneamiento: puertos internos ligados a 127.0.0.1 y
 # credenciales movidas a .env fuera de git — ver unocace.env.example).

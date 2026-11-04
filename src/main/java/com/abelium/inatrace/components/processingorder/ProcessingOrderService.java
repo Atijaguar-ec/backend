@@ -32,6 +32,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Lazy
@@ -264,6 +265,7 @@ public class ProcessingOrderService extends BaseService {
         // Get the first input Transaction with generated QR code tag (if present)
         String presentQrCodeTag = findFirstQRCodeTagTransaction(apiProcessingOrder.getInputTransactions());
         FinalProduct qrCodeFinalProduct = null;
+        boolean multipleQrTagsForSameFinalProduct = false;
 
         // Create new or update existing input Transactions and validate conditions if there is an input Transaction with generated QR code tag
         for (int i = 0; i < apiProcessingOrder.getInputTransactions().size(); i++) {
@@ -282,9 +284,16 @@ public class ProcessingOrderService extends BaseService {
                         "Generate QR code action cannot contain input transactions that have already generated QR code tag.");
             }
 
-            // If we have input Transaction which has QR code tag generated, check that we have consistency
-            // between all the input Transactions (all shall have the same QR code tag)
-            qrCodeFinalProduct = validateQRCodeTag(presentQrCodeTag, insertedTransaction);
+            // If we have input Transaction which has QR code tag generated, check consistency
+            FinalProduct txFinalProduct = validateQRCodeTag(presentQrCodeTag, qrCodeFinalProduct, insertedTransaction);
+            if (txFinalProduct != null) {
+                qrCodeFinalProduct = txFinalProduct;
+            }
+            if (presentQrCodeTag != null
+                    && insertedTransaction.getSourceStockOrder().getQrCodeTag() != null
+                    && !presentQrCodeTag.equals(insertedTransaction.getSourceStockOrder().getQrCodeTag())) {
+                multipleQrTagsForSameFinalProduct = true;
+            }
 
             entity.getInputTransactions().remove(insertedTransaction);
             entity.getInputTransactions().add(insertedTransaction);
@@ -306,9 +315,10 @@ public class ProcessingOrderService extends BaseService {
                 StockOrder targetStockOrder = fetchEntity(targetStockOrderId, StockOrder.class);
                 targetStockOrder.setProcessingOrder(entity);
 
-                // Transfer the QR code tag (if present) to the target Stock order
-                targetStockOrder.setQrCodeTag(presentQrCodeTag);
-                targetStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
+                // Transfer the source stock order's QR code tag (if present) 1-to-1 to the target Stock order
+                StockOrder sourceSo = insertedTransaction.getSourceStockOrder();
+                targetStockOrder.setQrCodeTag(sourceSo.getQrCodeTag() != null ? sourceSo.getQrCodeTag() : presentQrCodeTag);
+                targetStockOrder.setQrCodeTagFinalProduct(sourceSo.getQrCodeTagFinalProduct() != null ? sourceSo.getQrCodeTagFinalProduct() : qrCodeFinalProduct);
 
                 entity.getTargetStockOrders().add(targetStockOrder);
             }
@@ -323,9 +333,12 @@ public class ProcessingOrderService extends BaseService {
                 StockOrder targetStockOrder = fetchEntity(insertedTargetStockOrderId, StockOrder.class);
                 targetStockOrder.setProcessingOrder(entity);
 
-                // Transfer the QR code tag (if present) to the target Stock order
+                // Transfer the QR code tag (if present) to the target Stock order, or generate a consolidated tag when merging lots of the same FinalProduct
                 if (presentQrCodeTag != null) {
-                    targetStockOrder.setQrCodeTag(presentQrCodeTag);
+                    String effectiveQrTag = multipleQrTagsForSameFinalProduct
+                            ? (StringUtils.isNotBlank(targetStockOrder.getQrCodeTag()) ? targetStockOrder.getQrCodeTag() : UUID.randomUUID().toString())
+                            : presentQrCodeTag;
+                    targetStockOrder.setQrCodeTag(effectiveQrTag);
                     targetStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
                 }
 
@@ -412,6 +425,7 @@ public class ProcessingOrderService extends BaseService {
         // Get the first input Transaction with generated QR code tag (if present)
         String presentQrCodeTag = findFirstQRCodeTagTransaction(apiProcessingOrder.getInputTransactions());
         FinalProduct qrCodeFinalProduct = null;
+        boolean multipleQrTagsForSameFinalProduct = false;
 
         // Create new or update existing input Transactions
         for (int i = 0; i < apiProcessingOrder.getInputTransactions().size(); i++) {
@@ -420,9 +434,17 @@ public class ProcessingOrderService extends BaseService {
             Long insertedTransactionId = transactionService.createOrUpdateTransaction(apiTransaction, false).getId();
             Transaction insertedTransaction = fetchEntity(insertedTransactionId, Transaction.class);
 
-            // If we have input Transaction which has QR code tag generated, check that we have consistency
-            // between all the input Transactions (all shall have the same QR code tag)
-            qrCodeFinalProduct = validateQRCodeTag(presentQrCodeTag, insertedTransaction);
+            // If we have input Transaction which has QR code tag generated, check consistency
+            FinalProduct txFinalProduct = validateQRCodeTag(presentQrCodeTag, qrCodeFinalProduct, insertedTransaction);
+            if (txFinalProduct != null) {
+                qrCodeFinalProduct = txFinalProduct;
+            }
+            if (presentQrCodeTag != null
+                    && insertedTransaction.getSourceStockOrder() != null
+                    && insertedTransaction.getSourceStockOrder().getQrCodeTag() != null
+                    && !presentQrCodeTag.equals(insertedTransaction.getSourceStockOrder().getQrCodeTag())) {
+                multipleQrTagsForSameFinalProduct = true;
+            }
 
             entity.getInputTransactions().remove(insertedTransaction);
             entity.getInputTransactions().add(insertedTransaction);
@@ -456,9 +478,17 @@ public class ProcessingOrderService extends BaseService {
         // Set the back reference for the Processing order
         quoteStockOrder.setProcessingOrder(entity);
 
-        // Set the QR code tag data
-        quoteStockOrder.setQrCodeTag(presentQrCodeTag);
-        quoteStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct);
+        // Set the QR code tag data: inherit single tag, or generate a consolidated container QR tag when merging multiple FINAL_PROCESSING lots
+        if (presentQrCodeTag != null) {
+            String effectiveQrTag = multipleQrTagsForSameFinalProduct
+                    ? (StringUtils.isNotBlank(quoteStockOrder.getQrCodeTag()) ? quoteStockOrder.getQrCodeTag() : UUID.randomUUID().toString())
+                    : presentQrCodeTag;
+            quoteStockOrder.setQrCodeTag(effectiveQrTag);
+            quoteStockOrder.setQrCodeTagFinalProduct(qrCodeFinalProduct != null ? qrCodeFinalProduct : quoteStockOrder.getFinalProduct());
+        } else if (quoteStockOrder.getFinalProduct() != null && StringUtils.isBlank(quoteStockOrder.getQrCodeTag())) {
+            quoteStockOrder.setQrCodeTag(UUID.randomUUID().toString());
+            quoteStockOrder.setQrCodeTagFinalProduct(quoteStockOrder.getFinalProduct());
+        }
 
         // Set the user entered Order ID
         quoteStockOrder.setOrderId(apiQuoteStockOrder.getOrderId());
@@ -506,7 +536,9 @@ public class ProcessingOrderService extends BaseService {
 
         return inputTransactions
                 .stream()
-                .filter(apiTransaction -> apiTransaction.getSourceStockOrder().getQrCodeTag() != null)
+                .filter(apiTransaction -> apiTransaction != null
+                        && apiTransaction.getSourceStockOrder() != null
+                        && apiTransaction.getSourceStockOrder().getQrCodeTag() != null)
                 .map(apiTransaction -> apiTransaction.getSourceStockOrder().getQrCodeTag())
                 .findFirst()
                 .orElse(null);
@@ -523,14 +555,24 @@ public class ProcessingOrderService extends BaseService {
      *
      * @throws ApiException If the input Transaction validation fails.
      */
-    private FinalProduct validateQRCodeTag(String qrCodeTag, Transaction transaction) throws ApiException {
+    private FinalProduct validateQRCodeTag(String qrCodeTag, FinalProduct currentFinalProduct, Transaction transaction) throws ApiException {
 
-        if (qrCodeTag != null) {
-            if (!qrCodeTag.equals(transaction.getSourceStockOrder().getQrCodeTag())) {
-                throw new ApiException(ApiStatus.VALIDATION_ERROR, "There are input transactions present with different QR code tags.");
-            } else {
-                return transaction.getSourceStockOrder().getQrCodeTagFinalProduct();
+        if (qrCodeTag != null && transaction != null && transaction.getSourceStockOrder() != null) {
+            StockOrder sourceOrder = transaction.getSourceStockOrder();
+            FinalProduct sourceFinalProduct = sourceOrder.getQrCodeTagFinalProduct() != null
+                    ? sourceOrder.getQrCodeTagFinalProduct()
+                    : sourceOrder.getFinalProduct();
+
+            if (qrCodeTag.equals(sourceOrder.getQrCodeTag())) {
+                return sourceFinalProduct != null ? sourceFinalProduct : currentFinalProduct;
             }
+            // Allow consolidating multiple FINAL_PROCESSING lots into a shipment/transfer when they belong to the same FinalProduct
+            if (currentFinalProduct != null && sourceFinalProduct != null
+                    && currentFinalProduct.getId() != null
+                    && currentFinalProduct.getId().equals(sourceFinalProduct.getId())) {
+                return currentFinalProduct;
+            }
+            throw new ApiException(ApiStatus.VALIDATION_ERROR, "There are input transactions present with different QR code tags.");
         }
 
         return null;

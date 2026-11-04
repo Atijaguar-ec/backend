@@ -75,6 +75,7 @@ class StockOrderServiceTest {
     private Method calculateRepetitionsMethod;
     private Method calculateFulfilledQuantityMethod;
     private Method calculateUsedQuantityMethod;
+    private Method restrictToPublicReceiptFieldsMethod;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -110,6 +111,9 @@ class StockOrderServiceTest {
 
         calculateUsedQuantityMethod = StockOrderService.class.getDeclaredMethod("calculateUsedQuantity", List.class, Long.class);
         calculateUsedQuantityMethod.setAccessible(true);
+
+        restrictToPublicReceiptFieldsMethod = StockOrderService.class.getDeclaredMethod("restrictToPublicReceiptFields", ApiStockOrder.class);
+        restrictToPublicReceiptFieldsMethod.setAccessible(true);
     }
 
     // -------------------------------------------------------------------------
@@ -1141,5 +1145,224 @@ class StockOrderServiceTest {
         assertNull(result.getCreatedBy());
         assertNull(result.getUpdatedBy());
         assertNull(result.getCreatorId());
+    }
+
+    // -------------------------------------------------------------------------
+    // EUDR TRACES-NT GeoJSON Export & Automatic QR Code Tag Generation Tests
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("generateStockOrderQRCodeTag: auto-generates UUID v4 and sets FinalProduct on FINAL_PROCESSING")
+    void generateStockOrderQRCodeTag_finalProcessing_generatesUuidAndSetsFinalProduct() {
+        com.abelium.inatrace.db.entities.product.FinalProduct finalProduct = new com.abelium.inatrace.db.entities.product.FinalProduct();
+        ReflectionTestUtils.setField(finalProduct, "id", 10L);
+        finalProduct.setName("Cacao Seco Exportación 69kg");
+
+        com.abelium.inatrace.db.entities.processingaction.ProcessingAction action = new com.abelium.inatrace.db.entities.processingaction.ProcessingAction();
+        action.setType(com.abelium.inatrace.types.ProcessingActionType.FINAL_PROCESSING);
+        action.setOutputFinalProduct(finalProduct);
+
+        ProcessingOrder processingOrder = new ProcessingOrder();
+        processingOrder.setProcessingAction(action);
+
+        StockOrder entity = new StockOrder();
+        entity.setFinalProduct(finalProduct);
+
+        ReflectionTestUtils.invokeMethod(stockOrderService, "generateStockOrderQRCodeTag", entity, processingOrder);
+
+        assertNotNull(entity.getQrCodeTag(), "FINAL_PROCESSING lot must receive an automatic qrCodeTag");
+        assertDoesNotThrow(() -> UUID.fromString(entity.getQrCodeTag()), "qrCodeTag must be a valid UUID v4");
+        assertNotNull(entity.getQrCodeTagFinalProduct(), "qrCodeTagFinalProduct must be populated to prevent UI null errors");
+        assertEquals(10L, entity.getQrCodeTagFinalProduct().getId());
+    }
+
+    @Test
+    @DisplayName("generateStockOrderQRCodeTag: does not generate qrCodeTag on intermediate PROCESSING semi-product orders")
+    void generateStockOrderQRCodeTag_intermediateProcessing_leavesNull() {
+        com.abelium.inatrace.db.entities.processingaction.ProcessingAction action = new com.abelium.inatrace.db.entities.processingaction.ProcessingAction();
+        action.setType(com.abelium.inatrace.types.ProcessingActionType.PROCESSING);
+
+        ProcessingOrder processingOrder = new ProcessingOrder();
+        processingOrder.setProcessingAction(action);
+
+        StockOrder entity = new StockOrder();
+
+        ReflectionTestUtils.invokeMethod(stockOrderService, "generateStockOrderQRCodeTag", entity, processingOrder);
+
+        assertNull(entity.getQrCodeTag(), "Intermediate semi-product orders must not receive an isolated qrCodeTag");
+        assertNull(entity.getQrCodeTagFinalProduct());
+    }
+
+    @Test
+    @DisplayName("createGeoJsonFromDeliveries: filters plots by parcelLot and outputs EUDR TRACES-NT compliant individual Features")
+    @SuppressWarnings("unchecked")
+    void createGeoJsonFromDeliveries_filtersByParcelLotAndEmitsTracesCompliantFeatures() throws Exception {
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer1 = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer1, "id", 101L);
+
+        // Plot 1A: Polygon plot matching parcelLot "Finca San Antonio" (clockwise input to verify counter-clockwise reversal & closing)
+        com.abelium.inatrace.db.entities.common.Plot plot1A = new com.abelium.inatrace.db.entities.common.Plot();
+        ReflectionTestUtils.setField(plot1A, "id", 501L);
+        plot1A.setPlotName("Finca San Antonio");
+        plot1A.setSize(5.5);
+        plot1A.setGeoId("EC-AGSTACK-501");
+        plot1A.setFarmer(farmer1);
+
+        com.abelium.inatrace.db.entities.common.PlotCoordinate c1 = new com.abelium.inatrace.db.entities.common.PlotCoordinate();
+        c1.setLongitude(-80.175100);
+        c1.setLatitude(-0.845100);
+        com.abelium.inatrace.db.entities.common.PlotCoordinate c2 = new com.abelium.inatrace.db.entities.common.PlotCoordinate();
+        c2.setLongitude(-80.175100);
+        c2.setLatitude(-0.844100);
+        com.abelium.inatrace.db.entities.common.PlotCoordinate c3 = new com.abelium.inatrace.db.entities.common.PlotCoordinate();
+        c3.setLongitude(-80.174100);
+        c3.setLatitude(-0.844100);
+        com.abelium.inatrace.db.entities.common.PlotCoordinate c4 = new com.abelium.inatrace.db.entities.common.PlotCoordinate();
+        c4.setLongitude(-80.174100);
+        c4.setLatitude(-0.845100);
+        plot1A.setCoordinates(new ArrayList<>(List.of(c1, c2, c3, c4)));
+
+        // Plot 1B: Another plot owned by farmer1 ("Finca El Carmen") that did NOT contribute to this lot
+        com.abelium.inatrace.db.entities.common.Plot plot1B = new com.abelium.inatrace.db.entities.common.Plot();
+        ReflectionTestUtils.setField(plot1B, "id", 502L);
+        plot1B.setPlotName("Finca El Carmen");
+        plot1B.setSize(2.0);
+        plot1B.setFarmer(farmer1);
+        com.abelium.inatrace.db.entities.common.PlotCoordinate cOther = new com.abelium.inatrace.db.entities.common.PlotCoordinate();
+        cOther.setLongitude(-80.200000);
+        cOther.setLatitude(-0.900000);
+        plot1B.setCoordinates(new ArrayList<>(List.of(cOther)));
+
+        // Farmer 2: Point plot <= 4 ha
+        com.abelium.inatrace.db.entities.common.UserCustomer farmer2 = new com.abelium.inatrace.db.entities.common.UserCustomer();
+        ReflectionTestUtils.setField(farmer2, "id", 102L);
+        com.abelium.inatrace.db.entities.common.Plot plot2 = new com.abelium.inatrace.db.entities.common.Plot();
+        ReflectionTestUtils.setField(plot2, "id", 503L);
+        plot2.setPlotName("Parcela La Esperanza");
+        plot2.setSize(1.8);
+        plot2.setGeoId("EC-AGSTACK-503");
+        plot2.setFarmer(farmer2);
+        com.abelium.inatrace.db.entities.common.PlotCoordinate cPoint = new com.abelium.inatrace.db.entities.common.PlotCoordinate();
+        cPoint.setLongitude(-80.162345);
+        cPoint.setLatitude(-0.851234);
+        plot2.setCoordinates(new ArrayList<>(List.of(cPoint)));
+
+        TypedQuery<com.abelium.inatrace.db.entities.common.Plot> plotQuery = mock(TypedQuery.class);
+        when(plotQuery.setParameter(eq("customerIds"), any())).thenReturn(plotQuery);
+        when(plotQuery.getResultList()).thenReturn(List.of(plot1A, plot1B, plot2));
+        when(entityManager.createQuery(
+                contains("SELECT DISTINCT p FROM Plot p"),
+                eq(com.abelium.inatrace.db.entities.common.Plot.class)))
+                .thenReturn(plotQuery);
+
+        // Purchase orders in timeline: Farmer 1 delivered from "Finca San Antonio", Farmer 2 delivered from "Parcela La Esperanza"
+        com.abelium.inatrace.components.company.api.ApiUserCustomer apiFarmer1 = new com.abelium.inatrace.components.company.api.ApiUserCustomer();
+        apiFarmer1.setId(101L);
+        ApiStockOrder po1 = new ApiStockOrder();
+        po1.setProducerUserCustomer(apiFarmer1);
+        po1.setParcelLot("Finca San Antonio");
+
+        com.abelium.inatrace.components.company.api.ApiUserCustomer apiFarmer2 = new com.abelium.inatrace.components.company.api.ApiUserCustomer();
+        apiFarmer2.setId(102L);
+        ApiStockOrder po2 = new ApiStockOrder();
+        po2.setProducerUserCustomer(apiFarmer2);
+        po2.setParcelLot("Parcela La Esperanza");
+
+        ApiStockOrderHistoryTimelineItem item = new ApiStockOrderHistoryTimelineItem();
+        item.setPurchaseOrders(List.of(po1, po2));
+
+        byte[] geoJsonBytes = stockOrderService.createGeoJsonFromDeliveries(List.of(item));
+        assertNotNull(geoJsonBytes);
+        assertTrue(geoJsonBytes.length > 0);
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(geoJsonBytes);
+        assertEquals("FeatureCollection", root.get("type").asText());
+
+        com.fasterxml.jackson.databind.JsonNode features = root.get("features");
+        assertNotNull(features);
+        // Must contain exactly 2 Features (plot1A and plot2); plot1B ("Finca El Carmen") must be excluded!
+        assertEquals(2, features.size(), "Only plots matching parcelLot must be exported");
+
+        com.fasterxml.jackson.databind.JsonNode f1 = features.get(0);
+        assertEquals("Feature", f1.get("type").asText());
+        assertEquals("Polygon", f1.get("geometry").get("type").asText());
+        com.fasterxml.jackson.databind.JsonNode ring = f1.get("geometry").get("coordinates").get(0);
+        assertEquals(5, ring.size(), "Polygon ring must be closed (first vertex repeated as last)");
+        assertEquals(ring.get(0), ring.get(ring.size() - 1));
+        assertEquals("EC", f1.get("properties").get("ProducerCountry").asText());
+        assertEquals("Finca San Antonio", f1.get("properties").get("ProductionPlace").asText());
+        assertEquals(5.5, f1.get("properties").get("Area").asDouble(), 0.001);
+        assertEquals("EC-AGSTACK-501", f1.get("properties").get("geoID").asText());
+
+        com.fasterxml.jackson.databind.JsonNode f2 = features.get(1);
+        assertEquals("Feature", f2.get("type").asText());
+        assertEquals("Point", f2.get("geometry").get("type").asText());
+        assertEquals("EC", f2.get("properties").get("ProducerCountry").asText());
+        assertEquals("Parcela La Esperanza", f2.get("properties").get("ProductionPlace").asText());
+        assertEquals(1.8, f2.get("properties").get("Area").asDouble(), 0.001);
+    }
+
+    // -------------------------------------------------------------------------
+    // Comprobante publico: que NO debe salir sin autenticacion
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("El comprobante publico no expone el precio unitario ni el importe pagado al socio")
+    void restrictToPublicReceiptFields_removesPurchasePricing() throws Exception {
+        ApiStockOrder api = new ApiStockOrder();
+        api.setPricePerUnit(new BigDecimal("1.25"));
+        api.setCost(new BigDecimal("1375.00"));
+        api.setPricePerUnitForEndCustomer(new BigDecimal("3.90"));
+
+        restrictToPublicReceiptFieldsMethod.invoke(stockOrderService, api);
+
+        assertNull(api.getPricePerUnit(),
+                "pricePerUnit revela el precio de compra pagado al socio y no debe viajar en la vista publica");
+        assertNull(api.getCost(),
+                "cost revela el importe total de la entrega y no debe viajar en la vista publica");
+        assertNull(api.getPricePerUnitForEndCustomer(),
+                "pricePerUnitForEndCustomer ya se filtraba y debe seguir filtrandose");
+    }
+
+    @Test
+    @DisplayName("El comprobante publico conserva los pesos y los identificadores del ticket")
+    void restrictToPublicReceiptFields_keepsReceiptEssentials() throws Exception {
+        ApiStockOrder api = new ApiStockOrder();
+        api.setTotalGrossQuantity(new BigDecimal("1250.00"));
+        api.setTotalQuantity(new BigDecimal("1100.00"));
+        api.setNetQuantity(new BigDecimal("1100.00"));
+        api.setIdentifier("ECE-001042");
+        api.setParcelLot("Parcela San Antonio");
+
+        restrictToPublicReceiptFieldsMethod.invoke(stockOrderService, api);
+
+        assertEquals(new BigDecimal("1250.00"), api.getTotalGrossQuantity());
+        assertEquals(new BigDecimal("1100.00"), api.getTotalQuantity());
+        assertEquals(new BigDecimal("1100.00"), api.getNetQuantity());
+        assertEquals("ECE-001042", api.getIdentifier());
+        assertEquals("Parcela San Antonio", api.getParcelLot());
+    }
+
+    @Test
+    @DisplayName("El comprobante publico reduce al agricultor a nombre y apellido, sin datos de contacto ni bancarios")
+    void restrictToPublicReceiptFields_reducesFarmerToName() throws Exception {
+        com.abelium.inatrace.components.company.api.ApiUserCustomer farmer =
+                new com.abelium.inatrace.components.company.api.ApiUserCustomer();
+        farmer.setName("Maria Elena");
+        farmer.setSurname("Zambrano Vera");
+        farmer.setPhone("+593 99 123 4567");
+        farmer.setEmail("melena.zambrano@correo.test");
+
+        ApiStockOrder api = new ApiStockOrder();
+        api.setProducerUserCustomer(farmer);
+
+        restrictToPublicReceiptFieldsMethod.invoke(stockOrderService, api);
+
+        assertNotNull(api.getProducerUserCustomer());
+        assertEquals("Maria Elena", api.getProducerUserCustomer().getName());
+        assertEquals("Zambrano Vera", api.getProducerUserCustomer().getSurname());
+        assertNull(api.getProducerUserCustomer().getPhone());
+        assertNull(api.getProducerUserCustomer().getEmail());
     }
 }

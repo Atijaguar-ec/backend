@@ -1327,33 +1327,57 @@ public class CompanyService extends BaseService {
 		// Prepare the GeoJSON object
 		List<Feature> features = new ArrayList<>();
 
-		for (Plot plot : userCustomer.getPlots()) {
+		if (userCustomer.getPlots() != null) {
+			for (Plot plot : userCustomer.getPlots()) {
+				if (plot == null || plot.getCoordinates() == null || plot.getCoordinates().isEmpty()) {
+					continue;
+				}
+				List<PlotCoordinate> validCoords = plot.getCoordinates().stream()
+						.filter(c -> c != null && c.getLongitude() != null && c.getLatitude() != null)
+						.collect(Collectors.toList());
+				if (validCoords.isEmpty()) {
+					continue;
+				}
 
-			Feature feature;
-			if (plot.getCoordinates().size() < 3) {
+				Feature feature;
+				if (validCoords.size() < 3) {
+					feature = Feature.fromGeometry(Point.fromLngLat(
+							validCoords.get(0).getLongitude(),
+							validCoords.get(0).getLatitude()
+					));
+				} else {
+					List<PlotCoordinate> closedRing = PlotGeometryTools.closedCounterClockwiseRing(validCoords);
+					if (closedRing == null) {
+						feature = Feature.fromGeometry(Point.fromLngLat(
+								validCoords.get(0).getLongitude(),
+								validCoords.get(0).getLatitude()
+						));
+					} else {
+						List<Point> polygonCoordinates = closedRing.stream()
+								.map(c -> Point.fromLngLat(c.getLongitude(), c.getLatitude()))
+								.collect(Collectors.toList());
+						feature = Feature.fromGeometry(Polygon.fromLngLats(List.of(polygonCoordinates)));
+					}
+				}
+				String countryCode = "EC";
+				if (userCustomer.getUserCustomerLocation() != null
+						&& userCustomer.getUserCustomerLocation().getAddress() != null
+						&& userCustomer.getUserCustomerLocation().getAddress().getCountry() != null
+						&& StringUtils.isNotBlank(userCustomer.getUserCustomerLocation().getAddress().getCountry().getCode())) {
+					countryCode = userCustomer.getUserCustomerLocation().getAddress().getCountry().getCode().trim().toUpperCase(Locale.ROOT);
+				}
+				String productionPlace = StringUtils.isNotBlank(plot.getPlotName())
+						? plot.getPlotName().trim()
+						: (plot.getId() != null ? "Plot-" + plot.getId() : "Plot");
+				double areaHa = plot.getSize() != null ? plot.getSize() : 0.0;
 
-				feature = Feature.fromGeometry(Point.fromLngLat(
-						plot.getCoordinates().stream().toList().get(0).getLongitude(),
-						plot.getCoordinates().stream().toList().get(0).getLatitude()
-				));
-			} else {
-
-				List<Point> polygonCoordinates = plot.getCoordinates()
-						.stream()
-						.map(plotCoordinate -> Point.fromLngLat(
-								plotCoordinate.getLongitude(),
-								plotCoordinate.getLatitude()
-						))
-						.collect(
-						Collectors.toList());
-				polygonCoordinates.add(Point.fromLngLat(
-						plot.getCoordinates().stream().toList().get(0).getLongitude(),
-						plot.getCoordinates().stream().toList().get(0).getLatitude()));
-
-				feature = Feature.fromGeometry(Polygon.fromLngLats(List.of(polygonCoordinates)));
+				feature.addStringProperty("ProducerCountry", countryCode);
+				feature.addStringProperty("ProductionPlace", productionPlace);
+				feature.addNumberProperty("Area", areaHa);
+				feature.addStringProperty("geoID", Optional.ofNullable(plot.getGeoId()).orElse(""));
+				feature.addStringProperty("plotName", Optional.ofNullable(plot.getPlotName()).orElse(""));
+				features.add(feature);
 			}
-			feature.addStringProperty("geoID", Optional.ofNullable(plot.getGeoId()).orElse(""));
-			features.add(feature);
 		}
 
 		return FeatureCollection.fromFeatures(features).toJson().getBytes();
@@ -1646,7 +1670,7 @@ public class CompanyService extends BaseService {
 		return userCustomer;
 	}
 
-	private UserCustomer fetchUserCustomerWithPlots(Long id) throws ApiException {
+	UserCustomer fetchUserCustomerWithPlots(Long id) throws ApiException {
 		List<UserCustomer> list = em.createNamedQuery("UserCustomer.getUserCustomerWithPlotsById", UserCustomer.class)
 				.setParameter("id", id)
 				.getResultList();

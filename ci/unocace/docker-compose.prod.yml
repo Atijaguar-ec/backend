@@ -1,7 +1,7 @@
 # ============================================================================
 # INATrace — UNOCACE PRODUCCION (arquitectura nueva: PostgreSQL + Keycloak)
 #
-# CONVIVE CON EL SISTEMA HEREDADO EN LA MISMA MAQUINA (116.203.108.253).
+# CONVIVE CON EL SISTEMA HEREDADO EN LA MISMA MAQUINA (<PROD_UNOCACE_HOST>).
 # La estrategia acordada es reemplazar todo menos el MySQL, que se conserva
 # un tiempo para consultas de comprobacion. Por eso:
 #   - El backend se llama inatrace-api-prod-unocace, NO inatrace-be-prod-unocace:
@@ -14,7 +14,7 @@
 #     referencian. Apuntar a carpetas nuevas dejaria todos los adjuntos rotos.
 #
 # Este archivo NO describe nada que este corriendo hoy. La produccion actual de
-# UNOCACE (inatrace.unocace.com, 116.203.108.253) sigue siendo el sistema
+# UNOCACE (inatrace.unocace.com, <PROD_UNOCACE_HOST>) sigue siendo el sistema
 # heredado: MySQL, sin Keycloak, frontend de diciembre de 2025. Esto es la
 # definicion del entorno de destino del corte.
 #

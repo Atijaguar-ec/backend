@@ -1,6 +1,25 @@
 # INATrace
 
-Open-source blockchain-based track and trace system for an agricultural commodities (such as coffee) supply
+> ## 📍 Bifurcación Adaptada para Ecuador (UNOCACE · Fortaleza del Valle · Dufer)
+>
+> Este repositorio es la bifurcación activa para el despliegue nacional de INATrace en Ecuador (GIZ / Atijaguar).
+>
+> | Si eres… | Empieza por |
+> |---|---|
+> | **Agente de IA o desarrollador** | [`agent-context.md`](agent-context.md) — arquitectura real, PostgreSQL 16, Keycloak 26, contratos Flyway y reglas de negocio |
+> | **Documentación centralizada** | [Repositorio `ina-docs`](https://github.com/Atijaguar-ec/ina-docs) — arquitectura arc42, diagramas C4 y guías técnicas |
+> | **Quien despliega a una institución** | [`ci/unocace/`](ci/unocace/) (GitHub Actions) o [`ci/fortaleza/`](ci/fortaleza/) (Jenkins) |
+>
+> **Stack técnico real de esta bifurcación:**
+> - **Java 17 / Spring Boot 3.3.3**: Arquitectura multicadena y multi-tenant.
+> - **PostgreSQL 16**: Esquemas desacoplados (`public`, `shrimp`, `bi`). *MySQL ha sido completamente reemplazado*.
+> - **Keycloak 26 OIDC**: Autenticación centralizada *stateless* vía JWT Bearer con Spring Security Resource Server.
+> - **Cadenas activas**: Cacao en Baba/Seco (Fortaleza del Valle / UNOCACE) y Camarón industrial (Dufer / RF01).
+> - **Regulaciones integradas**: Trazabilidad EUDR (Reglamento UE 2023/1115), Agrocalidad GUIA (Acuerdo 023) y SRI Módulo 11.
+
+---
+
+### Descripción del Proyecto Upstream (Histórico)
 chain run. It provides transparency and creation of trust through
 digitalization of supply chains, connects every actor along the supply chain, assures quality and fair pricing.
 

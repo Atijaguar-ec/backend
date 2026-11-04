@@ -1807,3 +1807,64 @@ chocando aunque la secuencia ya esté bien.
   anterior al 2026-10-19. El respaldo es la única vía de recuperación de esos datos.
 - La tabla de historial de Flyway se llama **`schema_version`**
   (`spring.flyway.table`), no `flyway_schema_history`.
+
+---
+
+## 30. Interoperabilidad Mieru Cacao (Japón / JICA) y API REST de Integración v1 (2026-11-04)
+
+### 30.1 Contexto del Negocio y Alcance
+UNOCACE exporta lotes de cacao seco y fermentado a compradores en Japón en el marco de proyectos de cooperación con JICA y la plataforma **Mieru Cacao** (Shinmei Co., Ltd.). Para automatizar la sincronización de trazabilidad y debida diligencia de no deforestación (EUDR 2023/1115 y estándares japoneses de compra sostenible) sin ingreso manual de datos, se habilitó la API REST unidireccional y de solo lectura bajo el prefijo `/api/integration/v1/`.
+
+### 30.2 Decisiones de Arquitectura (ADRs)
+1. **`ADR-017`: Gateway Dedicado `/api/integration/v1`**
+   - Paquete: `com.abelium.inatrace.components.integration.v1`.
+   - Mapeo Dual: `@RequestMapping({"/api/integration/v1", "/integration/v1"})` para desacoplamiento absoluto de capas Nginx y del frontend web de INATrace.
+   - Formato Contractual: Respuestas estándar `ApiResponse<T>`, nombres de atributos serializados en `snake_case` explícito mediante `@JsonProperty`, paginación estándar `ApiIntegrationPage<T>`.
+
+2. **`ADR-018`: Seguridad M2M y Aislamiento Estricto Multi-Tenant**
+   - Autenticación: Keycloak OAuth2 Client Credentials (`service-account-mieru-cacao`).
+   - Base de Datos: Usuario técnico en `"User"` con rol `USER` (respetando la restricción CHECK `role = ANY (ARRAY['USER', 'SYSTEM_ADMIN', 'REGIONAL_ADMIN']))`) y registro en `companyuser` con rol `COMPANY_USER` asociado a UNOCACE (Empresa ID 12).
+   - Aislamiento Multi-Tenant: El endpoint valida la lista blanca de empresas a las que el usuario técnico tiene acceso (`IntegrationV1Service.getAuthorizedCompanyIds`). Si una petición solicita `company_id=5` (Fortaleza del Valle) con credenciales de UNOCACE, o consulta registros ajenos a su organización, el backend responde de inmediato con `HTTP 403 Forbidden` (`FORBIDDEN_TENANT_ACCESS`).
+
+3. **`ADR-019`: Trazabilidad Retrospectiva del Grafo DAG (`LotCompositionService`)**
+   - Los lotes exportados provienen de procesos físicos sucesivos (fermentación, secado y mezcla).
+   - El servicio `LotCompositionService` realiza una navegación recursiva en reversa a través de `ProcessingOrder.inputTransactions` ➔ `Transaction.sourceStockOrder` hasta alcanzar las órdenes de compra individuales (`OrderType.PURCHASE_ORDER`), con control de ciclos (`visited` sets) y límite de profundidad de 10 niveles.
+   - Se expone la lista verídica de compras de origen (`source_deliveries`) con los pesos reales de báscula en libras (LB) y números de comprobante secuencial, eliminando balance de masas o prorrateos ficticios que falseen auditorías.
+
+4. **`ADR-020`: Sincronización Incremental (Flyway V15) y Detección de Bajas**
+   - Migración Flyway: `V15__add_usercustomer_timestamps.sql` añade `creationtimestamp` y `updatetimestamp` (`timestamp(6) with time zone NULL`) a `usercustomer` y a la tabla de Envers `usercustomer_aud` (satisfaciendo `ddl-auto=validate`).
+   - Entidad: `UserCustomer` extiende `TimestampEntity`.
+   - Índices B-Tree: `idx_usercustomer_update_ts`, `idx_stockorder_update_ts`, `idx_plot_lastupdated`.
+   - Consulta Incremental de Productores: La condición evalúa tanto al agricultor como a sus parcelas secundarias:
+     `WHERE c.updateTimestamp >= :since OR c.creationTimestamp >= :since OR EXISTS (SELECT 1 FROM Plot p2 WHERE p2.farmer.id = c.id AND p2.lastUpdated >= :sinceDate)`
+   - Detección de Bajas (`/deletions`): Reporta órdenes canceladas (`status = 'CANCELED'`) como entidad `delivery` o `shipment`, y bajas físicas capturadas en Hibernate Envers (`revtype = 2` en `plot_aud` y `usercustomer_aud`).
+
+### 30.3 Gobernanza LOPDP y Privacidad
+- **Exclusión Financiera Absoluta:** En `/deliveries`, los campos `pricePerUnit`, `cost`, `paid`, `balance`, `damagedPriceDeduction` y montos liquidados están totalmente excluidos del DTO y de la serialización JSON.
+- **Sanitización de Datos Personales:** En `/farmers`, se excluyen cuentas bancarias (`bank`), números de teléfono personales (`phone`) y correos electrónicos personales (`email`).
+- **Geometrías WGS84:** Las coordenadas de parcelas se emiten como Polígono GeoJSON con orientación antihoraria (RFC 7946, regla de la mano derecha) y coordenadas redondeadas a 6 decimales. Si una parcela no tiene polígono completo ($\ge 3$ puntos), hace fallback seguro a `Point` o `null`.
+
+### 30.4 Inventario de Endpoints (`/api/integration/v1`)
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/companies` | Organizaciones autorizadas para el cliente M2M |
+| `GET` | `/facilities` | Centros de acopio y bodegas con georreferenciación |
+| `GET` | `/reference-data` | Catálogos dinámicos (unidades, factores, variedades, certificaciones) |
+| `GET` | `/farmers` | Padrón de productores y parcelas con polígonos GeoJSON |
+| `GET` | `/farmers/{id}` | Detalle individual de productor y parcelas |
+| `GET` | `/deliveries` | Compras en báscula (cacao en baba) con pesos y comprobante |
+| `GET` | `/deliveries/{id}` | Detalle individual de entrega |
+| `GET` | `/shipments` | Lotes de exportación procesados (cacao seco) y códigos de lote |
+| `GET` | `/shipments/{id}/composition` | Descomposición retrospectiva DAG a entregas de origen |
+| `GET` | `/deletions` | Registro de cancelaciones lógicas y bajas físicas |
+
+### 30.5 Harness de Protección Anti-Regresiones
+- **Flyway Parser Test:** `FlywayMigrationParseTest.java` valida en cada build que `V15__add_usercustomer_timestamps.sql` parsee sin errores en el dialecto PostgreSQL.
+- **Integration Test Suite:** `IntegrationV1ControllerTest.java` (21 pruebas unitarias e integración) verifica permanentemente:
+  1. Aislamiento multi-tenant (rechazo 403 `FORBIDDEN_TENANT_ACCESS` ante tenants no autorizados).
+  2. Sync incremental con `updated_since` y detección de cambios en parcelas secundarias.
+  3. Omisión estricta de precios y cuentas bancarias bajo LOPDP.
+  4. Fallback y validación de geometrías GeoJSON Point y Polygon.
+  5. Descomposición DAG multidimensional hasta órdenes `PURCHASE_ORDER`.
+  6. Identificación de bajas físicas y lógicas en `/deletions`.
+

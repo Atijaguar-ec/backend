@@ -139,4 +139,99 @@ class ProcessingOrderServiceTransferTest {
         assertTrue(exception.getMessage().contains("must contain a valid source StockOrder"),
                 exception.getMessage());
     }
+
+    @Test
+    @DisplayName("validateQRCodeTag: permite consolidar dos lotes FINAL_PROCESSING con distinto qrCodeTag si pertenecen al mismo FinalProduct")
+    void validateQRCodeTag_allowsConsolidatingLotsOfSameFinalProduct() throws Exception {
+        ProcessingOrderService service = new ProcessingOrderService(null, null, null);
+        Method method = ProcessingOrderService.class.getDeclaredMethod(
+                "validateQRCodeTag",
+                String.class,
+                com.abelium.inatrace.db.entities.product.FinalProduct.class,
+                com.abelium.inatrace.db.entities.stockorder.Transaction.class);
+        method.setAccessible(true);
+
+        com.abelium.inatrace.db.entities.product.FinalProduct fp = new com.abelium.inatrace.db.entities.product.FinalProduct();
+        ReflectionTestUtils.setField(fp, "id", 10L);
+
+        StockOrder secondLot = new StockOrder();
+        secondLot.setQrCodeTag("uuid-lot-2");
+        secondLot.setQrCodeTagFinalProduct(fp);
+
+        com.abelium.inatrace.db.entities.stockorder.Transaction tx2 = new com.abelium.inatrace.db.entities.stockorder.Transaction();
+        tx2.setSourceStockOrder(secondLot);
+
+        Object result = assertDoesNotThrow(() -> method.invoke(service, "uuid-lot-1", fp, tx2));
+        assertSame(fp, result);
+    }
+
+    @Test
+    @DisplayName("validateQRCodeTag: rechaza mezclar lotes con distinto qrCodeTag si pertenecen a distinto FinalProduct")
+    void validateQRCodeTag_rejectsLotsOfDifferentFinalProducts() throws Exception {
+        ProcessingOrderService service = new ProcessingOrderService(null, null, null);
+        Method method = ProcessingOrderService.class.getDeclaredMethod(
+                "validateQRCodeTag",
+                String.class,
+                com.abelium.inatrace.db.entities.product.FinalProduct.class,
+                com.abelium.inatrace.db.entities.stockorder.Transaction.class);
+        method.setAccessible(true);
+
+        com.abelium.inatrace.db.entities.product.FinalProduct fp1 = new com.abelium.inatrace.db.entities.product.FinalProduct();
+        ReflectionTestUtils.setField(fp1, "id", 10L);
+
+        com.abelium.inatrace.db.entities.product.FinalProduct fp2 = new com.abelium.inatrace.db.entities.product.FinalProduct();
+        ReflectionTestUtils.setField(fp2, "id", 20L);
+
+        StockOrder secondLot = new StockOrder();
+        secondLot.setQrCodeTag("uuid-lot-2");
+        secondLot.setQrCodeTagFinalProduct(fp2);
+
+        com.abelium.inatrace.db.entities.stockorder.Transaction tx2 = new com.abelium.inatrace.db.entities.stockorder.Transaction();
+        tx2.setSourceStockOrder(secondLot);
+
+        InvocationTargetException thrown = assertThrows(
+                InvocationTargetException.class,
+                () -> method.invoke(service, "uuid-lot-1", fp1, tx2));
+        assertTrue(thrown.getCause() instanceof ApiException);
+        assertTrue(thrown.getCause().getMessage().contains("different QR code tags"));
+    }
+
+    @Test
+    @DisplayName("validateQRCodeTag: resuelve FinalProduct desde sourceOrder.getFinalProduct si qrCodeTagFinalProduct es null")
+    void validateQRCodeTag_resolvesFinalProductFromStockOrderWhenQrCodeTagFinalProductIsNull() throws Exception {
+        ProcessingOrderService service = new ProcessingOrderService(null, null, null);
+        Method method = ProcessingOrderService.class.getDeclaredMethod(
+                "validateQRCodeTag",
+                String.class,
+                com.abelium.inatrace.db.entities.product.FinalProduct.class,
+                com.abelium.inatrace.db.entities.stockorder.Transaction.class);
+        method.setAccessible(true);
+
+        com.abelium.inatrace.db.entities.product.FinalProduct fp = new com.abelium.inatrace.db.entities.product.FinalProduct();
+        ReflectionTestUtils.setField(fp, "id", 15L);
+
+        // Lot 1: qrCodeTagFinalProduct is null, but finalProduct is set!
+        StockOrder firstLot = new StockOrder();
+        firstLot.setQrCodeTag("uuid-lot-1");
+        firstLot.setQrCodeTagFinalProduct(null);
+        firstLot.setFinalProduct(fp);
+
+        com.abelium.inatrace.db.entities.stockorder.Transaction tx1 = new com.abelium.inatrace.db.entities.stockorder.Transaction();
+        tx1.setSourceStockOrder(firstLot);
+
+        // First transaction resolves fp from finalProduct
+        Object resolvedFp = assertDoesNotThrow(() -> method.invoke(service, "uuid-lot-1", null, tx1));
+        assertSame(fp, resolvedFp);
+
+        // Lot 2: different UUID, same FinalProduct
+        StockOrder secondLot = new StockOrder();
+        secondLot.setQrCodeTag("uuid-lot-2");
+        secondLot.setFinalProduct(fp);
+
+        com.abelium.inatrace.db.entities.stockorder.Transaction tx2 = new com.abelium.inatrace.db.entities.stockorder.Transaction();
+        tx2.setSourceStockOrder(secondLot);
+
+        Object result2 = assertDoesNotThrow(() -> method.invoke(service, "uuid-lot-1", (com.abelium.inatrace.db.entities.product.FinalProduct) resolvedFp, tx2));
+        assertSame(fp, result2);
+    }
 }

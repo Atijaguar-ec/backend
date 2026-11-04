@@ -75,6 +75,46 @@ class PlotGeometryToolsTest {
 				coordinate(-1.5, -79.5))));
 	}
 
+	@Test
+	void shouldIdentifyCounterClockwiseRing() {
+		// Counter-clockwise triangle: (0,0) -> (1,0) -> (0,1) -> (0,0)
+		List<PlotCoordinate> ccw = List.of(
+				coordinate(0.0, 0.0),
+				coordinate(0.0, 1.0),
+				coordinate(1.0, 0.0),
+				coordinate(0.0, 0.0)
+		);
+		org.junit.jupiter.api.Assertions.assertTrue(PlotGeometryTools.isCounterClockwise(ccw));
+	}
+
+	@Test
+	void shouldIdentifyClockwiseRing() {
+		// Clockwise triangle: (0,0) -> (0,1) -> (1,0) -> (0,0)
+		List<PlotCoordinate> cw = List.of(
+				coordinate(0.0, 0.0),
+				coordinate(1.0, 0.0),
+				coordinate(0.0, 1.0),
+				coordinate(0.0, 0.0)
+		);
+		org.junit.jupiter.api.Assertions.assertFalse(PlotGeometryTools.isCounterClockwise(cw));
+	}
+
+	@Test
+	void shouldNormalizeClockwiseRingToCounterClockwise() {
+		// Stored open and clockwise: (0,0) -> (0,1) -> (1,0)
+		List<PlotCoordinate> openCw = List.of(
+				coordinate(0.0, 0.0),
+				coordinate(1.0, 0.0),
+				coordinate(0.0, 1.0)
+		);
+		List<PlotCoordinate> normalized = PlotGeometryTools.closedCounterClockwiseRing(openCw);
+		org.junit.jupiter.api.Assertions.assertNotNull(normalized);
+		assertEquals(4, normalized.size());
+		org.junit.jupiter.api.Assertions.assertTrue(PlotGeometryTools.isCounterClockwise(normalized));
+		assertEquals(normalized.get(0).getLatitude(), normalized.get(3).getLatitude());
+		assertEquals(normalized.get(0).getLongitude(), normalized.get(3).getLongitude());
+	}
+
 	private PlotCoordinate coordinate(double latitude, double longitude) {
 		PlotCoordinate coordinate = new PlotCoordinate();
 		coordinate.setLatitude(latitude);

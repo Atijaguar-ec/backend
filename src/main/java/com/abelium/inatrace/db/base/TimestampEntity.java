@@ -24,9 +24,16 @@ public class TimestampEntity extends BaseEntity {
     public Instant getCreationTimestamp() {
         return creationTimestamp;
     }
+
+    public void setCreationTimestamp(Instant creationTimestamp) {
+        this.creationTimestamp = creationTimestamp;
+    }
     
     public Instant getUpdateTimestamp() {
         return updateTimestamp;
     }
 
+    public void setUpdateTimestamp(Instant updateTimestamp) {
+        this.updateTimestamp = updateTimestamp;
+    }
 }

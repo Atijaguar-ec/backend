@@ -48,6 +48,7 @@ import com.abelium.inatrace.security.utils.PermissionsUtil;
 import com.abelium.inatrace.tools.PaginationTools;
 import com.abelium.inatrace.tools.Queries;
 import com.abelium.inatrace.tools.DeliveryReceiptTools;
+import com.abelium.inatrace.tools.PlotGeometryTools;
 import com.abelium.inatrace.tools.QueryTools;
 import com.abelium.inatrace.tools.TranslateTools;
 import com.abelium.inatrace.tools.WeekNumberTools;
@@ -372,6 +373,20 @@ public class StockOrderService extends BaseService {
                 .findFirst()
                 .orElse(null);
 
+        // Fallback: if the lot was partially or fully consumed in a consolidated multi-lot shipment
+        // that received its own container-level QR tag, still resolve the sack's QR tag to its latest StockOrder
+        if (topLevelStockOrder == null) {
+            topLevelStockOrder = em.createQuery(
+                    "SELECT so FROM StockOrder so WHERE so.qrCodeTag = :qrTag ORDER BY so.id DESC",
+                    StockOrder.class)
+                    .setParameter("qrTag", qrTag)
+                    .setMaxResults(1)
+                    .getResultList()
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+        }
+
         if (topLevelStockOrder != null) {
 
             // Get and set the orderId
@@ -572,6 +587,12 @@ public class StockOrderService extends BaseService {
      * devuelve unicamente lo que muestra la vista publica (public-delivery-receipt): se quitan
      * usuarios internos, pagos, evidencias, ubicaciones y la configuracion completa de la empresa
      * (solo se conserva la marca de colores por semana). Del agricultor solo viaja su nombre.
+     *
+     * REGLA DE AGENTE: este metodo es la unica barrera de privacidad del endpoint publico.
+     * Cualquier campo que no se anule aqui queda expuesto a quien escanee el QR o itere
+     * identificadores numericos. Los importes de la compra al socio (pricePerUnit, cost) son
+     * secreto comercial de la organizacion y NO deben viajar: anularlos no es opcional.
+     * Al anadir un campo nuevo a ApiStockOrder, decida explicitamente si es publico.
      */
     private void restrictToPublicReceiptFields(ApiStockOrder api) {
         api.setCreatedBy(null);
@@ -596,6 +617,10 @@ public class StockOrderService extends BaseService {
         api.setQrCodeTagFinalProduct(null);
         api.setWomenShare(null);
         api.setSacNumber(null);
+
+        // Importes de la compra al socio: secreto comercial de la organizacion.
+        api.setPricePerUnit(null);
+        api.setCost(null);
         api.setPricePerUnitForEndCustomer(null);
 
         com.abelium.inatrace.components.company.api.ApiUserCustomer farmer = api.getProducerUserCustomer();
@@ -1769,20 +1794,45 @@ public class StockOrderService extends BaseService {
 
     private void generateStockOrderQRCodeTag(StockOrder entity, ProcessingOrder processingOrder) {
 
-        if (entity.getId() == null && processingOrder != null && processingOrder.getProcessingAction().getType() == ProcessingActionType.GENERATE_QR_CODE) {
-            entity.setQrCodeTag(UUID.randomUUID().toString());
-            entity.setQrCodeTagFinalProduct(processingOrder.getProcessingAction().getQrCodeForFinalProduct());
+        if (entity.getId() == null && processingOrder != null && processingOrder.getProcessingAction() != null) {
+            ProcessingActionType actionType = processingOrder.getProcessingAction().getType();
+            if (actionType == ProcessingActionType.GENERATE_QR_CODE) {
+                entity.setQrCodeTag(UUID.randomUUID().toString());
+                entity.setQrCodeTagFinalProduct(processingOrder.getProcessingAction().getQrCodeForFinalProduct());
+            } else if (actionType == ProcessingActionType.FINAL_PROCESSING && StringUtils.isBlank(entity.getQrCodeTag())) {
+                com.abelium.inatrace.db.entities.product.FinalProduct finalProduct = entity.getFinalProduct() != null
+                        ? entity.getFinalProduct()
+                        : processingOrder.getProcessingAction().getOutputFinalProduct();
+                if (finalProduct != null) {
+                    entity.setQrCodeTag(UUID.randomUUID().toString());
+                    entity.setQrCodeTagFinalProduct(finalProduct);
+                }
+            }
         }
     }
 
     public byte[] createGeoJsonFromDeliveries(List<ApiStockOrderHistoryTimelineItem> timelineItems) throws ApiException {
 
-        // Read all userCustomers, from timeline item, and set ids in a Set
-        Set<Long> customerIds = new HashSet<>();
-        for (ApiStockOrderHistoryTimelineItem timelineItem: timelineItems) {
+        if (timelineItems == null || timelineItems.isEmpty()) {
+            return new byte[0];
+        }
+
+        // Read all userCustomers from timeline items, and track requested parcelLot names per farmer
+        Set<Long> customerIds = new LinkedHashSet<>();
+        Map<Long, Set<String>> requestedPlotsByFarmer = new HashMap<>();
+        for (ApiStockOrderHistoryTimelineItem timelineItem : timelineItems) {
+            if (timelineItem == null || timelineItem.getPurchaseOrders() == null) {
+                continue;
+            }
             timelineItem.getPurchaseOrders().forEach(po -> {
-                if (po.getProducerUserCustomer() != null) {
-                    customerIds.add(po.getProducerUserCustomer().getId());
+                if (po != null && po.getProducerUserCustomer() != null && po.getProducerUserCustomer().getId() != null) {
+                    Long farmerId = po.getProducerUserCustomer().getId();
+                    customerIds.add(farmerId);
+                    if (StringUtils.isNotBlank(po.getParcelLot())) {
+                        requestedPlotsByFarmer
+                                .computeIfAbsent(farmerId, k -> new LinkedHashSet<>())
+                                .add(po.getParcelLot().trim().toLowerCase(Locale.ROOT));
+                    }
                 }
             });
         }
@@ -1791,91 +1841,117 @@ public class StockOrderService extends BaseService {
             return new byte[0];
         }
 
-        // Get all plots for given farmers
-        Plot pcProxy = Torpedo.from(Plot.class);
-        Torpedo.where(pcProxy.getFarmer().getId()).in(customerIds);
-        List<Plot> plotList = Torpedo.select(pcProxy).list(em);
+        // Fetch plots and their coordinates for participating farmers
+        List<Plot> plotList = em.createQuery(
+                "SELECT DISTINCT p FROM Plot p LEFT JOIN FETCH p.coordinates WHERE p.farmer.id IN :customerIds",
+                Plot.class)
+                .setParameter("customerIds", customerIds)
+                .getResultList();
 
-        // Convert plot values into GeoJson coordinates
+        // Filter plots by parcelLot per farmer when matching plot names exist (fallback to farmer's plots for legacy records)
+        Map<Long, List<Plot>> plotsByFarmer = new LinkedHashMap<>();
+        for (Plot plot : plotList) {
+            if (plot == null || plot.getFarmer() == null || plot.getFarmer().getId() == null) {
+                continue;
+            }
+            plotsByFarmer.computeIfAbsent(plot.getFarmer().getId(), k -> new ArrayList<>()).add(plot);
+        }
+
+        List<Plot> selectedPlots = new ArrayList<>();
+        for (Map.Entry<Long, List<Plot>> entry : plotsByFarmer.entrySet()) {
+            Long farmerId = entry.getKey();
+            List<Plot> farmerPlots = entry.getValue();
+            Set<String> requestedNames = requestedPlotsByFarmer.get(farmerId);
+            if (requestedNames != null && !requestedNames.isEmpty()) {
+                List<Plot> matchingPlots = farmerPlots.stream()
+                        .filter(p -> StringUtils.isNotBlank(p.getPlotName())
+                                && requestedNames.contains(p.getPlotName().trim().toLowerCase(Locale.ROOT)))
+                        .collect(Collectors.toList());
+                if (!matchingPlots.isEmpty()) {
+                    selectedPlots.addAll(matchingPlots);
+                } else {
+                    selectedPlots.addAll(farmerPlots);
+                }
+            } else {
+                selectedPlots.addAll(farmerPlots);
+            }
+        }
+
+        // Convert each selected plot into an individual EUDR TRACES-NT compliant GeoJSON Feature
         ObjectMapper mapper = new ObjectMapper();
-        
-        // FeatureCollection, combines Multipoint feature and Multipolygon feature
         ObjectNode rootFeatureCollection = mapper.createObjectNode();
-        rootFeatureCollection.set("type", mapper.convertValue("FeatureCollection", JsonNode.class));
-        
-        // Multi points
-        ObjectNode rootMultiPoint = mapper.createObjectNode();
-        rootMultiPoint.set("type", mapper.convertValue("Feature", JsonNode.class));
-        
-        ObjectNode geometryMultiPoint = mapper.createObjectNode();
-        geometryMultiPoint.set("type", mapper.convertValue("MultiPoint", JsonNode.class));
-        rootMultiPoint.set("geometry", geometryMultiPoint);
+        rootFeatureCollection.put("type", "FeatureCollection");
 
-        List<List<Double>> pointCoordinatesList = new ArrayList<>();
-        plotList.forEach(plot -> {
-            // if point (less than 3 coordinates)
-            if (!plot.getCoordinates().isEmpty() && plot.getCoordinates().size() < 3) {
-                plot.getCoordinates().forEach(plotCoordinate -> {
-                    List<Double> cList = new ArrayList<>();
-                    cList.add(plotCoordinate.getLongitude());
-                    cList.add(plotCoordinate.getLatitude());
-                    pointCoordinatesList.add(cList);
-                });
-            }
-        });
-
-        geometryMultiPoint.set("coordinates", mapper.convertValue(pointCoordinatesList, JsonNode.class));
-        rootMultiPoint.set("properties",mapper.createObjectNode());
-        
-        // Multi polygon
-        ObjectNode rootMultiPolygon = mapper.createObjectNode();
-        rootMultiPolygon.set("type", mapper.convertValue("Feature", JsonNode.class));
-
-        ObjectNode geometryMultiPolygon = mapper.createObjectNode();
-        geometryMultiPolygon.set("type", mapper.convertValue("MultiPolygon", JsonNode.class));
-        rootMultiPolygon.set("geometry", geometryMultiPolygon);
-
-        List<List<List<List<Double>>>> plotCoordinatesList = new ArrayList<>();
-        plotList.forEach(plot -> {
-            // if polygon (more than 3 coordinates)
-            if (!plot.getCoordinates().isEmpty() && plot.getCoordinates().size() > 2) {
-                List<List<List<Double>>> plotCoordinatesListArray = new ArrayList<>();
-                List<List<Double>> coordinatesList = new ArrayList<>();
-
-                plot.getCoordinates().forEach(plotCoordinate -> {
-                    List<Double> cList = new ArrayList<>();
-                    cList.add(plotCoordinate.getLongitude());
-                    cList.add(plotCoordinate.getLatitude());
-                    coordinatesList.add(cList);
-                });
-
-                // polygons must follow right-hand rule (counter-clockwise)
-                if (!isPolygonCounterClockwise(coordinatesList)) {
-                    Collections.reverse(coordinatesList);
-                }
-
-                if (!coordinatesList.get(0).equals(coordinatesList.get(coordinatesList.size() - 1))) {
-                    // add first as last
-                    coordinatesList.add(coordinatesList.get(0));
-                }
-                plotCoordinatesListArray.add(coordinatesList);
-                plotCoordinatesList.add(plotCoordinatesListArray);
-            }
-        });
-
-        geometryMultiPolygon.set("coordinates", mapper.convertValue(plotCoordinatesList, JsonNode.class));
-
-        rootMultiPolygon.set("properties",mapper.createObjectNode());
-        
-        // combine MultiPolygon and Multipoint features
         List<ObjectNode> featureList = new ArrayList<>();
-        featureList.add(rootMultiPoint);
-        featureList.add(rootMultiPolygon);
-        
+        for (Plot plot : selectedPlots) {
+            if (plot.getCoordinates() == null || plot.getCoordinates().isEmpty()) {
+                continue;
+            }
+            List<PlotCoordinate> validCoords = plot.getCoordinates().stream()
+                    .filter(c -> c != null && c.getLongitude() != null && c.getLatitude() != null)
+                    .collect(Collectors.toList());
+            if (validCoords.isEmpty()) {
+                continue;
+            }
+
+            ObjectNode feature = mapper.createObjectNode();
+            feature.put("type", "Feature");
+
+            ObjectNode geometry = mapper.createObjectNode();
+            if (validCoords.size() < 3) {
+                geometry.put("type", "Point");
+                PlotCoordinate first = validCoords.get(0);
+                List<Double> pointCoords = List.of(first.getLongitude(), first.getLatitude());
+                geometry.set("coordinates", mapper.convertValue(pointCoords, JsonNode.class));
+            } else {
+                List<PlotCoordinate> closedRing = PlotGeometryTools.closedCounterClockwiseRing(validCoords);
+                if (closedRing == null) {
+                    geometry.put("type", "Point");
+                    PlotCoordinate first = validCoords.get(0);
+                    List<Double> pointCoords = List.of(first.getLongitude(), first.getLatitude());
+                    geometry.set("coordinates", mapper.convertValue(pointCoords, JsonNode.class));
+                } else {
+                    geometry.put("type", "Polygon");
+                    List<List<Double>> coordinatesList = new ArrayList<>();
+                    for (PlotCoordinate plotCoordinate : closedRing) {
+                        List<Double> cList = new ArrayList<>(2);
+                        cList.add(plotCoordinate.getLongitude());
+                        cList.add(plotCoordinate.getLatitude());
+                        coordinatesList.add(cList);
+                    }
+                    geometry.set("coordinates", mapper.convertValue(List.of(coordinatesList), JsonNode.class));
+                }
+            }
+            feature.set("geometry", geometry);
+
+            ObjectNode properties = mapper.createObjectNode();
+            String countryCode = "EC";
+            if (plot.getFarmer() != null
+                    && plot.getFarmer().getUserCustomerLocation() != null
+                    && plot.getFarmer().getUserCustomerLocation().getAddress() != null
+                    && plot.getFarmer().getUserCustomerLocation().getAddress().getCountry() != null
+                    && StringUtils.isNotBlank(plot.getFarmer().getUserCustomerLocation().getAddress().getCountry().getCode())) {
+                countryCode = plot.getFarmer().getUserCustomerLocation().getAddress().getCountry().getCode().trim().toUpperCase(Locale.ROOT);
+            }
+            String productionPlace = StringUtils.isNotBlank(plot.getPlotName())
+                    ? plot.getPlotName().trim()
+                    : (plot.getId() != null ? "Plot-" + plot.getId() : "Plot");
+            double areaHa = plot.getSize() != null ? plot.getSize() : 0.0;
+
+            properties.put("ProducerCountry", countryCode);
+            properties.put("ProductionPlace", productionPlace);
+            properties.put("Area", areaHa);
+            properties.put("geoID", Optional.ofNullable(plot.getGeoId()).orElse(""));
+            properties.put("plotName", Optional.ofNullable(plot.getPlotName()).orElse(""));
+            feature.set("properties", properties);
+
+            featureList.add(feature);
+        }
+
         rootFeatureCollection.set("features", mapper.convertValue(featureList, JsonNode.class));
 
         try {
-           return mapper.writer().writeValueAsBytes(rootFeatureCollection);
+            return mapper.writer().writeValueAsBytes(rootFeatureCollection);
         } catch (JsonProcessingException e) {
             logger.error("Error while generating geoJson file", e);
             throw new ApiException(ApiStatus.ERROR, "Error while generating geojson file");

@@ -1,7 +1,7 @@
 # ============================================================================
 # 🍫 Backend CI/CD - UNOCACE (Staging)
 # ============================================================================
-# Despliega el backend de UNOCACE en 95.217.182.220 (/opt/inatrace-test/),
+# Despliega el backend de UNOCACE en el servidor staging (${{ secrets.STAGE_UNOCACE_HOST }} / /opt/inatrace-test/),
 # verificado en vivo el 2026-07-28. Reemplaza el workflow anterior, que
 # apuntaba a /opt/inatrace/backend (ruta muerta desde abril), asumía un
 # contenedor MySQL inexistente y esperaba un service "backend" que no
