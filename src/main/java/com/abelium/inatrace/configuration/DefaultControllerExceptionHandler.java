@@ -27,6 +27,7 @@ import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpClientErrorException;
@@ -188,6 +189,21 @@ public class DefaultControllerExceptionHandler {
         updateErrorCounter();
         logger.error(exc.getMessage());
         return exceptionResponseBuilder.getAcceptableResponse(HttpStatus.BAD_REQUEST, ApiStatus.REQUEST_BODY_ERROR, exc.getMessage(), request);
+    }
+
+    /**
+     * Un parámetro de consulta obligatorio ausente es un error del cliente, no del servidor:
+     * debe responder 400 con un mensaje legible por máquina y sin filtrar la clase de la
+     * excepción interna. Sin este handler cae en handleException() y devuelve 500, lo que le
+     * dice al cliente que reintente un error que no se arregla reintentando.
+     */
+    @ExceptionHandler
+    public ResponseEntity<?> handleMissingServletRequestParameterException(MissingServletRequestParameterException exc, HttpServletRequest request) {
+        updateErrorCounter();
+        logger.warn("Missing required request parameter '{}' in {}", exc.getParameterName(), request.getRequestURI());
+        String message = "Required request parameter '" + exc.getParameterName() + "' is missing";
+        ApiError error = new ApiError(ApiStatus.INVALID_REQUEST, message, null, "MISSING_REQUIRED_PARAMETER");
+        return exceptionResponseBuilder.getAcceptableResponse(HttpStatus.BAD_REQUEST, error, request);
     }
 
     @ExceptionHandler

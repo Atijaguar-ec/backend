@@ -25,6 +25,7 @@ import jakarta.persistence.TypedQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,54 +39,115 @@ public class IntegrationV1Service {
 
     private static final Logger logger = LoggerFactory.getLogger(IntegrationV1Service.class);
 
+    private static final String FORBIDDEN_TENANT_ACCESS = "FORBIDDEN_TENANT_ACCESS";
+    private static final String FORBIDDEN_TENANT_MESSAGE = "No autorizado para consultar la organización especificada.";
+
     private final EntityManager entityManager;
     private final LotCompositionService lotCompositionService;
 
+    /**
+     * REGLA DE AGENTE: lista blanca de empresas que la API de integración puede leer (RF §4.1
+     * "Limited scope"). Es el único mecanismo que acota el alcance de la credencial M2M, así
+     * que NO debe ampliarse sin el acuerdo de cesión de datos firmado (RF §5).
+     *
+     * Vacía = se falla cerrado: ningún rol, SYSTEM_ADMIN incluido, obtiene acceso general a
+     * /integration/v1; cada usuario queda limitado a sus propias empresas (CompanyUser).
+     */
+    private final Set<Long> allowedCompanyIds;
+
     @Autowired
-    public IntegrationV1Service(EntityManager entityManager, LotCompositionService lotCompositionService) {
+    public IntegrationV1Service(EntityManager entityManager,
+                                LotCompositionService lotCompositionService,
+                                @Value("${INATrace.integration.allowedCompanyIds:}") String allowedCompanyIdsConfig) {
         this.entityManager = entityManager;
         this.lotCompositionService = lotCompositionService;
+        this.allowedCompanyIds = parseAllowedCompanyIds(allowedCompanyIdsConfig);
+        if (this.allowedCompanyIds.isEmpty()) {
+            logger.warn("INATrace.integration.allowedCompanyIds no está configurado: la API de integración "
+                    + "se limita a las empresas propias de cada usuario (fail-closed).");
+        } else {
+            logger.info("API de integración limitada a las empresas {}", this.allowedCompanyIds);
+        }
     }
 
+    public static Set<Long> parseAllowedCompanyIds(String config) {
+        if (config == null || config.isBlank()) {
+            return Collections.emptySet();
+        }
+        Set<Long> ids = new LinkedHashSet<>();
+        for (String token : config.split(",")) {
+            String trimmed = token.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            try {
+                ids.add(Long.parseLong(trimmed));
+            } catch (NumberFormatException e) {
+                logger.error("Valor no numérico '{}' en INATrace.integration.allowedCompanyIds; se ignora.", trimmed);
+            }
+        }
+        return Collections.unmodifiableSet(ids);
+    }
+
+    private ApiException forbiddenTenant() {
+        return new ApiException(ApiStatus.UNAUTHORIZED, FORBIDDEN_TENANT_MESSAGE, null, FORBIDDEN_TENANT_ACCESS);
+    }
+
+    /**
+     * Alcance efectivo de la credencial sobre /integration/v1.
+     *
+     * A diferencia del resto de la aplicación, aquí SYSTEM_ADMIN no es un comodín: el rol sólo
+     * decide de qué conjunto se parte, y la lista blanca lo acota en todos los casos. Una
+     * petición que nombre una empresa fuera del alcance recibe 403 FORBIDDEN_TENANT_ACCESS,
+     * sea cual sea el rol (RF §4.1 y comprobación de aceptación 2 del RF §6).
+     */
     public List<Long> getAuthorizedCompanyIds(CustomUserDetails authUser, Long requestedCompanyId) throws ApiException {
         if (authUser == null) {
-            throw new ApiException(ApiStatus.UNAUTHORIZED, "No autorizado para consultar la organización especificada.", null, "FORBIDDEN_TENANT_ACCESS");
+            throw forbiddenTenant();
         }
 
-        List<Long> userCompanyIds;
-        if (authUser.getUserRole() == UserRole.SYSTEM_ADMIN) {
-            if (requestedCompanyId != null) {
-                return Collections.singletonList(requestedCompanyId);
-            }
-            userCompanyIds = entityManager.createQuery("SELECT c.id FROM Company c WHERE c.status = com.abelium.inatrace.types.CompanyStatus.ACTIVE", Long.class).getResultList();
+        List<Long> scope;
+        if (!allowedCompanyIds.isEmpty() && authUser.getUserRole() == UserRole.SYSTEM_ADMIN) {
+            // La lista blanca es el alcance: un administrador no amplía lo acordado con Mieru.
+            scope = new ArrayList<>(allowedCompanyIds);
         } else {
-            userCompanyIds = entityManager.createQuery(
+            List<Long> userCompanyIds = entityManager.createQuery(
                     "SELECT cu.company.id FROM CompanyUser cu WHERE cu.user.id = :userId",
                     Long.class
             ).setParameter("userId", authUser.getUserId()).getResultList();
+            scope = userCompanyIds != null ? new ArrayList<>(userCompanyIds) : new ArrayList<>();
+            if (!allowedCompanyIds.isEmpty()) {
+                scope.removeIf(id -> !allowedCompanyIds.contains(id));
+            }
         }
 
-        if (userCompanyIds == null || userCompanyIds.isEmpty()) {
-            throw new ApiException(ApiStatus.UNAUTHORIZED, "No autorizado para consultar la organización especificada.", null, "FORBIDDEN_TENANT_ACCESS");
+        scope.removeIf(Objects::isNull);
+        Collections.sort(scope);
+
+        if (scope.isEmpty()) {
+            logger.warn("Access denied: user {} has no company in scope for the integration API", authUser.getUsername());
+            throw forbiddenTenant();
         }
 
         if (requestedCompanyId != null) {
-            if (!userCompanyIds.contains(requestedCompanyId)) {
+            if (!scope.contains(requestedCompanyId)) {
                 logger.warn("Access denied: user {} attempted to access unauthorized company {}", authUser.getUsername(), requestedCompanyId);
-                throw new ApiException(ApiStatus.UNAUTHORIZED, "No autorizado para consultar la organización especificada.", null, "FORBIDDEN_TENANT_ACCESS");
+                throw forbiddenTenant();
             }
             return Collections.singletonList(requestedCompanyId);
         }
 
-        return userCompanyIds;
+        return scope;
     }
 
+    /**
+     * Valida el acceso a una entidad concreta por la empresa a la que pertenece. Una entidad sin
+     * empresa no puede atribuirse a ningún tenant autorizado, así que se rechaza para cualquier
+     * rol.
+     */
     public void validateCompanyAccess(CustomUserDetails authUser, Long companyId) throws ApiException {
         if (companyId == null) {
-            if (authUser != null && authUser.getUserRole() == UserRole.SYSTEM_ADMIN) {
-                return;
-            }
-            throw new ApiException(ApiStatus.UNAUTHORIZED, "No autorizado para consultar la organización especificada.", null, "FORBIDDEN_TENANT_ACCESS");
+            throw forbiddenTenant();
         }
         getAuthorizedCompanyIds(authUser, companyId);
     }

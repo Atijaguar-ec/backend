@@ -85,7 +85,8 @@ class IntegrationV1ControllerTest {
     @BeforeEach
     void setUp() {
         lotCompositionService = new LotCompositionService(entityManager);
-        integrationService = new IntegrationV1Service(entityManager, lotCompositionService);
+        // Sin lista blanca configurada: fail-closed, cada usuario queda limitado a sus empresas.
+        integrationService = new IntegrationV1Service(entityManager, lotCompositionService, "");
         controller = new IntegrationV1Controller(integrationService);
 
         // M2M user enrolled only in UNOCACE (Company ID 12)
@@ -117,16 +118,77 @@ class IntegrationV1ControllerTest {
         assertEquals("FORBIDDEN_TENANT_ACCESS", exception.getErrorDetails());
     }
 
+    /**
+     * D-01 (informe QA 2026-11-04): el rol SYSTEM_ADMIN NO es un comodín en /integration/v1.
+     * Antes, getAuthorizedCompanyIds() devolvía el company_id pedido sin validarlo para ese rol,
+     * y la cuenta de servicio M2M leía las 21 empresas del tenant — fuga de datos personales de
+     * agricultores entre empresas (RF §4.1 "Limited scope", aceptación 2 del RF §6).
+     */
     @Test
-    @DisplayName("ADR-018: System admin can access any company")
-    void testSystemAdminAccessAllowed() throws ApiException {
+    @DisplayName("D-01: System admin NO puede acceder a una empresa fuera de la lista blanca (403)")
+    void testSystemAdminBlockedOutsideAllowlist() {
+        IntegrationV1Service scoped = new IntegrationV1Service(entityManager, lotCompositionService, "4,8");
+        IntegrationV1Controller scopedController = new IntegrationV1Controller(scoped);
+
+        ApiException ex = assertThrows(ApiException.class, () ->
+                scopedController.getFacilities(5L, null, authUserSystemAdmin)
+        );
+
+        assertEquals(ApiStatus.UNAUTHORIZED, ex.getApiStatus());
+        assertEquals("FORBIDDEN_TENANT_ACCESS", ex.getErrorDetails());
+    }
+
+    @Test
+    @DisplayName("D-01: System admin sí accede a una empresa dentro de la lista blanca")
+    void testSystemAdminAllowedInsideAllowlist() throws ApiException {
+        IntegrationV1Service scoped = new IntegrationV1Service(entityManager, lotCompositionService, "4,8");
+        IntegrationV1Controller scopedController = new IntegrationV1Controller(scoped);
+
         when(entityManager.createQuery(contains("FROM Facility"), eq(Facility.class))).thenReturn(facilityQuery);
         when(facilityQuery.setParameter(eq("companyIds"), anyList())).thenReturn(facilityQuery);
         when(facilityQuery.getResultList()).thenReturn(Collections.emptyList());
 
-        ApiResponse<List<ApiFacilityIntegration>> response = controller.getFacilities(5L, null, authUserSystemAdmin);
+        ApiResponse<List<ApiFacilityIntegration>> response = scopedController.getFacilities(8L, null, authUserSystemAdmin);
         assertNotNull(response);
         assertEquals(ApiStatus.OK, response.getStatus());
+    }
+
+    @Test
+    @DisplayName("D-01: con lista blanca, el alcance sin company_id es exactamente la lista blanca")
+    void testAllowlistIsTheScopeForSystemAdmin() throws ApiException {
+        IntegrationV1Service scoped = new IntegrationV1Service(entityManager, lotCompositionService, "8, 4 ,8");
+
+        List<Long> scope = scoped.getAuthorizedCompanyIds(authUserSystemAdmin, null);
+
+        assertEquals(List.of(4L, 8L), scope, "deduplicado, saneado y ordenado de forma estable");
+    }
+
+    @Test
+    @DisplayName("D-01: fail-closed — sin lista blanca, un admin sin empresas propias recibe 403")
+    void testFailsClosedWithoutAllowlist() {
+        when(longQuery.setParameter("userId", 1L)).thenReturn(longQuery);
+        when(longQuery.getResultList()).thenReturn(Collections.emptyList());
+
+        ApiException ex = assertThrows(ApiException.class, () ->
+                integrationService.getAuthorizedCompanyIds(authUserSystemAdmin, 5L)
+        );
+
+        assertEquals(ApiStatus.UNAUTHORIZED, ex.getApiStatus());
+        assertEquals("FORBIDDEN_TENANT_ACCESS", ex.getErrorDetails());
+    }
+
+    @Test
+    @DisplayName("D-01: la lista blanca también acota a un usuario normal a su intersección")
+    void testAllowlistIntersectsRegularUserCompanies() {
+        // El usuario 99 pertenece a la empresa 12, que no está en la lista acordada.
+        IntegrationV1Service scoped = new IntegrationV1Service(entityManager, lotCompositionService, "4,8");
+
+        ApiException ex = assertThrows(ApiException.class, () ->
+                scoped.getAuthorizedCompanyIds(authUserUnocace, 12L)
+        );
+
+        assertEquals(ApiStatus.UNAUTHORIZED, ex.getApiStatus());
+        assertEquals("FORBIDDEN_TENANT_ACCESS", ex.getErrorDetails());
     }
 
     // =========================================================================
@@ -625,7 +687,7 @@ class IntegrationV1ControllerTest {
     }
 
     @Test
-    @DisplayName("Security: Access denied when entity company is null for non-admin user")
+    @DisplayName("Security: Access denied when entity company is null, for any role")
     void testAccessDeniedWhenCompanyIsNull() {
         UserCustomer unassignedFarmer = new UserCustomer();
         ReflectionTestUtils.setField(unassignedFarmer, "id", 7777L);
@@ -642,6 +704,13 @@ class IntegrationV1ControllerTest {
         );
         assertEquals(ApiStatus.UNAUTHORIZED, ex.getApiStatus());
         assertEquals("FORBIDDEN_TENANT_ACCESS", ex.getErrorDetails());
+
+        // D-01: una entidad sin empresa no se atribuye a ningún tenant, tampoco para un admin.
+        ApiException adminEx = assertThrows(ApiException.class, () ->
+                controller.getFarmerById(7777L, authUserSystemAdmin)
+        );
+        assertEquals(ApiStatus.UNAUTHORIZED, adminEx.getApiStatus());
+        assertEquals("FORBIDDEN_TENANT_ACCESS", adminEx.getErrorDetails());
     }
 
     @Test
