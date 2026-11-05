@@ -193,16 +193,15 @@ en la fecha de la compra. **Todas las columnas son nullable** (§12) y el índic
 
 ### Cálculo de Peso Neto (`StockOrderService`)
 ```
-Base              = Bruto − Tara − PesoDañado
-DescuentoHumedad  = Base × Humedad / 100        (2 decimales, HALF_UP)
-Net               = Base − DescuentoHumedad
+Entregado         = Bruto − Tara
+DescuentoHumedad  = Entregado × Humedad / 100    (2 decimales, HALF_UP)
+Net               = Entregado − DescuentoHumedad − PesoDañado
 cost              = (pricePerUnit − damagedPriceDeduction) × (Net ?? totalQuantity) − finalPriceDiscount
 ```
 - Método: `calculateNetQuantity(ApiStockOrder api, StockOrder entity)`.
 - Se calcula automáticamente al guardar un `StockOrder` tipo `PURCHASE_ORDER`.
 - `cost` no se redondea en Java: lo redondea la columna `numeric(38,2)` al persistir.
-- ⚠️ Hasta 2026-09-15 este archivo decía `Net = (Bruto − Tara − PesoDañado) × (Humedad / 100)`.
-  Eso es el **descuento**, no el neto. No "corrijas" el código hacia esa fórmula.
+- ⚠️ Regla de UNOCACE (Trello #32): el descuento por humedad se aplica directamente sobre la cantidad entregada en baba (`Bruto - Tara`), y luego se resta la merma/peso dañado. Con $CL=100$, $DH=30\%$ y $DP=1$, $Neto = 100 - 30 - 1 = 69.00$ (no 69.30).
   El orden completo del guardado y lo que exige a los clientes está en §16.
 
 ### Orgánico y certificación por defecto (`StockOrderService`)

@@ -1386,15 +1386,20 @@ public class StockOrderService extends BaseService {
         BigDecimal tare = api.getTare() != null ? api.getTare() : BigDecimal.ZERO;
         BigDecimal damaged = api.getDamagedWeightDeduction() != null ? api.getDamagedWeightDeduction() : BigDecimal.ZERO;
         
-        BigDecimal grossTareDamaged = gross.subtract(tare).subtract(damaged);
+        BigDecimal deliveredQuantity = gross.subtract(tare);
+        if (deliveredQuantity.compareTo(BigDecimal.ZERO) < 0) {
+            deliveredQuantity = BigDecimal.ZERO;
+        }
 
         if (api.getMoisturePercentage() != null && api.getMoisturePercentage().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal moistureDeduction = grossTareDamaged.multiply(api.getMoisturePercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            BigDecimal moistureDeduction = deliveredQuantity.multiply(api.getMoisturePercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
             entity.setMoistureWeightDeduction(moistureDeduction);
-            entity.setNetQuantity(grossTareDamaged.subtract(moistureDeduction));
+            BigDecimal net = deliveredQuantity.subtract(moistureDeduction).subtract(damaged);
+            entity.setNetQuantity(net.compareTo(BigDecimal.ZERO) > 0 ? net : BigDecimal.ZERO);
         } else {
             entity.setMoistureWeightDeduction(BigDecimal.ZERO);
-            entity.setNetQuantity(grossTareDamaged);
+            BigDecimal net = deliveredQuantity.subtract(damaged);
+            entity.setNetQuantity(net.compareTo(BigDecimal.ZERO) > 0 ? net : BigDecimal.ZERO);
         }
     }
 

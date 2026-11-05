@@ -132,12 +132,30 @@ class StockOrderServiceTest {
 
         calculateNetQuantityMethod.invoke(stockOrderService, api, entity);
 
-        // grossTareDamaged = 1000 - 50 - 20 = 930
-        // moistureDeduction = 930 * 10 / 100 = 93
-        // expected net = 930 - 93 = 837
+        // deliveredQuantity = 1000 - 50 = 950
+        // moistureDeduction = 950 * 10 / 100 = 95.00
+        // expected net = 950 - 95.00 - 20 = 835.00
 
-        assertEquals(new BigDecimal("93.00"), entity.getMoistureWeightDeduction().setScale(2, RoundingMode.HALF_UP));
-        assertEquals(new BigDecimal("837.00"), entity.getNetQuantity().setScale(2, RoundingMode.HALF_UP));
+        assertEquals(new BigDecimal("95.00"), entity.getMoistureWeightDeduction().setScale(2, RoundingMode.HALF_UP));
+        assertEquals(new BigDecimal("835.00"), entity.getNetQuantity().setScale(2, RoundingMode.HALF_UP));
+    }
+
+    @Test
+    void testCalculateNetQuantity_unocaceHumidityDeductionContract() throws Exception {
+        // UNOCACE Card #32: gross = 100 lb, tare = 0 lb, damaged = 1 lb, moisture = 30%
+        // Expected: moistureDeduction = 30.00 lb, netQuantity = 69.00 lb (not 69.30 lb)
+        ApiStockOrder api = new ApiStockOrder();
+        api.setTotalGrossQuantity(new BigDecimal("100.00"));
+        api.setTare(BigDecimal.ZERO);
+        api.setDamagedWeightDeduction(new BigDecimal("1.00"));
+        api.setMoisturePercentage(new BigDecimal("30.00"));
+
+        StockOrder entity = new StockOrder();
+
+        calculateNetQuantityMethod.invoke(stockOrderService, api, entity);
+
+        assertEquals(new BigDecimal("30.00"), entity.getMoistureWeightDeduction().setScale(2, RoundingMode.HALF_UP));
+        assertEquals(new BigDecimal("69.00"), entity.getNetQuantity().setScale(2, RoundingMode.HALF_UP));
     }
 
     @Test
