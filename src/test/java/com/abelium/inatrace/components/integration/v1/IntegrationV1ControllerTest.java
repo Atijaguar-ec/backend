@@ -177,6 +177,46 @@ class IntegrationV1ControllerTest {
         assertEquals("FORBIDDEN_TENANT_ACCESS", ex.getErrorDetails());
     }
 
+    /**
+     * Despliegue mono-cliente (UNOCACE y todas sus asociaciones en la misma instancia): el
+     * alcance pedido por el requerimiento es la instancia completa, y se concede de forma
+     * explícita con "*", no por el rol del usuario.
+     */
+    @Test
+    @DisplayName("D-01: con '*' el alcance es todas las empresas ACTIVE de la instancia")
+    void testWildcardScopeCoversAllActiveCompanies() throws ApiException {
+        IntegrationV1Service wholeInstance = new IntegrationV1Service(entityManager, lotCompositionService, "*");
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> allCompaniesQuery = mock(TypedQuery.class);
+        when(entityManager.createQuery(contains("SELECT c.id FROM Company c"), eq(Long.class)))
+                .thenReturn(allCompaniesQuery);
+        when(allCompaniesQuery.getResultList()).thenReturn(Arrays.asList(11L, 1L, 4L, 5L));
+
+        assertEquals(List.of(1L, 4L, 5L, 11L), wholeInstance.getAuthorizedCompanyIds(authUserSystemAdmin, null));
+        assertEquals(List.of(5L), wholeInstance.getAuthorizedCompanyIds(authUserSystemAdmin, 5L),
+                "la empresa 5 es una asociación legítima de esta instancia");
+    }
+
+    @Test
+    @DisplayName("D-01: con '*' una empresa inexistente o inactiva sigue recibiendo 403")
+    void testWildcardStillRejectsUnknownCompany() {
+        IntegrationV1Service wholeInstance = new IntegrationV1Service(entityManager, lotCompositionService, "*");
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> allCompaniesQuery = mock(TypedQuery.class);
+        when(entityManager.createQuery(contains("SELECT c.id FROM Company c"), eq(Long.class)))
+                .thenReturn(allCompaniesQuery);
+        when(allCompaniesQuery.getResultList()).thenReturn(Arrays.asList(1L, 4L));
+
+        ApiException ex = assertThrows(ApiException.class, () ->
+                wholeInstance.getAuthorizedCompanyIds(authUserSystemAdmin, 9999L)
+        );
+
+        assertEquals(ApiStatus.UNAUTHORIZED, ex.getApiStatus());
+        assertEquals("FORBIDDEN_TENANT_ACCESS", ex.getErrorDetails());
+    }
+
     @Test
     @DisplayName("D-01: la lista blanca también acota a un usuario normal a su intersección")
     void testAllowlistIntersectsRegularUserCompanies() {

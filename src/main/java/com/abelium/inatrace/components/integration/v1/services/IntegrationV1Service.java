@@ -45,15 +45,24 @@ public class IntegrationV1Service {
     private final EntityManager entityManager;
     private final LotCompositionService lotCompositionService;
 
+    /** Valor de configuración que concede el alcance a todas las empresas de la instancia. */
+    public static final String ALL_COMPANIES = "*";
+
     /**
-     * REGLA DE AGENTE: lista blanca de empresas que la API de integración puede leer (RF §4.1
-     * "Limited scope"). Es el único mecanismo que acota el alcance de la credencial M2M, así
-     * que NO debe ampliarse sin el acuerdo de cesión de datos firmado (RF §5).
+     * REGLA DE AGENTE: alcance de la API de integración (RF §4.1 "Limited scope"). Es el único
+     * mecanismo que acota la credencial M2M, así que NO debe ampliarse sin el acuerdo de cesión
+     * de datos firmado (RF §5).
      *
-     * Vacía = se falla cerrado: ningún rol, SYSTEM_ADMIN incluido, obtiene acceso general a
-     * /integration/v1; cada usuario queda limitado a sus propias empresas (CompanyUser).
+     * Tres estados posibles, según INATrace.integration.allowedCompanyIds:
+     *   "*"        -> todas las empresas ACTIVE de la instancia. Es lo correcto en un despliegue
+     *                 mono-cliente como UNOCACE, donde todas las empresas son la propia UNOCACE
+     *                 y sus asociaciones.
+     *   "4,7,8"    -> exactamente esas empresas; cualquier otra recibe 403.
+     *   vacío      -> fail-closed: ningún rol, SYSTEM_ADMIN incluido, obtiene acceso general;
+     *                 cada usuario queda limitado a sus propias empresas (CompanyUser).
      */
     private final Set<Long> allowedCompanyIds;
+    private final boolean allCompaniesAllowed;
 
     @Autowired
     public IntegrationV1Service(EntityManager entityManager,
@@ -61,8 +70,13 @@ public class IntegrationV1Service {
                                 @Value("${INATrace.integration.allowedCompanyIds:}") String allowedCompanyIdsConfig) {
         this.entityManager = entityManager;
         this.lotCompositionService = lotCompositionService;
-        this.allowedCompanyIds = parseAllowedCompanyIds(allowedCompanyIdsConfig);
-        if (this.allowedCompanyIds.isEmpty()) {
+        this.allCompaniesAllowed = isAllCompanies(allowedCompanyIdsConfig);
+        this.allowedCompanyIds = this.allCompaniesAllowed
+                ? Collections.emptySet()
+                : parseAllowedCompanyIds(allowedCompanyIdsConfig);
+        if (this.allCompaniesAllowed) {
+            logger.info("API de integración con alcance a TODAS las empresas activas de esta instancia.");
+        } else if (this.allowedCompanyIds.isEmpty()) {
             logger.warn("INATrace.integration.allowedCompanyIds no está configurado: la API de integración "
                     + "se limita a las empresas propias de cada usuario (fail-closed).");
         } else {
@@ -70,8 +84,17 @@ public class IntegrationV1Service {
         }
     }
 
+    /** True cuando la configuración concede el alcance a toda la instancia ("*" o "ALL"). */
+    public static boolean isAllCompanies(String config) {
+        if (config == null) {
+            return false;
+        }
+        String trimmed = config.trim();
+        return ALL_COMPANIES.equals(trimmed) || "ALL".equalsIgnoreCase(trimmed);
+    }
+
     public static Set<Long> parseAllowedCompanyIds(String config) {
-        if (config == null || config.isBlank()) {
+        if (config == null || config.isBlank() || isAllCompanies(config)) {
             return Collections.emptySet();
         }
         Set<Long> ids = new LinkedHashSet<>();
@@ -87,6 +110,13 @@ public class IntegrationV1Service {
             }
         }
         return Collections.unmodifiableSet(ids);
+    }
+
+    private List<Long> findAllActiveCompanyIds() {
+        return entityManager.createQuery(
+                "SELECT c.id FROM Company c WHERE c.status = com.abelium.inatrace.types.CompanyStatus.ACTIVE",
+                Long.class
+        ).getResultList();
     }
 
     private ApiException forbiddenTenant() {
@@ -107,7 +137,12 @@ public class IntegrationV1Service {
         }
 
         List<Long> scope;
-        if (!allowedCompanyIds.isEmpty() && authUser.getUserRole() == UserRole.SYSTEM_ADMIN) {
+        if (allCompaniesAllowed && authUser.getUserRole() == UserRole.SYSTEM_ADMIN) {
+            // Despliegue mono-cliente: todas las empresas son del mismo grupo (UNOCACE y sus
+            // asociaciones), así que el alcance es la instancia completa.
+            List<Long> all = findAllActiveCompanyIds();
+            scope = all != null ? new ArrayList<>(all) : new ArrayList<>();
+        } else if (!allowedCompanyIds.isEmpty() && authUser.getUserRole() == UserRole.SYSTEM_ADMIN) {
             // La lista blanca es el alcance: un administrador no amplía lo acordado con Mieru.
             scope = new ArrayList<>(allowedCompanyIds);
         } else {

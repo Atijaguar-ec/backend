@@ -13,15 +13,13 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Fija la lista blanca de empresas de la API de integración Mieru Cacao, que es el único
- * mecanismo que acota el alcance de la credencial M2M (D-01 del informe QA 2026-11-04).
+ * Fija el alcance configurado de la API de integración Mieru Cacao, que es el único mecanismo
+ * que acota la credencial M2M (D-01 del informe QA 2026-11-04).
  *
- * Un error tipográfico aquí no rompe el arranque: los valores no numéricos se descartan con
- * un log, de modo que «1l» en lugar de «11» reduciría el alcance en silencio. Esta prueba
- * convierte ese fallo silencioso en un fallo de compilación del build.
- *
- * Si cambia el acuerdo de cesión de datos con Mieru (RF §5), hay que actualizar esta prueba
- * a propósito — y eso es deliberado: la lista no debe poder cambiar sin que nadie lo note.
+ * El perfil unocace usa "*" porque el despliegue es mono-cliente: todas sus empresas son
+ * UNOCACE y sus asociaciones, que es el alcance que pide el requerimiento. Lo que estas
+ * pruebas protegen es que "*" no se cuele en un perfil que aloje a más de un cliente, y que
+ * el valor por defecto siga siendo fail-closed.
  */
 class IntegrationAllowlistConfigTest {
 
@@ -58,47 +56,46 @@ class IntegrationAllowlistConfigTest {
     }
 
     @Test
-    @DisplayName("Perfil unocace: la lista acordada con Mieru es exactamente 1,4,7,8,11,15")
-    void testUnocaceAllowlistMatchesTheAgreement() throws Exception {
+    @DisplayName("Perfil unocace: alcance a todas las empresas de la instancia (despliegue mono-cliente)")
+    void testUnocaceScopeCoversTheWholeInstance() throws Exception {
         String configured = load("application-unocace.properties").getProperty(KEY);
 
         assertNotNull(configured, KEY + " debe estar definido en el perfil unocace");
-        assertEquals(Set.of(1L, 4L, 7L, 8L, 11L, 15L), IntegrationV1Service.parseAllowedCompanyIds(configured),
-                "lista confirmada por el dueño de producto el 2026-11-04 y ampliada con el id 1 el 2026-11-05; "
-                        + "actualizar sólo con el acuerdo firmado");
+        assertTrue(IntegrationV1Service.isAllCompanies(configured),
+                "UNOCACE y todas sus asociaciones viven en esta instancia, así que el alcance es "
+                        + "la instancia completa; valor configurado: '" + configured + "'");
     }
 
     /**
-     * CP-02 de la matriz de QA: «Devuelve UNOCACE con RUC 0992258814001». Mieru conoce a las
-     * empresas sólo por nombre y resuelve los IDs con GET /companies (RF §4.3), así que sacar a
-     * UNOCACE del alcance le impediría resolver una de las dos empresas que el RF §4.1 nombra.
+     * "*" sólo es correcto donde todas las empresas pertenecen al mismo grupo. El perfil de
+     * Fortaleza del Valle es otro cliente, y su configuración no debe conceder ese alcance.
      */
     @Test
-    @DisplayName("Perfil unocace: la lista incluye UNOCACE (id 1), que el caso CP-02 necesita")
-    void testUnocaceAllowlistIncludesUnocaceItself() throws Exception {
-        String configured = load("application-unocace.properties").getProperty(KEY);
+    @DisplayName("Perfil fortaleza: no concede alcance a toda la instancia")
+    void testFortalezaDoesNotGrantWholeInstanceScope() throws Exception {
+        String configured = load("application-fortaleza.properties").getProperty(KEY);
 
-        assertTrue(IntegrationV1Service.parseAllowedCompanyIds(configured).contains(1L),
-                "sin el id 1, GET /companies no devuelve UNOCACE y CP-02 no puede pasar");
+        assertFalse(IntegrationV1Service.isAllCompanies(configured),
+                "sólo un despliegue mono-cliente puede usar '*'; valor configurado: '" + configured + "'");
     }
 
     @Test
-    @DisplayName("Perfil unocace: la lista no incluye la empresa 5, usada en el caso CP-09")
-    void testUnocaceAllowlistExcludesCp09Company() throws Exception {
-        String configured = load("application-unocace.properties").getProperty(KEY);
-
-        assertFalse(IntegrationV1Service.parseAllowedCompanyIds(configured).contains(5L),
-                "CP-09 exige que GET /farmers?company_id=5 responda 403");
-    }
-
-    @Test
-    @DisplayName("Por defecto la lista va vacía: fail-closed si un despliegue no la configura")
+    @DisplayName("Por defecto el alcance va vacío: fail-closed si un despliegue no lo configura")
     void testDefaultIsFailClosed() throws Exception {
         String configured = loadShippedMainProperties().getProperty(KEY);
 
         assertNotNull(configured, KEY + " debe estar documentado en application.properties");
+        assertFalse(IntegrationV1Service.isAllCompanies(configured),
+                "el valor por defecto no debe conceder la instancia completa");
         assertTrue(IntegrationV1Service.parseAllowedCompanyIds(configured).isEmpty(),
                 "el valor por defecto no debe conceder alcance a ninguna empresa");
+    }
+
+    @Test
+    @DisplayName("Una lista explícita de IDs sigue funcionando, para excluir a quien no firme el acuerdo")
+    void testExplicitListStillSupported() {
+        assertFalse(IntegrationV1Service.isAllCompanies("4,7,8"));
+        assertEquals(Set.of(4L, 7L, 8L), IntegrationV1Service.parseAllowedCompanyIds("4,7,8"));
     }
 
     @Test
@@ -107,5 +104,9 @@ class IntegrationAllowlistConfigTest {
         assertEquals(Set.of(4L, 8L), IntegrationV1Service.parseAllowedCompanyIds(" 8 , 4 ,, no-numerico , 8 "));
         assertTrue(IntegrationV1Service.parseAllowedCompanyIds(null).isEmpty());
         assertTrue(IntegrationV1Service.parseAllowedCompanyIds("   ").isEmpty());
+        assertTrue(IntegrationV1Service.isAllCompanies(" * "));
+        assertTrue(IntegrationV1Service.isAllCompanies("all"));
+        assertFalse(IntegrationV1Service.isAllCompanies(null));
+        assertFalse(IntegrationV1Service.isAllCompanies(""));
     }
 }
