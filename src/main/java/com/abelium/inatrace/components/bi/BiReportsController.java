@@ -15,6 +15,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -47,22 +49,29 @@ public class BiReportsController {
 	@PreAuthorize("hasAnyAuthority('USER', 'SYSTEM_ADMIN', 'REGIONAL_ADMIN')")
 	@RequireCompanyAccess
 	@Operation(summary = "List authorized Superset dashboards for a company")
-	public ApiResponse<ApiBiDashboardCatalogResponse> getDashboards(
+	public ResponseEntity<ApiResponse<ApiBiDashboardCatalogResponse>> getDashboards(
 			@NotNull @RequestParam("companyId") Long companyId,
 			@AuthenticationPrincipal CustomUserDetails authUser
 	) throws ApiException {
-		return new ApiResponse<>(biReportsService.getDashboardCatalog(companyId, authUser));
+		return noStoreJson(biReportsService.getDashboardCatalog(companyId, authUser));
 	}
 
 	@PostMapping("/guest-token")
 	@PreAuthorize("hasAnyAuthority('USER', 'SYSTEM_ADMIN', 'REGIONAL_ADMIN')")
 	@RequireCompanyAccess
 	@Operation(summary = "Issue a short-lived Superset guest token for an authorized dashboard slug")
-	public ApiResponse<ApiBiGuestTokenResponse> createGuestToken(
+	public ResponseEntity<ApiResponse<ApiBiGuestTokenResponse>> createGuestToken(
 			@Valid @RequestBody ApiBiGuestTokenRequest request,
 			@AuthenticationPrincipal CustomUserDetails authUser
 	) throws ApiException {
-		return new ApiResponse<>(biReportsService.issueGuestToken(request, authUser));
+		return noStoreJson(biReportsService.issueGuestToken(request, authUser));
+	}
+
+	private static <T> ResponseEntity<ApiResponse<T>> noStoreJson(T payload) {
+		return ResponseEntity.ok()
+				.cacheControl(CacheControl.noStore().mustRevalidate())
+				.header("Pragma", "no-cache")
+				.body(new ApiResponse<>(payload));
 	}
 
 	@PostMapping("/custom-dashboards")

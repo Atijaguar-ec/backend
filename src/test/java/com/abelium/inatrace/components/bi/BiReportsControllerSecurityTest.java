@@ -33,9 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.abelium.inatrace.components.bi.api.ApiBiDashboardCatalogResponse;
+import com.abelium.inatrace.components.bi.api.ApiBiGuestTokenResponse;
+import org.hamcrest.Matchers;
 
 @ExtendWith(MockitoExtension.class)
 class BiReportsControllerSecurityTest {
@@ -124,5 +130,37 @@ class BiReportsControllerSecurityTest {
 				.andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.status").value("VALIDATION_ERROR"))
 				.andExpect(jsonPath("$.errorMessage").value("El tablero no autoriza el dominio del portal."));
+	}
+
+	@Test
+	void catalogAndGuestTokenResponsesEmitNoStoreCacheHeaders() throws Exception {
+		CustomUserDetails user = new CustomUserDetails(10L, "op@fv.ec", "Operador", "FV", UserRole.USER);
+		SecurityContextHolder.getContext().setAuthentication(
+				new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities())
+		);
+
+		ApiBiDashboardCatalogResponse catalog = new ApiBiDashboardCatalogResponse();
+		catalog.supersetDomain = "https://testinatrace.espam.edu.ec/bi";
+		when(biReportsService.getDashboardCatalog(any(), any())).thenReturn(catalog);
+
+		when(biReportsService.issueGuestToken(any(), any())).thenReturn(
+				new ApiBiGuestTokenResponse("https://testinatrace.espam.edu.ec/bi", "uuid-1", "guest-jwt", 300)
+		);
+
+		mockMvc.perform(get("/bi/dashboards")
+						.param("companyId", "5")
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Cache-Control", Matchers.containsString("no-store")))
+				.andExpect(header().string("Pragma", "no-cache"));
+
+		mockMvc.perform(post("/bi/guest-token")
+						.accept(MediaType.APPLICATION_JSON)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"companyId\":5,\"slug\":\"fortaleza-cacao-arqueo-bascula-staging\"}"))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Cache-Control", Matchers.containsString("no-store")))
+				.andExpect(header().string("Pragma", "no-cache"))
+				.andExpect(jsonPath("$.data.guestToken").value("guest-jwt"));
 	}
 }

@@ -12,8 +12,13 @@ import com.abelium.inatrace.components.company.CompanyQueries;
 import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.types.UserRole;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.transaction.Transactional;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -35,24 +40,48 @@ import java.util.Set;
 @Service
 public class BiReportsService extends BaseService {
 
+	private static final Logger logger = LoggerFactory.getLogger(BiReportsService.class);
 	public static final String CUSTOM_BI_DASHBOARDS_KEY = "customBiDashboards";
 
 	private final CompanyQueries companyQueries;
 	private final BiSupersetProperties properties;
 	private final BiOfficialCatalog officialCatalog;
 	private final SupersetClient supersetClient;
+	private final MeterRegistry meterRegistry;
 
-	@Autowired
 	public BiReportsService(
 			CompanyQueries companyQueries,
 			BiSupersetProperties properties,
 			BiOfficialCatalog officialCatalog,
 			SupersetClient supersetClient
 	) {
+		this(companyQueries, properties, officialCatalog, supersetClient, (MeterRegistry) null);
+	}
+
+	@Autowired
+	public BiReportsService(
+			CompanyQueries companyQueries,
+			BiSupersetProperties properties,
+			BiOfficialCatalog officialCatalog,
+			SupersetClient supersetClient,
+			ObjectProvider<MeterRegistry> meterRegistryProvider
+	) {
+		this(companyQueries, properties, officialCatalog, supersetClient,
+				meterRegistryProvider != null ? meterRegistryProvider.getIfAvailable() : null);
+	}
+
+	BiReportsService(
+			CompanyQueries companyQueries,
+			BiSupersetProperties properties,
+			BiOfficialCatalog officialCatalog,
+			SupersetClient supersetClient,
+			MeterRegistry meterRegistry
+	) {
 		this.companyQueries = companyQueries;
 		this.properties = properties;
 		this.officialCatalog = officialCatalog;
 		this.supersetClient = supersetClient;
+		this.meterRegistry = meterRegistry;
 	}
 
 	@Transactional
@@ -81,193 +110,228 @@ public class BiReportsService extends BaseService {
 
 	@Transactional
 	public ApiBiGuestTokenResponse issueGuestToken(ApiBiGuestTokenRequest request, CustomUserDetails userDetails) throws ApiException {
-		requireAuthenticatedUser(userDetails);
-		properties.requireConfigured();
+		long startNs = System.nanoTime();
+		Long companyId = request != null ? request.getCompanyId() : null;
+		String slug = normalizeSlug(request != null ? request.getSlug() : "");
+		String orgSlug = StringUtils.defaultIfBlank(properties.normalizedOrganizationSlug(), "unknown");
 
-		Long companyId = request.getCompanyId();
-		String slug = normalizeSlug(request.getSlug());
-		String orgSlug = properties.normalizedOrganizationSlug();
+		try {
+			requireAuthenticatedUser(userDetails);
+			properties.requireConfigured();
 
-		if (officialCatalog.isForbiddenForOrganization(orgSlug, slug)) {
-			throw new BiReportException(
-					HttpStatus.FORBIDDEN,
-					ApiStatus.UNAUTHORIZED,
-					"Este reporte no está habilitado para la organización activa."
+			if (officialCatalog.isForbiddenForOrganization(orgSlug, slug)) {
+				throw new BiReportException(
+						HttpStatus.FORBIDDEN,
+						ApiStatus.UNAUTHORIZED,
+						"Este reporte no está habilitado para la organización activa."
+				);
+			}
+
+			Company company = companyQueries.fetchCompany(companyId);
+			ApiBiDashboard target = collectTenantDashboards(company, orgSlug).stream()
+					.filter(d -> d.slug.equals(slug))
+					.findFirst()
+					.orElseThrow(() -> new BiReportException(
+							HttpStatus.NOT_FOUND,
+							ApiStatus.NOT_FOUND,
+							"El tablero '" + slug + "' no está registrado para esta empresa."
+					));
+
+			Set<String> effectiveRoles = resolveEffectiveRoles(companyId, userDetails);
+			if (!isRoleAuthorized(effectiveRoles, target.allowedRoles)) {
+				throw new BiReportException(
+						HttpStatus.FORBIDDEN,
+						ApiStatus.UNAUTHORIZED,
+						"No tiene permisos para visualizar este tablero."
+				);
+			}
+
+			SupersetClient.EmbeddedInfo embedded = supersetClient.getDashboardEmbedded(slug);
+			String portalOrigin = properties.normalizedPortalOrigin();
+			if (embedded.allowedDomains().stream().noneMatch(domain -> domain.equalsIgnoreCase(portalOrigin))) {
+				throw new BiReportException(
+						HttpStatus.UNPROCESSABLE_ENTITY,
+						ApiStatus.VALIDATION_ERROR,
+						"El tablero '" + slug + "' no autoriza el dominio del portal (" + portalOrigin + ") en Superset."
+				);
+			}
+
+			String guestToken = supersetClient.createGuestToken(embedded.uuid(), userDetails);
+			recordGuestTokenMetric(orgSlug, "success");
+			auditBiEvent("ISSUE_GUEST_TOKEN", userDetails, companyId, slug, "success", elapsedMs(startNs));
+			return new ApiBiGuestTokenResponse(
+					properties.normalizedPublicDomain(),
+					embedded.uuid(),
+					guestToken,
+					properties.getGuestTokenTtlSeconds()
 			);
+		} catch (BiReportException exc) {
+			String outcome = mapOutcome(exc);
+			recordGuestTokenMetric(orgSlug, outcome);
+			String action = "forbidden".equals(outcome) ? "DENY" : "ISSUE_GUEST_TOKEN";
+			auditBiEvent(action, userDetails, companyId, slug, outcome, elapsedMs(startNs));
+			throw exc;
 		}
-
-		Company company = companyQueries.fetchCompany(companyId);
-		ApiBiDashboard target = collectTenantDashboards(company, orgSlug).stream()
-				.filter(d -> d.slug.equals(slug))
-				.findFirst()
-				.orElseThrow(() -> new BiReportException(
-						HttpStatus.NOT_FOUND,
-						ApiStatus.NOT_FOUND,
-						"El tablero '" + slug + "' no está registrado para esta empresa."
-				));
-
-		Set<String> effectiveRoles = resolveEffectiveRoles(companyId, userDetails);
-		if (!isRoleAuthorized(effectiveRoles, target.allowedRoles)) {
-			throw new BiReportException(
-					HttpStatus.FORBIDDEN,
-					ApiStatus.UNAUTHORIZED,
-					"No tiene permisos para visualizar este tablero."
-			);
-		}
-
-		SupersetClient.EmbeddedInfo embedded = supersetClient.getDashboardEmbedded(slug);
-		String portalOrigin = properties.normalizedPortalOrigin();
-		if (embedded.allowedDomains().stream().noneMatch(domain -> domain.equalsIgnoreCase(portalOrigin))) {
-			throw new BiReportException(
-					HttpStatus.UNPROCESSABLE_ENTITY,
-					ApiStatus.VALIDATION_ERROR,
-					"El tablero '" + slug + "' no autoriza el dominio del portal (" + portalOrigin + ") en Superset."
-			);
-		}
-
-		String guestToken = supersetClient.createGuestToken(embedded.uuid(), userDetails);
-		return new ApiBiGuestTokenResponse(
-				properties.normalizedPublicDomain(),
-				embedded.uuid(),
-				guestToken,
-				properties.getGuestTokenTtlSeconds()
-		);
 	}
 
 	@Transactional
 	public ApiBiDashboard registerCustomDashboard(ApiCustomBiDashboardRequest request, CustomUserDetails userDetails) throws ApiException {
-		requireStudioAdmin(userDetails);
-		properties.requireConfigured();
+		long startNs = System.nanoTime();
+		Long companyId = request != null ? request.getCompanyId() : null;
+		String orgSlug = StringUtils.defaultIfBlank(properties.normalizedOrganizationSlug(), "unknown");
+		String slug = normalizeSlug(request != null ? request.getSlug() : "");
 
-		String orgSlug = properties.normalizedOrganizationSlug();
-		String slug = normalizeSlug(request.getSlug());
+		try {
+			requireStudioAdmin(userDetails);
+			properties.requireConfigured();
 
-		if (officialCatalog.isForbiddenForOrganization(orgSlug, slug)) {
-			throw new BiReportException(
-					HttpStatus.FORBIDDEN,
-					ApiStatus.UNAUTHORIZED,
-					"No está permitido registrar este reporte para la organización activa."
-			);
-		}
-		if (officialCatalog.isReservedOfficialPrefix(orgSlug, slug)) {
-			throw new BiReportException(
-					HttpStatus.UNPROCESSABLE_ENTITY,
-					ApiStatus.VALIDATION_ERROR,
-					"El slug no puede iniciar con el prefijo reservado '" + orgSlug + "-cacao-'."
-			);
-		}
-
-		List<String> normalizedRoles = normalizeAndValidateAllowedRoles(request.getAllowedRoles());
-
-		// Validate dashboard exists, is embedded for portalOrigin, uses only allowed bi.* views,
-		// and has query_context saved on all charts before publishing.
-		SupersetClient.DashboardMetadata metadata = supersetClient.getDashboardMetadata(slug);
-		if (metadata.datasetKeys().isEmpty()) {
-			throw new BiReportException(
-					HttpStatus.UNPROCESSABLE_ENTITY,
-					ApiStatus.VALIDATION_ERROR,
-					"El tablero '" + slug + "' no contiene datasets configurados."
-			);
-		}
-
-		Set<String> allowedDatasetSet = Set.copyOf(officialCatalog.getAllowedDatasets(orgSlug));
-		List<String> unauthorizedDatasets = metadata.datasetKeys().stream()
-				.filter(ds -> !allowedDatasetSet.contains(ds))
-				.sorted()
-				.toList();
-		if (!unauthorizedDatasets.isEmpty()) {
-			throw new BiReportException(
-					HttpStatus.UNPROCESSABLE_ENTITY,
-					ApiStatus.VALIDATION_ERROR,
-					"El tablero usa datasets no autorizados para EmbeddedGuest: " + String.join(", ", unauthorizedDatasets)
-			);
-		}
-
-		if (metadata.chartCount() == 0 || !metadata.allChartsHaveQueryContext()) {
-			throw new BiReportException(
-					HttpStatus.UNPROCESSABLE_ENTITY,
-					ApiStatus.VALIDATION_ERROR,
-					"Todos los gráficos del tablero deben guardarse en Superset (con query_context) antes de publicarlo."
-			);
-		}
-
-		SupersetClient.EmbeddedInfo embedded = supersetClient.getDashboardEmbedded(slug);
-		String portalOrigin = properties.normalizedPortalOrigin();
-		if (embedded.allowedDomains().stream().noneMatch(domain -> domain.equalsIgnoreCase(portalOrigin))) {
-			throw new BiReportException(
-					HttpStatus.UNPROCESSABLE_ENTITY,
-					ApiStatus.VALIDATION_ERROR,
-					"Active 'Embed dashboard' en Superset agregando el dominio '" + portalOrigin + "'."
-			);
-		}
-
-		Company company = companyQueries.fetchCompany(request.getCompanyId());
-		List<ApiBiDashboard> existingCustom = readCustomDashboards(company, orgSlug);
-		int defaultOrder = 100 + existingCustom.size() * 10;
-		int sortOrder = request.getSortOrder() != null ? request.getSortOrder() : defaultOrder;
-		ApiBiDashboard newEntry = new ApiBiDashboard(
-				slug,
-				StringUtils.trimToEmpty(request.getLabel()),
-				StringUtils.trimToEmpty(request.getDescription()),
-				false,
-				sortOrder,
-				normalizedRoles
-		);
-
-		List<Map<String, Object>> serialized = new ArrayList<>();
-		boolean replaced = false;
-		for (ApiBiDashboard item : existingCustom) {
-			if (item.slug.equals(slug)) {
-				serialized.add(toConfigMap(newEntry));
-				replaced = true;
-			} else {
-				serialized.add(toConfigMap(item));
+			if (officialCatalog.isForbiddenForOrganization(orgSlug, slug)) {
+				throw new BiReportException(
+						HttpStatus.FORBIDDEN,
+						ApiStatus.UNAUTHORIZED,
+						"No está permitido registrar este reporte para la organización activa."
+				);
 			}
-		}
-		if (!replaced) {
-			serialized.add(toConfigMap(newEntry));
-		}
+			if (officialCatalog.isReservedOfficialPrefix(orgSlug, slug)) {
+				throw new BiReportException(
+						HttpStatus.UNPROCESSABLE_ENTITY,
+						ApiStatus.VALIDATION_ERROR,
+						"El slug no puede iniciar con el prefijo reservado '" + orgSlug + "-cacao-'."
+				);
+			}
 
-		writeCustomDashboards(company, serialized);
-		return newEntry;
+			List<String> normalizedRoles = normalizeAndValidateAllowedRoles(request.getAllowedRoles());
+
+			// Validate dashboard exists, is embedded for portalOrigin, uses only allowed bi.* views,
+			// and has query_context saved on all charts before publishing.
+			SupersetClient.DashboardMetadata metadata = supersetClient.getDashboardMetadata(slug);
+			if (metadata.datasetKeys().isEmpty()) {
+				throw new BiReportException(
+						HttpStatus.UNPROCESSABLE_ENTITY,
+						ApiStatus.VALIDATION_ERROR,
+						"El tablero '" + slug + "' no contiene datasets configurados."
+				);
+			}
+
+			Set<String> allowedDatasetSet = Set.copyOf(officialCatalog.getAllowedDatasets(orgSlug));
+			List<String> unauthorizedDatasets = metadata.datasetKeys().stream()
+					.filter(ds -> !allowedDatasetSet.contains(ds))
+					.sorted()
+					.toList();
+			if (!unauthorizedDatasets.isEmpty()) {
+				throw new BiReportException(
+						HttpStatus.UNPROCESSABLE_ENTITY,
+						ApiStatus.VALIDATION_ERROR,
+						"El tablero usa datasets no autorizados para EmbeddedGuest: " + String.join(", ", unauthorizedDatasets)
+				);
+			}
+
+			if (metadata.chartCount() == 0 || !metadata.allChartsHaveQueryContext()) {
+				throw new BiReportException(
+						HttpStatus.UNPROCESSABLE_ENTITY,
+						ApiStatus.VALIDATION_ERROR,
+						"Todos los gráficos del tablero deben guardarse en Superset (con query_context) antes de publicarlo."
+				);
+			}
+
+			SupersetClient.EmbeddedInfo embedded = supersetClient.getDashboardEmbedded(slug);
+			String portalOrigin = properties.normalizedPortalOrigin();
+			if (embedded.allowedDomains().stream().noneMatch(domain -> domain.equalsIgnoreCase(portalOrigin))) {
+				throw new BiReportException(
+						HttpStatus.UNPROCESSABLE_ENTITY,
+						ApiStatus.VALIDATION_ERROR,
+						"Active 'Embed dashboard' en Superset agregando el dominio '" + portalOrigin + "'."
+				);
+			}
+
+			Company company = companyQueries.fetchCompany(companyId);
+			List<ApiBiDashboard> existingCustom = readCustomDashboards(company, orgSlug);
+			int defaultOrder = 100 + existingCustom.size() * 10;
+			int sortOrder = request.getSortOrder() != null ? request.getSortOrder() : defaultOrder;
+			ApiBiDashboard newEntry = new ApiBiDashboard(
+					slug,
+					StringUtils.trimToEmpty(request.getLabel()),
+					StringUtils.trimToEmpty(request.getDescription()),
+					false,
+					sortOrder,
+					normalizedRoles
+			);
+
+			List<Map<String, Object>> serialized = new ArrayList<>();
+			boolean replaced = false;
+			for (ApiBiDashboard item : existingCustom) {
+				if (item.slug.equals(slug)) {
+					serialized.add(toConfigMap(newEntry));
+					replaced = true;
+				} else {
+					serialized.add(toConfigMap(item));
+				}
+			}
+			if (!replaced) {
+				serialized.add(toConfigMap(newEntry));
+			}
+
+			writeCustomDashboards(company, serialized);
+			recordCustomMutationMetric(orgSlug, "publish", "success");
+			auditBiEvent("PUBLISH_CUSTOM_DASHBOARD", userDetails, companyId, slug, "success", elapsedMs(startNs));
+			return newEntry;
+		} catch (BiReportException exc) {
+			String outcome = mapOutcome(exc);
+			recordCustomMutationMetric(orgSlug, "publish", outcome);
+			String action = "forbidden".equals(outcome) ? "DENY" : "PUBLISH_CUSTOM_DASHBOARD";
+			auditBiEvent(action, userDetails, companyId, slug, outcome, elapsedMs(startNs));
+			throw exc;
+		}
 	}
 
 	@Transactional
 	public void removeCustomDashboard(Long companyId, String rawSlug, CustomUserDetails userDetails) throws ApiException {
-		requireStudioAdmin(userDetails);
-		String orgSlug = properties.normalizedOrganizationSlug();
+		long startNs = System.nanoTime();
+		String orgSlug = StringUtils.defaultIfBlank(properties.normalizedOrganizationSlug(), "unknown");
 		String slug = normalizeSlug(rawSlug);
 
-		boolean isOfficial = officialCatalog.getOfficialDashboards(orgSlug, properties.normalizedEnvironment())
-				.stream()
-				.anyMatch(d -> d.slug.equals(slug));
-		if (isOfficial) {
-			throw new BiReportException(
-					HttpStatus.FORBIDDEN,
-					ApiStatus.UNAUTHORIZED,
-					"Los tableros oficiales no pueden eliminarse desde esta sección."
-			);
-		}
+		try {
+			requireStudioAdmin(userDetails);
 
-		Company company = companyQueries.fetchCompany(companyId);
-		List<ApiBiDashboard> existingCustom = readCustomDashboards(company, orgSlug);
-		List<Map<String, Object>> remaining = new ArrayList<>();
-		boolean removed = false;
-		for (ApiBiDashboard item : existingCustom) {
-			if (item.slug.equals(slug)) {
-				removed = true;
-			} else {
-				remaining.add(toConfigMap(item));
+			boolean isOfficial = officialCatalog.getOfficialDashboards(orgSlug, properties.normalizedEnvironment())
+					.stream()
+					.anyMatch(d -> d.slug.equals(slug));
+			if (isOfficial) {
+				throw new BiReportException(
+						HttpStatus.FORBIDDEN,
+						ApiStatus.UNAUTHORIZED,
+						"Los tableros oficiales no pueden eliminarse desde esta sección."
+				);
 			}
+
+			Company company = companyQueries.fetchCompany(companyId);
+			List<ApiBiDashboard> existingCustom = readCustomDashboards(company, orgSlug);
+			List<Map<String, Object>> remaining = new ArrayList<>();
+			boolean removed = false;
+			for (ApiBiDashboard item : existingCustom) {
+				if (item.slug.equals(slug)) {
+					removed = true;
+				} else {
+					remaining.add(toConfigMap(item));
+				}
+			}
+			if (!removed) {
+				throw new BiReportException(
+						HttpStatus.NOT_FOUND,
+						ApiStatus.NOT_FOUND,
+						"El tablero personalizado '" + slug + "' no está registrado en esta empresa."
+				);
+			}
+			writeCustomDashboards(company, remaining);
+			recordCustomMutationMetric(orgSlug, "remove", "success");
+			auditBiEvent("REMOVE_CUSTOM_DASHBOARD", userDetails, companyId, slug, "success", elapsedMs(startNs));
+		} catch (BiReportException exc) {
+			String outcome = mapOutcome(exc);
+			recordCustomMutationMetric(orgSlug, "remove", outcome);
+			String action = "forbidden".equals(outcome) ? "DENY" : "REMOVE_CUSTOM_DASHBOARD";
+			auditBiEvent(action, userDetails, companyId, slug, outcome, elapsedMs(startNs));
+			throw exc;
 		}
-		if (!removed) {
-			throw new BiReportException(
-					HttpStatus.NOT_FOUND,
-					ApiStatus.NOT_FOUND,
-					"El tablero personalizado '" + slug + "' no está registrado en esta empresa."
-			);
-		}
-		writeCustomDashboards(company, remaining);
 	}
 
 	private List<ApiBiDashboard> collectTenantDashboards(Company company, String orgSlug) {
@@ -424,6 +488,70 @@ public class BiReportsService extends BaseService {
 
 	private static String normalizeSlug(String raw) {
 		return StringUtils.lowerCase(StringUtils.trimToEmpty(raw));
+	}
+
+	private void recordGuestTokenMetric(String organization, String outcome) {
+		if (meterRegistry != null) {
+			Counter.builder("inatrace.bi.guest_token.requests")
+					.tag("organization", organization)
+					.tag("outcome", outcome)
+					.register(meterRegistry)
+					.increment();
+		}
+	}
+
+	private void recordCustomMutationMetric(String organization, String action, String outcome) {
+		if (meterRegistry != null) {
+			Counter.builder("inatrace.bi.custom_dashboard.mutations")
+					.tag("organization", organization)
+					.tag("action", action)
+					.tag("outcome", outcome)
+					.register(meterRegistry)
+					.increment();
+		}
+	}
+
+	private static String mapOutcome(BiReportException exc) {
+		int status = exc.getHttpStatus().value();
+		if (status == 401 || status == 403) {
+			return "forbidden";
+		}
+		if (status == 404) {
+			return "not_found";
+		}
+		if (status == 400 || status == 422) {
+			return "validation_error";
+		}
+		return "upstream_error";
+	}
+
+	private static long elapsedMs(long startNs) {
+		return Math.max(0L, (System.nanoTime() - startNs) / 1_000_000L);
+	}
+
+	private static void auditBiEvent(
+			String action,
+			CustomUserDetails userDetails,
+			Long companyId,
+			String slug,
+			String outcome,
+			long durationMs
+	) {
+		String user = sanitizeLogField(userDetails != null ? userDetails.getUsername() : "anonymous");
+		String role = sanitizeLogField(userDetails != null && userDetails.getUserRole() != null
+				? userDetails.getUserRole().name() : "NONE");
+		logger.info("BI_AUDIT action={} user={} role={} companyId={} slug={} outcome={} durationMs={}",
+				sanitizeLogField(action),
+				user,
+				role,
+				companyId != null ? companyId : -1L,
+				sanitizeLogField(slug),
+				sanitizeLogField(outcome),
+				durationMs);
+	}
+
+	private static String sanitizeLogField(String value) {
+		return StringUtils.defaultIfBlank(value, "-").replaceAll("[\\r\\n\\t\\s]+", "_");
 	}
 
 	private static int parseInt(Object raw, int fallback) {

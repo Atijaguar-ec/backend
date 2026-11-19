@@ -10,6 +10,7 @@ import com.abelium.inatrace.db.entities.company.Company;
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import com.abelium.inatrace.types.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -308,6 +309,38 @@ class BiReportsServiceTest {
 		assertEquals(2, csrfCalls.get());
 		assertEquals(1, guestTokenCalls.get());
 		assertEquals(List.of("session=sess-xyz"), observedCookies);
+	}
+
+	@Test
+	void metricsRecordGuestTokenSuccessAndForbiddenOutcomes() throws Exception {
+		SimpleMeterRegistry registry = new SimpleMeterRegistry();
+		BiReportsService meteredService = new BiReportsService(
+				companyQueries, properties, officialCatalog, supersetClient, registry
+		);
+
+		when(supersetClient.getDashboardEmbedded("fortaleza-cacao-arqueo-bascula-staging"))
+				.thenReturn(new SupersetClient.EmbeddedInfo("uuid-1", List.of("https://testinatrace.espam.edu.ec")));
+		when(supersetClient.createGuestToken("uuid-1", regularUser)).thenReturn("guest-jwt");
+
+		ApiBiGuestTokenRequest validReq = new ApiBiGuestTokenRequest();
+		validReq.setCompanyId(5L);
+		validReq.setSlug("fortaleza-cacao-arqueo-bascula-staging");
+		ApiBiGuestTokenResponse resp = meteredService.issueGuestToken(validReq, regularUser);
+		assertEquals("guest-jwt", resp.guestToken);
+
+		ApiBiGuestTokenRequest forbiddenReq = new ApiBiGuestTokenRequest();
+		forbiddenReq.setCompanyId(5L);
+		forbiddenReq.setSlug("fortaleza-cacao-compras-certificadas-staging");
+		assertThrows(BiReportException.class, () -> meteredService.issueGuestToken(forbiddenReq, regularUser));
+
+		assertEquals(1.0, registry.get("inatrace.bi.guest_token.requests")
+				.tag("organization", "fortaleza")
+				.tag("outcome", "success")
+				.counter().count());
+		assertEquals(1.0, registry.get("inatrace.bi.guest_token.requests")
+				.tag("organization", "fortaleza")
+				.tag("outcome", "forbidden")
+				.counter().count());
 	}
 
 	private static Mono<ClientResponse> jsonResponse(HttpStatus status, String body, String setCookie) {

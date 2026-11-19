@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 
 /**
  * Internal read-only + guest-token HTTP client for Apache Superset 6.0.0.
@@ -36,6 +37,7 @@ public class SupersetClient {
 
 	private static final Logger logger = LoggerFactory.getLogger(SupersetClient.class);
 	private static final Duration TOKEN_MAX_AGE = Duration.ofMinutes(15);
+	private static final Pattern VALID_SLUG_PATTERN = Pattern.compile("^[a-z0-9][a-z0-9-]{1,120}$");
 
 	private final WebClient.Builder webClientBuilder;
 	private final BiSupersetProperties properties;
@@ -68,17 +70,30 @@ public class SupersetClient {
 	) {
 	}
 
+	static String validateSlugSegment(String rawSlug) throws BiReportException {
+		String normalized = StringUtils.lowerCase(StringUtils.trimToEmpty(rawSlug));
+		if (!VALID_SLUG_PATTERN.matcher(normalized).matches()) {
+			throw new BiReportException(
+					HttpStatus.BAD_REQUEST,
+					ApiStatus.VALIDATION_ERROR,
+					"El slug del tablero contiene caracteres no permitidos."
+			);
+		}
+		return normalized;
+	}
+
 	public EmbeddedInfo getDashboardEmbedded(String slug) throws BiReportException {
 		properties.requireConfigured();
-		JsonNode root = executeGetWithAuthRetry("/api/v1/dashboard/" + slug + "/embedded",
-				"El tablero '" + slug + "' no tiene embebido activado en Superset.");
+		String validSlug = validateSlugSegment(slug);
+		JsonNode root = executeGetWithAuthRetry("/api/v1/dashboard/{slug}/embedded",
+				"El tablero '" + validSlug + "' no tiene embebido activado en Superset.", validSlug);
 		JsonNode result = root.path("result");
 		String uuid = result.path("uuid").asText("");
 		if (StringUtils.isBlank(uuid)) {
 			throw new BiReportException(
 					HttpStatus.NOT_FOUND,
 					ApiStatus.NOT_FOUND,
-					"El tablero '" + slug + "' no tiene un UUID embebido configurado."
+					"El tablero '" + validSlug + "' no tiene un UUID embebido configurado."
 			);
 		}
 		List<String> allowedDomains = new ArrayList<>();
@@ -96,17 +111,18 @@ public class SupersetClient {
 
 	public DashboardMetadata getDashboardMetadata(String slug) throws BiReportException {
 		properties.requireConfigured();
-		JsonNode dashRoot = executeGetWithAuthRetry("/api/v1/dashboard/" + slug,
-				"El tablero '" + slug + "' no existe en Superset.");
+		String validSlug = validateSlugSegment(slug);
+		JsonNode dashRoot = executeGetWithAuthRetry("/api/v1/dashboard/{slug}",
+				"El tablero '" + validSlug + "' no existe en Superset.", validSlug);
 		JsonNode dashResult = dashRoot.path("result");
 		long dashboardId = dashResult.path("id").asLong(-1L);
 		if (dashboardId <= 0) {
 			throw new BiReportException(HttpStatus.NOT_FOUND, ApiStatus.NOT_FOUND,
-					"El tablero '" + slug + "' no existe en Superset.");
+					"El tablero '" + validSlug + "' no existe en Superset.");
 		}
 
-		JsonNode dsRoot = executeGetWithAuthRetry("/api/v1/dashboard/" + slug + "/datasets",
-				"No se pudieron consultar los datasets del tablero '" + slug + "'.");
+		JsonNode dsRoot = executeGetWithAuthRetry("/api/v1/dashboard/{slug}/datasets",
+				"No se pudieron consultar los datasets del tablero '" + validSlug + "'.", validSlug);
 		Set<String> datasetKeys = new LinkedHashSet<>();
 		JsonNode dsResult = dsRoot.path("result");
 		if (dsResult.isArray()) {
@@ -118,8 +134,8 @@ public class SupersetClient {
 			}
 		}
 
-		JsonNode chartsRoot = executeGetWithAuthRetry("/api/v1/dashboard/" + slug + "/charts",
-				"No se pudieron consultar los gráficos del tablero '" + slug + "'.");
+		JsonNode chartsRoot = executeGetWithAuthRetry("/api/v1/dashboard/{slug}/charts",
+				"No se pudieron consultar los gráficos del tablero '" + validSlug + "'.", validSlug);
 		JsonNode chartsResult = chartsRoot.path("result");
 		int chartCount = 0;
 		boolean allHaveQueryContext = true;
@@ -135,7 +151,7 @@ public class SupersetClient {
 			}
 		}
 
-		return new DashboardMetadata(dashboardId, slug, datasetKeys, chartCount, allHaveQueryContext);
+		return new DashboardMetadata(dashboardId, validSlug, datasetKeys, chartCount, allHaveQueryContext);
 	}
 
 	public String createGuestToken(String embeddedUuid, CustomUserDetails userDetails) throws BiReportException {
@@ -153,22 +169,26 @@ public class SupersetClient {
 		);
 
 		try {
-			return postGuestTokenWithAuth(body, true);
+			return postGuestTokenWithAuth(body);
 		} catch (WebClientResponseException.Unauthorized exc) {
 			invalidateToken();
 			try {
-				return postGuestTokenWithAuth(body, false);
+				return postGuestTokenWithAuth(body);
 			} catch (WebClientResponseException retryExc) {
 				throw mapUpstreamResponseException(retryExc, "No se pudo emitir el guest token en Superset.");
+			} catch (RuntimeException retryExc) {
+				throw upstreamUnavailable("Tiempo de espera agotado o fallo de conexión al comunicar con Superset.", retryExc);
 			}
 		} catch (WebClientResponseException exc) {
 			throw mapUpstreamResponseException(exc, "No se pudo emitir el guest token en Superset.");
 		} catch (WebClientRequestException exc) {
 			throw upstreamUnavailable("No hay conexión con Superset.", exc);
+		} catch (RuntimeException exc) {
+			throw upstreamUnavailable("Tiempo de espera agotado o fallo de conexión al comunicar con Superset.", exc);
 		}
 	}
 
-	private String postGuestTokenWithAuth(Map<String, Object> body, boolean retryOnUnauthorized) throws BiReportException {
+	private String postGuestTokenWithAuth(Map<String, Object> body) throws BiReportException {
 		String token = getValidAccessToken();
 		WebClient client = buildClient();
 		ResponseEntity<String> csrfResp = client.get()
@@ -211,32 +231,36 @@ public class SupersetClient {
 	}
 
 	private boolean fetchChartHasQueryContext(long chartId) throws BiReportException {
-		JsonNode root = executeGetWithAuthRetry("/api/v1/chart/" + chartId,
-				"No se pudo verificar el gráfico " + chartId + " en Superset.");
+		JsonNode root = executeGetWithAuthRetry("/api/v1/chart/{id}",
+				"No se pudo verificar el gráfico " + chartId + " en Superset.", chartId);
 		return hasQueryContext(root.path("result"));
 	}
 
-	private JsonNode executeGetWithAuthRetry(String path, String notFoundMessage) throws BiReportException {
+	private JsonNode executeGetWithAuthRetry(String pathTemplate, String notFoundMessage, Object... uriVars) throws BiReportException {
 		try {
-			return executeGet(path);
+			return executeGet(pathTemplate, uriVars);
 		} catch (WebClientResponseException.Unauthorized exc) {
 			invalidateToken();
 			try {
-				return executeGet(path);
+				return executeGet(pathTemplate, uriVars);
 			} catch (WebClientResponseException retryExc) {
 				throw mapUpstreamResponseException(retryExc, notFoundMessage);
+			} catch (RuntimeException retryExc) {
+				throw upstreamUnavailable("Tiempo de espera agotado o fallo de conexión al comunicar con Superset.", retryExc);
 			}
 		} catch (WebClientResponseException exc) {
 			throw mapUpstreamResponseException(exc, notFoundMessage);
 		} catch (WebClientRequestException exc) {
 			throw upstreamUnavailable("No hay conexión con Superset.", exc);
+		} catch (RuntimeException exc) {
+			throw upstreamUnavailable("Tiempo de espera agotado o fallo de conexión al comunicar con Superset.", exc);
 		}
 	}
 
-	private JsonNode executeGet(String path) throws BiReportException {
+	private JsonNode executeGet(String pathTemplate, Object... uriVars) throws BiReportException {
 		String token = getValidAccessToken();
 		String raw = buildClient().get()
-				.uri(path)
+				.uri(uriBuilder -> uriBuilder.path(pathTemplate).build(uriVars))
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
 				.retrieve()
 				.bodyToMono(String.class)
@@ -281,6 +305,8 @@ public class SupersetClient {
 					+ exc.getStatusCode().value() + ").", exc);
 		} catch (WebClientRequestException exc) {
 			throw upstreamUnavailable("No hay conexión con Superset al autenticar la cuenta de servicio BI.", exc);
+		} catch (RuntimeException exc) {
+			throw upstreamUnavailable("Tiempo de espera agotado o fallo de conexión al autenticar la cuenta de servicio BI.", exc);
 		} finally {
 			tokenLock.unlock();
 		}
