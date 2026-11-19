@@ -181,7 +181,30 @@ public class CompanyApiTools {
 		c.setDisplayPrefferedWayOfPayment(ac.displayPrefferedWayOfPayment);
 		c.setPurchaseProofDocumentMultipleFarmers(ac.purchaseProofDocumentMultipleFarmers);
 		c.setAllowBeycoIntegration(ac.allowBeycoIntegration);
-		c.setConfiguration(ac.configuration);
+		c.setConfiguration(mergePreservedBiConfiguration(c.getConfiguration(), ac.configuration));
+	}
+
+	/**
+	 * Preserves server-managed customBiDashboards in company.configuration when
+	 * company-detail form submissions omit that key.
+	 */
+	public static Map<String, Object> mergePreservedBiConfiguration(
+			Map<String, Object> existingConfig,
+			Map<String, Object> incomingConfig
+	) {
+		final String key = "customBiDashboards";
+		if (existingConfig == null || !existingConfig.containsKey(key)) {
+			return incomingConfig;
+		}
+		if (incomingConfig != null && incomingConfig.containsKey(key)) {
+			return incomingConfig;
+		}
+		Map<String, Object> merged = new LinkedHashMap<>();
+		if (incomingConfig != null) {
+			merged.putAll(incomingConfig);
+		}
+		merged.put(key, existingConfig.get(key));
+		return merged;
 	}
 
 	public void updateCompanyValueChains(ApiCompany apiCompany, Company company) throws ApiException {

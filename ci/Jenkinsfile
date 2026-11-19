@@ -584,6 +584,17 @@ EOSSH
                   grep -q "^EXCHANGERATE_APIKEY=." .env || printf '\nEXCHANGERATE_APIKEY=disabled' >> .env
                   grep -q "^EXCHANGERATE_ENABLED=" .env || printf '\nEXCHANGERATE_ENABLED=false' >> .env
 
+                  # Superset BI Embedded Gateway (defaults no secretos para Fortaleza staging)
+                  if ! grep -q "^INATRACE_BI_SUPERSET_ORGANIZATION_SLUG=." .env && ! grep -q "^BI_SUPERSET_ORGANIZATION_SLUG=." .env; then printf '\nINATRACE_BI_SUPERSET_ORGANIZATION_SLUG=fortaleza' >> .env; fi
+                  if ! grep -q "^INATRACE_BI_SUPERSET_ENVIRONMENT=." .env && ! grep -q "^BI_SUPERSET_ENVIRONMENT=." .env; then printf '\nINATRACE_BI_SUPERSET_ENVIRONMENT=staging' >> .env; fi
+                  if ! grep -q "^INATRACE_BI_SUPERSET_INTERNAL_URL=." .env && ! grep -q "^BI_SUPERSET_INTERNAL_URL=." .env; then printf '\nINATRACE_BI_SUPERSET_INTERNAL_URL=http://inatrace-bi-superset-fortaleza:8088/bi' >> .env; fi
+                  if ! grep -q "^INATRACE_BI_SUPERSET_PUBLIC_DOMAIN=." .env && ! grep -q "^BI_SUPERSET_PUBLIC_DOMAIN=." .env; then printf '\nINATRACE_BI_SUPERSET_PUBLIC_DOMAIN=https://testinatrace.espam.edu.ec/bi' >> .env; fi
+                  if ! grep -q "^INATRACE_BI_SUPERSET_ALLOWED_PORTAL_ORIGIN=." .env && ! grep -q "^BI_SUPERSET_ALLOWED_PORTAL_ORIGIN=." .env; then printf '\nINATRACE_BI_SUPERSET_ALLOWED_PORTAL_ORIGIN=https://testinatrace.espam.edu.ec' >> .env; fi
+                  if ! grep -q "^INATRACE_BI_SUPERSET_SERVICE_USERNAME=." .env && ! grep -q "^INATRACE_BI_SUPERSET_SERVICE_USER=." .env && ! grep -q "^BI_SUPERSET_SERVICE_USER=." .env; then printf '\nINATRACE_BI_SUPERSET_SERVICE_USERNAME=bi_embed_service' >> .env; fi
+                  if ! grep -q "^INATRACE_BI_SUPERSET_SERVICE_PASSWORD=." .env && ! grep -q "^BI_SUPERSET_SERVICE_PASSWORD=." .env; then
+                    echo "⚠️ INATRACE_BI_SUPERSET_SERVICE_PASSWORD no definida en credencial fortaleza-env-staging (/api/bi/guest-token responderá 503 hasta configurarla)."
+                  fi
+
                   echo "🗂️ Creando directorios de almacenamiento en host..."
                   sudo mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents /opt/inatrace/postgresql_data_test 2>/dev/null || \
                   mkdir -p /opt/inatrace/uploads /opt/inatrace/import /opt/inatrace/documents /opt/inatrace/postgresql_data_test 2>/dev/null || \

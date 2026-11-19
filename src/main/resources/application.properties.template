@@ -166,3 +166,15 @@ inatrace.keycloak.admin.realm = inatrace
 inatrace.keycloak.admin.client-id = inatrace-backend
 inatrace.keycloak.admin.client-secret = backend-secret-123
 
+# ============================================================
+# Superset BI Embedded Gateway
+# ============================================================
+inatrace.bi.superset.internal-url = ${INATRACE_BI_SUPERSET_INTERNAL_URL:}
+inatrace.bi.superset.public-domain = ${INATRACE_BI_SUPERSET_PUBLIC_DOMAIN:}
+inatrace.bi.superset.allowed-portal-origin = ${INATRACE_BI_SUPERSET_ALLOWED_PORTAL_ORIGIN:}
+inatrace.bi.superset.organization-slug = ${INATRACE_BI_SUPERSET_ORGANIZATION_SLUG:}
+inatrace.bi.superset.environment = ${INATRACE_BI_SUPERSET_ENVIRONMENT:staging}
+inatrace.bi.superset.service-username = ${INATRACE_BI_SUPERSET_SERVICE_USERNAME:bi_embed_service}
+inatrace.bi.superset.service-password = ${INATRACE_BI_SUPERSET_SERVICE_PASSWORD:}
+inatrace.bi.superset.guest-token-ttl-seconds = ${INATRACE_BI_SUPERSET_GUEST_TOKEN_TTL_SECONDS:300}
+
