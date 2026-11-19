@@ -1867,3 +1867,29 @@ UNOCACE exporta lotes de cacao seco y fermentado a compradores en Japón en el m
   5. Descomposición DAG multidimensional hasta órdenes `PURCHASE_ORDER`.
   6. Identificación de bajas físicas y lógicas en `/deletions`.
 
+
+---
+
+## 31. Gateway BI Embedded SDK (`/api/bi/*`), Auditoría, Métricas y Despliegue Jenkins Staging (2026-11-19)
+
+> **Fuente canónica de reglas BI de cacao:** [`inatrace-bi/AGENTS.md`](../inatrace-bi/AGENTS.md) y `inatrace-bi/docs/adr/ADR-BI-005-superset-embedded-sdk-y-estudio.md` (`ADR-BI-004`). Este documento describe únicamente el contrato del código en `backend/`.
+
+### 31.1 Principio Cero Público y Arquitectura de Gateway
+El consumo y administración de tableros de Apache Superset 6.0.0 en Fortaleza del Valle opera bajo acceso **100% autenticado** (cero endpoints públicos, jamás incluir `/api/bi/**` en `SpringSecurityConfig.permitAll()`).
+- **Paquete:** `com.abelium.inatrace.components.bi` (`BiReportsController`, `BiReportsService`, `BiOfficialCatalog`, `SupersetClient`, `BiSupersetProperties`, `BiReportException` y DTOs en `.api`).
+- **Controlador (`BiReportsController.java`):**
+  - `GET /api/bi/dashboards?companyId={id}` (`@PreAuthorize("hasAnyAuthority('USER', 'SYSTEM_ADMIN', 'REGIONAL_ADMIN')")`, `@RequireCompanyAccess`): lista tableros autorizados (7 oficiales de `BiOfficialCatalog` + personalizados de `company.configuration.customBiDashboards` filtrados por rol efectivo y empresa) con `Cache-Control: no-store, must-revalidate` y `Pragma: no-cache`.
+  - `POST /api/bi/guest-token` (`USER`, `REGIONAL_ADMIN`, `SYSTEM_ADMIN` + `@RequireCompanyAccess`): emite token temporal `X-GuestToken` (rol `EmbeddedGuest` en Superset) con cabeceras `no-store`. Valida antes que el tablero exista, pertenezca a la empresa/rol, no sea `compras-certificadas` en Fortaleza y autorice `allowedPortalOrigin` en `/embedded`.
+  - `POST /api/bi/custom-dashboards` (`SYSTEM_ADMIN`, `REGIONAL_ADMIN` + `@RequireCompanyAccess`): rechaza prefijo reservado `<org>-cacao-` (`422`), exige gráficos guardados con `query_context` (`422`), exige que todos los datasets pertenezcan a la lista blanca `bi.*` autorizada (`5` vistas en Fortaleza), valida `allowed_domains` y persiste en `company.configuration.customBiDashboards`.
+  - `DELETE /api/bi/custom-dashboards/{slug}?companyId={id}` (`SYSTEM_ADMIN`, `REGIONAL_ADMIN` + `@RequireCompanyAccess`): elimina únicamente tableros personalizados (bloquea oficiales con `403`).
+
+### 31.2 Endurecimiento, Auditoría y Resiliencia (`SupersetClient` y `BiReportsService`)
+- **Anti-SSRF y path-traversal:** `SupersetClient.validateSlugSegment()` exige `^[a-z0-9][a-z0-9-]{1,120}$` (HTTP `400 VALIDATION_ERROR` si falla) y construye las URIs con `UriBuilder` parametrizado.
+- **Mapeo de timeouts e indisponibilidad:** `SupersetClient` captura `WebClientResponseException`, `WebClientRequestException` y `RuntimeException` (timeouts de `.block()`) devolviendo `BiReportException(HttpStatus.SERVICE_UNAVAILABLE, ApiStatus.UPSTREAM_HTTP_ERROR)` en lugar de HTTP 500; renueva automáticamente el JWT técnico de `bi_embed_service` ante `401` enviando CSRF + cookie de sesión para `guest_token`.
+- **Observabilidad sin fugas:** `BiReportsService` registra logs estructurados sanitizados `BI_AUDIT action=... user=... role=... companyId=... slug=... outcome=... durationMs=...` (prohibido loguear tokens o contraseñas) e incrementa contadores Micrometer (`inatrace.bi.guest_token.requests`, `inatrace.bi.custom_dashboard.mutations`). Injecta `ObjectProvider<MeterRegistry>` conservando el constructor de 4 argumentos para compatibilidad de pruebas.
+- **Preservación en actualizaciones de empresa:** `CompanyApiTools.mergePreservedBiConfiguration()` conserva `company.configuration.customBiDashboards` cuando el formulario de detalle de empresa omite esa clave.
+
+### 31.3 Cableado Crítico de Staging con Jenkins (`ci/Jenkinsfile` y `ci/fortaleza/docker-compose.yml`)
+- **Trampa resuelta:** `ci/Jenkinsfile` despliega staging con `SPRING_PROFILES_ACTIVE=staging` (no `fortaleza`) y levanta el contenedor desde `ci/fortaleza/docker-compose.yml`. Sin passthrough en el compose, `application-fortaleza.properties` nunca entraba en vigor y `/api/bi/guest-token` respondía `503`.
+- **Regla vigente:** `ci/fortaleza/docker-compose.yml` reenvía todas las variables `INATRACE_BI_SUPERSET_*` a `inatrace-backend`. En staging (`FORTALEZA_ENV == 'test'`), `ci/Jenkinsfile` inyecta los defaults no secretos (incluido `INATRACE_BI_SUPERSET_INTERNAL_URL=http://inatrace-bi-superset-fortaleza:8088/bi` con el sufijo `/bi`); solo `INATRACE_BI_SUPERSET_SERVICE_PASSWORD` debe residir en el secreto `fortaleza-env-staging` de Jenkins. En producción queda fail-closed si no se configuran URL interna y contraseña.
+- **Pruebas:** `BiReportsServiceTest`, `BiReportsControllerSecurityTest`, `SupersetClientResilienceTest`, `CompanyApiToolsConfigurationMergeTest` (incluidas en `mvn -B clean verify -Dspring.profiles.active=test -Djacoco.skip=false`).
