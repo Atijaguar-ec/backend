@@ -132,7 +132,7 @@ for path_url in \
 done
 
 # 5. Canonical host redirect check
-REDIR_CODE="$(curl "${CURL_TLS_OPTS[@]}" -o /dev/null -w '%{http_code}' -H "Host: invalid-alias.example.com" --resolve "invalid-alias.example.com:443:127.0.0.1" "https://invalid-alias.example.com/" 2>/dev/null || echo 000)"
+REDIR_CODE="$(curl -sSk -o /dev/null -w '%{http_code}' -H "Host: invalid-alias.example.com" --resolve "invalid-alias.example.com:443:127.0.0.1" "https://invalid-alias.example.com/" 2>/dev/null || true)"
 if [[ "${REDIR_CODE}" == "301" || "${REDIR_CODE}" == "302" ]]; then
   check_ok "Canonical host redirect check -> HTTP ${REDIR_CODE}"
 else
