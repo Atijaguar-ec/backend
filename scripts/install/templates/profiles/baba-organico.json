@@ -1,0 +1,9 @@
+{
+  "enableDeliveryReceipt": true,
+  "enablePublicDeliveryReceipt": true,
+  "enableQuotaBalance": true,
+  "quotaAlertThresholdPercent": 80,
+  "parcelLotFreeText": false,
+  "onlyNacionalVariety": true,
+  "onlyOrganicProduction": true
+}

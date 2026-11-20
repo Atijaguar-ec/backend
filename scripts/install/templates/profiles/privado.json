@@ -1,0 +1,7 @@
+{
+  "enableDeliveryReceipt": true,
+  "enablePublicDeliveryReceipt": false,
+  "enableQuotaBalance": true,
+  "quotaAlertThresholdPercent": 80,
+  "parcelLotFreeText": false
+}

@@ -1,0 +1,149 @@
+# ==============================================================================
+# docker-compose.produccion.yml — INATrace Producción Autónoma (Estándar Global)
+# PostgreSQL 16 + Keycloak 26 + Backend Spring Boot 3.3 + Frontend Angular 19
+# ==============================================================================
+
+networks:
+  inatrace-net:
+    driver: bridge
+
+services:
+
+  # ----------------------------------------------------------------------------
+  # 1. BASE DE DATOS: PostgreSQL 16.10 (Debian glibc, collation UTF-8)
+  # ----------------------------------------------------------------------------
+  inatrace-postgres:
+    image: postgres:16.10
+    container_name: inatrace-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--locale=en_US.utf8 --encoding=UTF8"
+      KC_DB_NAME: ${KC_DB_NAME}
+    volumes:
+      - ${PG_DATA_VOL}:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${PG_HOST_PORT}:5432"
+    networks:
+      - inatrace-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ----------------------------------------------------------------------------
+  # 2. IDENTIDAD Y ACCESOS: Keycloak 26.0.0 (OIDC + PKCE + Tema inatrace)
+  # ----------------------------------------------------------------------------
+  inatrace-keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: inatrace-keycloak
+    restart: unless-stopped
+    command: start
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: inatrace-postgres
+      KC_DB_URL_PORT: 5432
+      KC_DB_URL_DATABASE: ${KC_DB_NAME}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME: https://${DOMAIN_NAME}/auth
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ${BASE_DIR:-/opt/inatrace}/keycloak-theme/inatrace:/opt/keycloak/themes/inatrace:ro
+    depends_on:
+      inatrace-postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT}:8080"
+    networks:
+      - inatrace-net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /auth/health/live HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # 3. BACKEND TRANSACCIONAL: Spring Boot 3.3 / Java 17 LTS + Flyway
+  # ----------------------------------------------------------------------------
+  inatrace-backend:
+    image: ${IMAGE_PREFIX:-mi-organizacion}/inatrace-backend:${IMAGE_TAG:-v1.0.0}
+    container_name: inatrace-backend
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SERVER_PORT: 8080
+      INATRACE_DATABASE_NAME: ${POSTGRES_DB}
+      INATRACE_DATABASE_HOSTNAME: inatrace-postgres
+      INATRACE_DATABASE_PORT: 5432
+      SPRING_DATASOURCE_URL: jdbc:postgresql://inatrace-postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      INATRACE_FE_URL: https://${DOMAIN_NAME}
+      INATRACE_EMAILCONFIRMATION_URL: https://${DOMAIN_NAME}/es/confirm-email/
+      INATRACE_PASSWORDRESET_URL: https://${DOMAIN_NAME}/es/reset-password/
+      INATRACE_FILESTORAGE_ROOT: /app/files
+      INATRACE_DOCUMENTS_ROOT: /app/documents
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 50MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 50MB
+      INATRACE_KEYCLOAK_ADMIN_SERVER_URL: http://inatrace-keycloak:8080/auth
+      INATRACE_KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_REALM}
+      INATRACE_KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      INATRACE_KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: https://${DOMAIN_NAME}/auth/realms/${KEYCLOAK_REALM}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://inatrace-keycloak:8080/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+    volumes:
+      - ${BASE_DIR:-/opt/inatrace}/file_storage:/app/files
+      - ${BASE_DIR:-/opt/inatrace}/documents:/app/documents
+    depends_on:
+      inatrace-postgres:
+        condition: service_healthy
+      inatrace-keycloak:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BACKEND_PORT}:8080"
+    networks:
+      - inatrace-net
+
+  # ----------------------------------------------------------------------------
+  # 4. FRONTEND WEB: Angular 19 / Nx 22 (Nginx interno + envsubst dinámico)
+  # ----------------------------------------------------------------------------
+  inatrace-frontend:
+    image: ${IMAGE_PREFIX:-mi-organizacion}/inatrace-fe:${IMAGE_TAG:-v1.0.0}
+    container_name: inatrace-frontend
+    restart: always
+    environment:
+      ENVIRONMENT_NAME: prod
+      APP_BASE_URL: https://${DOMAIN_NAME}
+      API_BASE_URL: https://${DOMAIN_NAME}/api
+      QR_CODE_BASE_PATH: q-cd
+      KEYCLOAK_URL: https://${DOMAIN_NAME}/auth
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: inatrace-frontend
+      RELATIVE_FILE_UPLOAD_URL: /api/common/document
+      RELATIVE_FILE_UPLOAD_URL_MANUAL_TYPE: /api/common/document?type=
+      RELATIVE_IMAGE_UPLOAD_URL: /api/common/image
+      RELATIVE_IMAGE_UPLOAD_URL_ALL_SIZES: /api/common/image
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT}:80"
+    networks:
+      - inatrace-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
