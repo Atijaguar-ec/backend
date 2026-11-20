@@ -1,0 +1,44 @@
+# ==============================================================================
+# install.conf.example — Declarative configuration for INATrace single-command install
+# Copy to /opt/inatrace/install.conf (chmod 600) and adjust for your organization.
+# Works with any public Git URL, private/corporate repository, pre-cloned directory,
+# or pre-built OCI container registry.
+# ==============================================================================
+
+# 1. Domain & TLS
+DOMAIN_NAME="trazabilidad.mi-cooperativa.org"
+TLS_MODE="letsencrypt"                      # letsencrypt | lan-selfsigned
+TLS_EMAIL="ops@mi-cooperativa.org"          # Required when TLS_MODE=letsencrypt
+
+# 2. Code / Image Source (Repository-agnostic)
+DEPLOY_MODE="build"                         # build (compile from source) | pull (pre-built registry images)
+IMAGE_PREFIX="mi-organizacion"              # Local namespace or container registry (e.g. registry.example.org/inatrace)
+IMAGE_TAG="v1.0.0"
+
+# Frontend source: set FRONTEND_DIR to an already-cloned folder (public or private repo),
+# OR leave it pointing to the target folder and set FRONTEND_REPO + FRONTEND_REF to auto-clone.
+FRONTEND_DIR="/opt/src/inatrace-fe"
+FRONTEND_REPO=""                            # Optional: HTTPS or SSH Git URL if FRONTEND_DIR is not cloned yet
+FRONTEND_REF="main"                         # Any branch or tag (default: main; never locked to a fixed tag)
+
+# 3. Runtime & Host Options
+BASE_DIR="/opt/inatrace"
+DOCKER_USER="ubuntu"                        # Non-root Linux user added to docker group
+KEYCLOAK_REALM="inatrace"
+SPRING_PROFILES_ACTIVE="prod"
+SWAP_GB="4"                                 # Automatic swapfile for Angular build when RAM < 8 GB (0 to skip)
+WAIT_SECONDS="240"
+
+# 4. Initial SYSTEM_ADMIN & Country Seed
+# Password is requested securely without echo (or read from INATRACE_ADMIN_PASSWORD env var).
+ADMIN_EMAIL="admin@mi-cooperativa.org"
+ADMIN_NAME="Admin"
+ADMIN_SURNAME="Sistema"
+ADMIN_LANG="ES"                             # ES | EN | DE | RW
+COUNTRY_CODE="EC"
+COUNTRY_NAME="Ecuador"
+COUNTRY_LAT="-1.8312"
+COUNTRY_LNG="-78.1834"
+CURRENCY_CODE="USD"
+CURRENCY_LABEL="US Dollar"
+SKIP_SEED="false"

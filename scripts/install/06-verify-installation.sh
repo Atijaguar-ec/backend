@@ -50,6 +50,9 @@ load_env_file "${ENV_FILE}"
 FRONTEND_PORT="${FRONTEND_PORT:-8081}"
 KEYCLOAK_PORT="${KEYCLOAK_PORT:-8082}"
 BACKEND_PORT="${BACKEND_PORT:-8083}"
+if [[ "${TLS_MODE:-letsencrypt}" == "lan-selfsigned" ]]; then
+  INSECURE_TLS="true"
+fi
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -75,6 +78,18 @@ if docker exec inatrace-postgres pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES
     check_ok "PostgreSQL ready (Flyway schema_version: ${FLYWAY_OK} migrations, latest V${FLYWAY_MAX}; ACTIVE SYSTEM_ADMIN: ${ADMIN_OK})"
   else
     check_fail "PostgreSQL reachable but public.schema_version has 0 successful migrations"
+  fi
+  SEED_MISSING=""
+  for tbl in country currencytype measureunittype producttype semiproduct facilitytype valuechain; do
+    CNT="$(psql_exec -tAc "SELECT COUNT(*) FROM public.${tbl};" 2>/dev/null || echo 0)"
+    if [[ "${CNT}" -eq 0 ]]; then
+      SEED_MISSING="${SEED_MISSING} ${tbl}"
+    fi
+  done
+  if [[ -z "${SEED_MISSING}" ]]; then
+    check_ok "Base Cacao catalogs populated (country, currencytype, measureunittype, producttype, semiproduct, facilitytype, valuechain)"
+  else
+    log_warn "Seed tables currently empty (run 05-create-admin-and-seed.sh if not intentionally skipped):${SEED_MISSING}"
   fi
 else
   check_fail "PostgreSQL readiness check failed"

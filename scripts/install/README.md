@@ -1,6 +1,23 @@
-# INATrace Backend & Operations Installation Scripts (`v1.0.0`)
+# INATrace Backend & Operations Installation Scripts (`v1.1.0`)
 
-Standardized, idempotent shell scripts for deploying and operating INATrace (Cacao edition) on Ubuntu 22.04/24.04 x86_64 LTS with Docker Compose, PostgreSQL 16, Keycloak 26, Spring Boot 3.3, and Nginx TLS.
+Standardized, idempotent shell scripts for deploying and operating INATrace (Cacao edition) on Ubuntu 22.04/24.04 or Debian 12 (`x86_64`) with Docker Compose, PostgreSQL 16, Keycloak 26, Spring Boot 3.3, and Nginx TLS.
+
+> For single-command clean-server deployment from any public repo, private/corporate fork, pre-cloned folder, or pre-built OCI container registry, use `inatrace-install.sh` with `install.conf.example`.
+
+## Quick 3-Step Deployment (Source-Agnostic)
+
+```bash
+# 1. Copy and edit declarative configuration
+sudo mkdir -p /opt/inatrace
+sudo cp ./scripts/install/install.conf.example /opt/inatrace/install.conf
+sudo chmod 600 /opt/inatrace/install.conf
+sudo nano /opt/inatrace/install.conf
+
+# 2. Run the single-command orchestrator (prompts for admin password securely without echo)
+sudo ./scripts/install/inatrace-install.sh --config /opt/inatrace/install.conf
+```
+
+Use `--from-step <1..8>` or `--only-step <1..8>` to resume or run individual stages.
 
 > Frontend image build (`build-frontend.sh`), institutional Keycloak login theme deployment (`install-keycloak-theme.sh`), and Nginx/TLS configuration (`configure-nginx-tls.sh`) live in `scripts/install/` of the INATrace Frontend repository.
 

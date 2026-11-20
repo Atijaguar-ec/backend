@@ -23,7 +23,7 @@ services:
       POSTGRES_INITDB_ARGS: "--locale=en_US.utf8 --encoding=UTF8"
       KC_DB_NAME: ${KC_DB_NAME}
     volumes:
-      - ${PG_DATA_VOL}:/var/lib/postgresql/data
+      - ${PG_DATA_VOL:-/opt/inatrace/pg_data}:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
     ports:
       - "127.0.0.1:${PG_HOST_PORT}:5432"
@@ -117,6 +117,12 @@ services:
       - "127.0.0.1:${BACKEND_PORT}:8080"
     networks:
       - inatrace-net
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /api/v3/api-docs HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"200\" <&3'"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   # ----------------------------------------------------------------------------
   # 4. FRONTEND WEB: Angular 19 / Nx 22 (Nginx interno + envsubst dinámico)

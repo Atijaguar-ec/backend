@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ENV_FILE="/opt/inatrace/.env"
 ADMIN_EMAIL=""
-ADMIN_PASSWORD=""
+ADMIN_PASSWORD="${INATRACE_ADMIN_PASSWORD:-}"
 ADMIN_NAME="Admin"
 ADMIN_SURNAME="Sistema"
 ADMIN_LANG="ES"
@@ -75,8 +75,18 @@ done
 
 require_root
 require_cmd docker python3
-[[ -n "${ADMIN_EMAIL}" && -n "${ADMIN_PASSWORD}" ]] || {
-  log_error "--email and --password are required."
+[[ -n "${ADMIN_EMAIL}" ]] || {
+  log_error "--email is required."
+  exit 1
+}
+if [[ -z "${ADMIN_PASSWORD}" ]]; then
+  if [[ -t 0 ]]; then
+    read -r -s -p "Enter initial SYSTEM_ADMIN password (min 8 chars, upper, lower, digit, symbol): " ADMIN_PASSWORD
+    printf '\n'
+  fi
+fi
+[[ -n "${ADMIN_PASSWORD}" ]] || {
+  log_error "Administrator password required via INATRACE_ADMIN_PASSWORD env var, interactive prompt, or --password."
   exit 1
 }
 case "${ADMIN_LANG}" in

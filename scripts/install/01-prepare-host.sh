@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Version: 1.0.0
-# Prepares an Ubuntu 22.04/24.04 x86_64 LTS server host for INATrace:
+# Version: 1.1.0
+# Prepares an Ubuntu 22.04/24.04 or Debian 12 x86_64 LTS server host for INATrace:
 # base packages, Docker Engine + Compose v2, Nginx, Certbot, UFW firewall,
-# Docker JSON log rotation, and optional Fail2ban SSH protection.
+# Docker JSON log rotation, and optional Fail2ban SSH protection (systemd backend).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -87,15 +87,20 @@ apt-get install -y \
 
 if ! command -v docker >/dev/null 2>&1; then
   log_info "Installing Docker Engine + Docker Compose v2 plugin..."
+  DISTRO_ID="$(. /etc/os-release && printf '%s' "${ID}")"
+  case "${DISTRO_ID}" in
+    ubuntu|debian) ;;
+    *) log_error "Unsupported Linux distribution '${DISTRO_ID}' (supported: ubuntu, debian)."; exit 1 ;;
+  esac
   install -m 0755 -d /etc/apt/keyrings
   if [[ ! -f /etc/apt/keyrings/docker.asc ]]; then
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    curl -fsSL "https://download.docker.com/linux/${DISTRO_ID}/gpg" -o /etc/apt/keyrings/docker.asc
     chmod a+r /etc/apt/keyrings/docker.asc
   fi
   ARCH_DEB="$(dpkg --print-architecture)"
   CODENAME="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME}")"
-  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu %s stable\n' \
-    "${ARCH_DEB}" "${CODENAME}" > /etc/apt/sources.list.d/docker.list
+  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/%s %s stable\n' \
+    "${ARCH_DEB}" "${DISTRO_ID}" "${CODENAME}" > /etc/apt/sources.list.d/docker.list
   apt-get update -y
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 else
@@ -139,14 +144,14 @@ if [[ "${SKIP_UFW}" == "false" ]]; then
 fi
 
 if [[ "${SKIP_FAIL2BAN}" == "false" ]]; then
-  log_info "Installing and enabling Fail2ban SSH jail..."
-  apt-get install -y fail2ban
+  log_info "Installing and enabling Fail2ban SSH jail (systemd backend)..."
+  apt-get install -y fail2ban python3-systemd || apt-get install -y fail2ban
   cat > /etc/fail2ban/jail.d/sshd.local <<'F2B_EOF'
 [sshd]
 enabled  = true
 port     = ssh
 filter   = sshd
-logpath  = /var/log/auth.log
+backend  = systemd
 maxretry = 5
 bantime  = 3600
 findtime = 600
