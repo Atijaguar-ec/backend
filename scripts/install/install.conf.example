@@ -41,4 +41,7 @@ COUNTRY_LAT="-1.8312"
 COUNTRY_LNG="-78.1834"
 CURRENCY_CODE="USD"
 CURRENCY_LABEL="US Dollar"
+COMPANY_NAME="Mi Cooperativa Cacao"         # Initial ACTIVE organization linked to SYSTEM_ADMIN
+COMPANY_ABBR="COOP"
+COMPANY_PROFILE="baba-organico"             # baba-organico | seco-certificado | privado
 SKIP_SEED="false"

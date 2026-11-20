@@ -20,6 +20,9 @@ CURRENCY_CODE="USD"
 CURRENCY_LABEL="US Dollar"
 COUNTRY_LAT="-1.8312"
 COUNTRY_LNG="-78.1834"
+COMPANY_NAME="Mi Cooperativa Cacao"
+COMPANY_ABBR="COOP"
+COMPANY_PROFILE="baba-organico"
 SKIP_SEED="false"
 
 usage() {
@@ -41,7 +44,10 @@ Options:
   --currency-label <lbl>   Default currency label (default: US Dollar)
   --lat <latitude>         Country latitude (default: -1.8312)
   --lng <longitude>        Country longitude (default: -78.1834)
-  --skip-seed              Only create/promote admin user without loading catalog seed
+  --company-name <name>    Initial active cacao company name (default: Mi Cooperativa Cacao)
+  --company-abbr <abbr>    Initial company abbreviation (default: COOP)
+  --company-profile <prof> Initial profile: baba-organico | seco-certificado | privado (default: baba-organico)
+  --skip-seed              Only create/promote admin user without loading catalog seed and initial company
   --env-file <path>        Path to .env file (default: /opt/inatrace/.env)
   -h, --help               Show this help message and exit
 
@@ -64,9 +70,12 @@ while [[ $# -gt 0 ]]; do
     --country-name)   [[ $# -ge 2 ]] || { log_error "--country-name requires a value"; exit 1; }; COUNTRY_NAME="$2"; shift 2 ;;
     --currency-code)  [[ $# -ge 2 ]] || { log_error "--currency-code requires a value"; exit 1; }; CURRENCY_CODE="$2"; shift 2 ;;
     --currency-label) [[ $# -ge 2 ]] || { log_error "--currency-label requires a value"; exit 1; }; CURRENCY_LABEL="$2"; shift 2 ;;
-    --lat)            [[ $# -ge 2 ]] || { log_error "--lat requires a value"; exit 1; }; COUNTRY_LAT="$2"; shift 2 ;;
-    --lng)            [[ $# -ge 2 ]] || { log_error "--lng requires a value"; exit 1; }; COUNTRY_LNG="$2"; shift 2 ;;
-    --skip-seed)      SKIP_SEED="true"; shift ;;
+    --lat)             [[ $# -ge 2 ]] || { log_error "--lat requires a value"; exit 1; }; COUNTRY_LAT="$2"; shift 2 ;;
+    --lng)             [[ $# -ge 2 ]] || { log_error "--lng requires a value"; exit 1; }; COUNTRY_LNG="$2"; shift 2 ;;
+    --company-name)    [[ $# -ge 2 ]] || { log_error "--company-name requires a value"; exit 1; }; COMPANY_NAME="$2"; shift 2 ;;
+    --company-abbr)    [[ $# -ge 2 ]] || { log_error "--company-abbr requires a value"; exit 1; }; COMPANY_ABBR="$2"; shift 2 ;;
+    --company-profile) [[ $# -ge 2 ]] || { log_error "--company-profile requires a value"; exit 1; }; COMPANY_PROFILE="$2"; shift 2 ;;
+    --skip-seed)       SKIP_SEED="true"; shift ;;
     --env-file)       [[ $# -ge 2 ]] || { log_error "--env-file requires a value"; exit 1; }; ENV_FILE="$2"; shift 2 ;;
     -h|--help)        usage; exit 0 ;;
     *)                log_error "Unknown option: $1"; usage >&2; exit 1 ;;
@@ -238,7 +247,11 @@ print(f"[OK]    Keycloak user '{email}' verified with permanent credentials.")
 PY_KC_USER
 
 if [[ "${SKIP_SEED}" == "false" ]]; then
-  log_info "Applying idempotent Cacao base catalog seed into PostgreSQL..."
+  PROFILE_PATH="${SCRIPT_DIR}/templates/profiles/${COMPANY_PROFILE}.json"
+  [[ -f "${PROFILE_PATH}" ]] || { log_error "Company profile not found: ${PROFILE_PATH}"; exit 1; }
+  COMPANY_CFG_JSON="$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1], encoding="utf-8"))))' "${PROFILE_PATH}")"
+
+  log_info "Applying idempotent Cacao base catalog seed and initial organization '${COMPANY_NAME}'..."
   psql_exec \
     -v country_code="${COUNTRY_CODE}" \
     -v country_name="${COUNTRY_NAME}" \
@@ -246,7 +259,10 @@ if [[ "${SKIP_SEED}" == "false" ]]; then
     -v country_lng="${COUNTRY_LNG}" \
     -v currency_code="${CURRENCY_CODE}" \
     -v currency_label="${CURRENCY_LABEL}" \
-    -v admin_email="${ADMIN_EMAIL}" <<'SQL_SEED'
+    -v admin_email="${ADMIN_EMAIL}" \
+    -v company_name="${COMPANY_NAME}" \
+    -v company_abbr="${COMPANY_ABBR}" \
+    -v company_cfg="${COMPANY_CFG_JSON}" <<'SQL_SEED'
 BEGIN;
 
 INSERT INTO public.country (code, name, latitude, longitude)
@@ -339,6 +355,61 @@ FROM public.valuechain vc, public.facilitytype ft
 WHERE vc.name = 'Cacao' AND ft.code = 'COLLECTING'
 ON CONFLICT (valuechain_id, facilitytype_id) DO NOTHING;
 
+-- Initial ACTIVE organization so SYSTEM_ADMIN can sign in without triggering the no-company logout modal
+INSERT INTO public.company (
+  abbreviation, email, entityversion, name, status, currency_id, headquarters_country_id, configuration
+)
+SELECT
+  :'company_abbr',
+  :'admin_email',
+  0,
+  :'company_name',
+  'ACTIVE',
+  (SELECT id FROM public.currencytype WHERE code = :'currency_code' ORDER BY id LIMIT 1),
+  (SELECT id FROM public.country WHERE code = :'country_code' ORDER BY id LIMIT 1),
+  :'company_cfg'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM public.company);
+
+INSERT INTO public.companytranslation (language, abbreviation, name, company_id)
+SELECT 'ES', c.abbreviation, c.name, c.id
+FROM public.company c
+WHERE c.id = (SELECT id FROM public.company ORDER BY id LIMIT 1)
+  AND NOT EXISTS (
+    SELECT 1 FROM public.companytranslation ct WHERE ct.company_id = c.id AND ct.language = 'ES'
+  );
+
+INSERT INTO public.companytranslation (language, abbreviation, name, company_id)
+SELECT 'EN', c.abbreviation, c.name, c.id
+FROM public.company c
+WHERE c.id = (SELECT id FROM public.company ORDER BY id LIMIT 1)
+  AND NOT EXISTS (
+    SELECT 1 FROM public.companytranslation ct WHERE ct.company_id = c.id AND ct.language = 'EN'
+  );
+
+INSERT INTO public.companyvaluechain (company_id, valuechain_id)
+SELECT
+  (SELECT id FROM public.company ORDER BY id LIMIT 1),
+  (SELECT id FROM public.valuechain WHERE name = 'Cacao' ORDER BY id LIMIT 1)
+WHERE EXISTS (SELECT 1 FROM public.company)
+  AND NOT EXISTS (
+    SELECT 1 FROM public.companyvaluechain
+    WHERE company_id = (SELECT id FROM public.company ORDER BY id LIMIT 1)
+      AND valuechain_id = (SELECT id FROM public.valuechain WHERE name = 'Cacao' ORDER BY id LIMIT 1)
+  );
+
+INSERT INTO public.companyuser (entityversion, role, company_id, user_id)
+SELECT
+  0,
+  'COMPANY_ADMIN',
+  (SELECT id FROM public.company ORDER BY id LIMIT 1),
+  u.id
+FROM public."User" u
+WHERE lower(u.email) = lower(:'admin_email')
+  AND EXISTS (SELECT 1 FROM public.company)
+  AND NOT EXISTS (
+    SELECT 1 FROM public.companyuser cu WHERE cu.user_id = u.id
+  );
+
 SELECT setval(pg_get_serial_sequence('public.country', 'id'), COALESCE((SELECT MAX(id) FROM public.country), 1));
 SELECT setval(pg_get_serial_sequence('public.currencytype', 'id'), COALESCE((SELECT MAX(id) FROM public.currencytype), 1));
 SELECT setval(pg_get_serial_sequence('public.measureunittype', 'id'), COALESCE((SELECT MAX(id) FROM public.measureunittype), 1));
@@ -351,6 +422,10 @@ SELECT setval(pg_get_serial_sequence('public.valuechain', 'id'), COALESCE((SELEC
 SELECT setval(pg_get_serial_sequence('public.valuechainmeasureunittype', 'id'), COALESCE((SELECT MAX(id) FROM public.valuechainmeasureunittype), 1));
 SELECT setval(pg_get_serial_sequence('public.valuechainsemiproduct', 'id'), COALESCE((SELECT MAX(id) FROM public.valuechainsemiproduct), 1));
 SELECT setval(pg_get_serial_sequence('public.valuechainfacilitytype', 'id'), COALESCE((SELECT MAX(id) FROM public.valuechainfacilitytype), 1));
+SELECT setval(pg_get_serial_sequence('public.company', 'id'), COALESCE((SELECT MAX(id) FROM public.company), 1));
+SELECT setval(pg_get_serial_sequence('public.companytranslation', 'id'), COALESCE((SELECT MAX(id) FROM public.companytranslation), 1));
+SELECT setval(pg_get_serial_sequence('public.companyvaluechain', 'id'), COALESCE((SELECT MAX(id) FROM public.companyvaluechain), 1));
+SELECT setval(pg_get_serial_sequence('public.companyuser', 'id'), COALESCE((SELECT MAX(id) FROM public.companyuser), 1));
 
 COMMIT;
 SQL_SEED

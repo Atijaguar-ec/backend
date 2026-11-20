@@ -101,6 +101,9 @@ COUNTRY_LAT="${COUNTRY_LAT:--1.8312}"
 COUNTRY_LNG="${COUNTRY_LNG:--78.1834}"
 CURRENCY_CODE="${CURRENCY_CODE:-USD}"
 CURRENCY_LABEL="${CURRENCY_LABEL:-US Dollar}"
+COMPANY_NAME="${COMPANY_NAME:-Mi Cooperativa Cacao}"
+COMPANY_ABBR="${COMPANY_ABBR:-COOP}"
+COMPANY_PROFILE="${COMPANY_PROFILE:-baba-organico}"
 SKIP_SEED="${SKIP_SEED:-false}"
 SKIP_UFW="${SKIP_UFW:-false}"
 SKIP_FAIL2BAN="${SKIP_FAIL2BAN:-false}"
@@ -234,6 +237,9 @@ if should_run 7; then
       --lng "${COUNTRY_LNG}"
       --currency-code "${CURRENCY_CODE}"
       --currency-label "${CURRENCY_LABEL}"
+      --company-name "${COMPANY_NAME}"
+      --company-abbr "${COMPANY_ABBR}"
+      --company-profile "${COMPANY_PROFILE}"
     )
     [[ "${SKIP_SEED}" == "true" ]] && ADMIN_ARGS+=(--skip-seed)
     INATRACE_ADMIN_PASSWORD="${INATRACE_ADMIN_PASSWORD}" \

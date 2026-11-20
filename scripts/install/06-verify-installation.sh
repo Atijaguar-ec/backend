@@ -91,6 +91,12 @@ if docker exec inatrace-postgres pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES
   else
     log_warn "Seed tables currently empty (run 05-create-admin-and-seed.sh if not intentionally skipped):${SEED_MISSING}"
   fi
+  ADMIN_COMPANIES="$(psql_exec -tAc "SELECT COUNT(*) FROM public.companyuser cu JOIN public.\"User\" u ON u.id = cu.user_id JOIN public.company c ON c.id = cu.company_id WHERE u.role = 'SYSTEM_ADMIN' AND u.status = 'ACTIVE' AND c.status = 'ACTIVE';" 2>/dev/null || echo 0)"
+  if [[ "${ADMIN_COMPANIES}" -gt 0 ]]; then
+    check_ok "SYSTEM_ADMIN linked to ACTIVE organization (${ADMIN_COMPANIES} active assignment(s))"
+  else
+    check_fail "No ACTIVE company assigned to SYSTEM_ADMIN (browser UI will force logout without an assigned company)"
+  fi
 else
   check_fail "PostgreSQL readiness check failed"
 fi
