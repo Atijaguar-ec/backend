@@ -68,9 +68,14 @@ done
 
 # 2. PostgreSQL + Flyway + SYSTEM_ADMIN
 if docker exec inatrace-postgres pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" >/dev/null 2>&1; then
-  FLYWAY_OK="$(psql_exec -tAc "SELECT COUNT(*) FROM public.flyway_schema_history WHERE success = true;" 2>/dev/null || echo 0)"
+  FLYWAY_OK="$(psql_exec -tAc "SELECT COUNT(*) FROM public.schema_version WHERE success = true;" 2>/dev/null || echo 0)"
+  FLYWAY_MAX="$(psql_exec -tAc "SELECT COALESCE(MAX(version::int), 0) FROM public.schema_version WHERE success = true;" 2>/dev/null || echo 0)"
   ADMIN_OK="$(psql_exec -tAc "SELECT COUNT(*) FROM public.\"User\" WHERE role = 'SYSTEM_ADMIN' AND status = 'ACTIVE';" 2>/dev/null || echo 0)"
-  check_ok "PostgreSQL ready (Flyway migrations applied: ${FLYWAY_OK}; ACTIVE SYSTEM_ADMIN users: ${ADMIN_OK})"
+  if [[ "${FLYWAY_OK}" -gt 0 ]]; then
+    check_ok "PostgreSQL ready (Flyway schema_version: ${FLYWAY_OK} migrations, latest V${FLYWAY_MAX}; ACTIVE SYSTEM_ADMIN: ${ADMIN_OK})"
+  else
+    check_fail "PostgreSQL reachable but public.schema_version has 0 successful migrations"
+  fi
 else
   check_fail "PostgreSQL readiness check failed"
 fi
@@ -100,6 +105,7 @@ CURL_TLS_OPTS=(-sS)
 
 for path_url in \
   "https://${DOMAIN_NAME}/" \
+  "https://${DOMAIN_NAME}/assets/env.js" \
   "https://${DOMAIN_NAME}/auth/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration" \
   "https://${DOMAIN_NAME}/api/v3/api-docs"; do
   CODE="$(curl "${CURL_TLS_OPTS[@]}" -o /dev/null -w '%{http_code}' "${path_url}" || echo 000)"
@@ -128,12 +134,15 @@ if [[ "${CHECK_QR}" == "true" ]]; then
       python3 - "${QR_TMP}" <<'PY_QR_PII'
 import json, sys
 data = json.load(open(sys.argv[1], encoding="utf-8"))
+rec = data.get("data", data)
+if isinstance(rec, dict) and (rec.get("pricePerUnit") is not None or rec.get("cost") is not None):
+    sys.exit("Price/cost fields leaked in public receipt (expected null for pricePerUnit and cost)")
 payload = json.dumps(data).lower()
 forbidden_pii = ['"email":', '"phone":', '"bankaccount', '"identificationnumber":', '"password":']
 leaked = [k for k in forbidden_pii if k in payload and f'{k} null' not in payload]
 if leaked:
     sys.exit(f"Potential sensitive fields present in public receipt: {leaked}")
-print("[OK]    Public QR receipt HTTP 200 verified with LOPDP PII filtering.")
+print("[OK]    Public QR receipt HTTP 200 verified with LOPDP PII and pricePerUnit/cost filtering.")
 PY_QR_PII
       PASS_COUNT=$((PASS_COUNT + 1))
       ;;
