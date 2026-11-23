@@ -5,13 +5,19 @@ import com.abelium.inatrace.configuration.OpenAPIConfiguration;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.Paths;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,12 +25,12 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Verifies the OpenAPI 3.0/3.1 contract for /api/integration/v1 against schema collisions,
  * invalid securityScheme combinations, untyped GeoJSON coordinates, missing required/enum metadata,
- * and Swagger UI primaryName mismatches.
+ * preserved 200 responses alongside 400/401/403/404/429/500 error responses, and Swagger UI primaryName.
  */
 class IntegrationV1OpenApiContractTest {
 
     @SuppressWarnings("rawtypes")
-    private Map<String, Schema> resolveAllIntegrationSchemas() {
+    private OpenAPI buildCustomizedMieruOpenApi() {
         Map<String, Schema> all = new LinkedHashMap<>();
         Class<?>[] rootDtos = {
                 ApiCompanyIntegration.class,
@@ -44,15 +50,36 @@ class IntegrationV1OpenApiContractTest {
         Components components = openApi.getComponents() != null ? openApi.getComponents() : new Components();
         components.setSchemas(all);
         openApi.setComponents(components);
+
+        Paths paths = new Paths();
+        for (String route : List.of(
+                "/api/integration/v1/companies",
+                "/api/integration/v1/facilities",
+                "/api/integration/v1/reference-data",
+                "/api/integration/v1/farmers",
+                "/api/integration/v1/farmers/{id}",
+                "/api/integration/v1/deliveries",
+                "/api/integration/v1/deliveries/{id}",
+                "/api/integration/v1/shipments",
+                "/api/integration/v1/shipments/{id}/composition",
+                "/api/integration/v1/deletions"
+        )) {
+            Operation getOp = new Operation().responses(new ApiResponses().addApiResponse(
+                    "200",
+                    new ApiResponse().description("OK").content(new Content().addMediaType("application/json", new MediaType()))
+            ));
+            paths.addPathItem(route, new PathItem().get(getOp));
+        }
+        openApi.setPaths(paths);
         OpenAPIConfiguration.customizeMieruCacaoOpenApi(openApi);
-        return openApi.getComponents().getSchemas();
+        return openApi;
     }
 
     @Test
     @DisplayName("ReferenceUnitDto preserves 'label' while UnitSummaryDto keeps 2 fields without collision")
     @SuppressWarnings("rawtypes")
     void testReferenceUnitDtoAndUnitSummaryDtoDoNotCollide() {
-        Map<String, Schema> schemas = resolveAllIntegrationSchemas();
+        Map<String, Schema> schemas = buildCustomizedMieruOpenApi().getComponents().getSchemas();
 
         assertFalse(schemas.containsKey("UnitDto"), "Ambiguous 'UnitDto' schema name must not exist");
         Schema refUnit = schemas.get("ReferenceUnitDto");
@@ -67,12 +94,14 @@ class IntegrationV1OpenApiContractTest {
     }
 
     @Test
-    @DisplayName("ShipmentLotCodesDto and CompositionLotCodesDto are distinct schemas without extra fields")
+    @DisplayName("ShipmentLotCodesDto, CompositionLotCodesDto, and Location DTOs do not collide")
     @SuppressWarnings("rawtypes")
-    void testLotCodesSchemasDoNotCollide() {
-        Map<String, Schema> schemas = resolveAllIntegrationSchemas();
+    void testNestedSchemasDoNotCollide() {
+        Map<String, Schema> schemas = buildCustomizedMieruOpenApi().getComponents().getSchemas();
 
         assertFalse(schemas.containsKey("LotCodesDto"), "Ambiguous 'LotCodesDto' schema name must not exist");
+        assertFalse(schemas.containsKey("LocationDto"), "Ambiguous 'LocationDto' schema name must not exist");
+
         Schema shipmentLots = schemas.get("ShipmentLotCodesDto");
         assertNotNull(shipmentLots);
         assertEquals(Set.of("internal_lot_number", "order_id", "qr_code_tag", "sac_numbers"),
@@ -82,6 +111,9 @@ class IntegrationV1OpenApiContractTest {
         assertNotNull(compLots);
         assertEquals(Set.of("internal_lot_number", "qr_code_tag"),
                 compLots.getProperties().keySet());
+
+        assertNotNull(schemas.get("FacilityLocationDto"));
+        assertNotNull(schemas.get("FarmerLocationDto"));
     }
 
     @Test
@@ -104,7 +136,7 @@ class IntegrationV1OpenApiContractTest {
     @DisplayName("GeoJsonGeometryDto.coordinates uses oneOf typed coordinate arrays instead of generic object")
     @SuppressWarnings("rawtypes")
     void testGeoJsonCoordinatesTypedAsPointOrPolygonArrays() {
-        Map<String, Schema> schemas = resolveAllIntegrationSchemas();
+        Map<String, Schema> schemas = buildCustomizedMieruOpenApi().getComponents().getSchemas();
         Schema geo = schemas.get("GeoJsonGeometryDto");
         assertNotNull(geo);
         assertTrue(geo.getRequired().containsAll(List.of("type", "coordinates")));
@@ -118,25 +150,27 @@ class IntegrationV1OpenApiContractTest {
     }
 
     @Test
-    @DisplayName("Controller declares error responses and springdoc urls-primary-name matches displayName")
-    void testControllerResponsesAndPrimaryNameMatch() throws Exception {
-        io.swagger.v3.oas.annotations.responses.ApiResponses classResponses =
-                IntegrationV1Controller.class.getAnnotation(io.swagger.v3.oas.annotations.responses.ApiResponses.class);
-        assertNotNull(classResponses, "IntegrationV1Controller must declare class-level @ApiResponses");
-        Set<String> codes = new HashSet<>();
-        for (var r : classResponses.value()) {
-            codes.add(r.responseCode());
-        }
-        assertEquals(Set.of("400", "401", "403", "429", "500"), codes);
+    @DisplayName("Customizer preserves 200 OK while attaching 400/401/403/404/429/500 responses and matching primaryName")
+    void testErrorResponsesPreserving200AndPrimaryNameMatch() throws Exception {
+        assertNull(IntegrationV1Controller.class.getAnnotation(io.swagger.v3.oas.annotations.responses.ApiResponses.class),
+                "Class-level @ApiResponses without 200 suppresses Springdoc return-type introspection and must not be used");
 
-        for (String methodName : List.of("getFarmerById", "getDeliveryById", "getShipmentComposition")) {
-            Method m = Arrays.stream(IntegrationV1Controller.class.getDeclaredMethods())
-                    .filter(it -> it.getName().equals(methodName))
-                    .findFirst()
-                    .orElseThrow();
-            var r404 = m.getAnnotation(io.swagger.v3.oas.annotations.responses.ApiResponse.class);
-            assertNotNull(r404, methodName + " must declare 404 response");
-            assertEquals("404", r404.responseCode());
+        OpenAPI openApi = buildCustomizedMieruOpenApi();
+        assertTrue(openApi.getComponents().getSchemas().containsKey("ApiDefaultResponse"),
+                "ApiDefaultResponse schema must be registered for $ref resolution");
+
+        ApiResponses collectionResponses = openApi.getPaths().get("/api/integration/v1/shipments").getGet().getResponses();
+        assertEquals(Set.of("200", "400", "401", "403", "429", "500"), collectionResponses.keySet());
+        assertNotNull(collectionResponses.get("429").getHeaders().get("Retry-After"));
+
+        for (String idRoute : List.of(
+                "/api/integration/v1/farmers/{id}",
+                "/api/integration/v1/deliveries/{id}",
+                "/api/integration/v1/shipments/{id}/composition"
+        )) {
+            ApiResponses itemResponses = openApi.getPaths().get(idRoute).getGet().getResponses();
+            assertEquals(Set.of("200", "400", "401", "403", "404", "429", "500"), itemResponses.keySet(),
+                    "Route " + idRoute + " must retain 200 and include 404");
         }
 
         for (String relPath : List.of("src/main/resources/application.properties", "src/main/resources/application.properties.template")) {

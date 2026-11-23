@@ -1,6 +1,5 @@
 package com.abelium.inatrace.components.integration.v1;
 
-import com.abelium.inatrace.api.ApiDefaultResponse;
 import com.abelium.inatrace.api.ApiResponse;
 import com.abelium.inatrace.api.errors.ApiException;
 import com.abelium.inatrace.components.integration.v1.dto.*;
@@ -8,10 +7,7 @@ import com.abelium.inatrace.components.integration.v1.services.IntegrationV1Serv
 import com.abelium.inatrace.security.service.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.headers.Header;
-import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,34 +23,6 @@ import java.util.List;
 @RequestMapping("/integration/v1")
 @SecurityRequirement(name = "Bearer Authentication")
 @Tag(name = "Integration V1 - Mieru Cacao", description = "Read-only REST Integration API for Mieru Cacao platform")
-@ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "400",
-                description = "Invalid or missing query parameter (INVALID_REQUEST / REQUEST_BODY_ERROR)",
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiDefaultResponse.class))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "401",
-                description = "Missing, expired, or invalid OAuth 2.0 Bearer JWT token",
-                content = @Content
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "403",
-                description = "Requested company_id is outside the credential's authorized scope (FORBIDDEN_TENANT_ACCESS)",
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiDefaultResponse.class))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "429",
-                description = "Request rate limit exceeded",
-                headers = @Header(name = "Retry-After", description = "Seconds (or HTTP-date) to wait before retrying", schema = @Schema(type = "string")),
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiDefaultResponse.class))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "500",
-                description = "Unexpected server error",
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiDefaultResponse.class))
-        )
-})
 public class IntegrationV1Controller {
 
     private final IntegrationV1Service integrationService;
@@ -107,11 +75,6 @@ public class IntegrationV1Controller {
 
     @GetMapping("/farmers/{id}")
     @Operation(summary = "Get farmer details and plots by ID")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404",
-            description = "Farmer not found with the specified ID",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiDefaultResponse.class))
-    )
     public ApiResponse<ApiFarmerIntegration> getFarmerById(
             @Parameter(description = "Farmer ID", required = true)
             @PathVariable("id") Long id,
@@ -148,11 +111,6 @@ public class IntegrationV1Controller {
 
     @GetMapping("/deliveries/{id}")
     @Operation(summary = "Get single delivery details by ID")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404",
-            description = "Delivery not found with the specified ID",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiDefaultResponse.class))
-    )
     public ApiResponse<ApiDeliveryIntegration> getDeliveryById(
             @Parameter(description = "Delivery ID", required = true)
             @PathVariable("id") Long id,
@@ -187,11 +145,6 @@ public class IntegrationV1Controller {
 
     @GetMapping("/shipments/{id}/composition")
     @Operation(summary = "Backward DAG trace of source deliveries composing the shipment lot")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404",
-            description = "Shipment not found or specified ID corresponds to a primary purchase order",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiDefaultResponse.class))
-    )
     public ApiResponse<ApiCompositionIntegration> getShipmentComposition(
             @Parameter(description = "Shipment ID", required = true)
             @PathVariable("id") Long id,

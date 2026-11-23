@@ -53,6 +53,7 @@ spring.datasource.hikari.leakDetectionThreshold = 60000
 spring.jpa.hibernate.naming.implicit-strategy = org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl
 spring.jpa.hibernate.naming.physical-strategy = org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 spring.jpa.properties.hibernate.dialect = com.abelium.inatrace.configuration.CustomPostgreSQLDialect
+spring.jpa.properties.hibernate.type.preferred_sql_type_code_for_string_lob = 12
 
 # ============================================================
 # Flyway (ADR-008, HU-01: Migraciones estrictas antes de Hibernate)
@@ -64,6 +65,7 @@ spring.flyway.out-of-order = false
 spring.flyway.validate-on-migrate = true
 spring.flyway.table = schema_version
 spring.flyway.locations = classpath:db/migration
+spring.flyway.fail-on-missing-locations = false
 
 spring.jackson.serialization.write-dates-as-timestamps = false
 spring.jackson.serialization.write-date-timestamps-as-nanoseconds = false
@@ -157,6 +159,9 @@ INATrace.agstack.loginBaseURL =
 # stays off and /whisp/status says so. The default base URL is the public instance.
 INATrace.whisp.baseURL = https://whisp.openforis.org/api
 INATrace.whisp.apiKey =
+
+# Read-only Integration API (/api/integration/v1) — fail-closed by default
+INATrace.integration.allowedCompanyIds =
 
 # ============================================================
 # Keycloak Admin Client (User Provisioning)

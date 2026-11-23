@@ -198,27 +198,28 @@ public class IntegrationV1Service {
 
         List<ApiCompanyIntegration> result = new ArrayList<>();
         for (Company c : companies) {
-            String businessName = c.getName();
+            String name = LotCompositionService.trimOrNull(c.getName());
+            String businessName = name;
             String taxId = null;
             if (c.getConfiguration() != null) {
                 Object bName = c.getConfiguration().get("businessName");
                 if (bName != null) {
-                    businessName = String.valueOf(bName);
+                    businessName = LotCompositionService.trimOrNull(String.valueOf(bName));
                 }
                 Object tId = c.getConfiguration().get("taxId");
                 if (tId != null) {
-                    taxId = String.valueOf(tId);
+                    taxId = LotCompositionService.trimOrNull(String.valueOf(tId));
                 } else {
                     Object ruc = c.getConfiguration().get("ruc");
                     if (ruc != null) {
-                        taxId = String.valueOf(ruc);
+                        taxId = LotCompositionService.trimOrNull(String.valueOf(ruc));
                     }
                 }
             }
-            if (taxId == null && c.getName() != null && c.getName().toUpperCase().contains("UNOCACE")) {
+            if (taxId == null && name != null && name.toUpperCase().contains("UNOCACE")) {
                 taxId = "0992258814001";
             }
-            result.add(new ApiCompanyIntegration(c.getId(), c.getName(), businessName, taxId));
+            result.add(new ApiCompanyIntegration(c.getId(), name, businessName, taxId));
         }
         return result;
     }
@@ -255,9 +256,9 @@ public class IntegrationV1Service {
 
         // 1. Units
         refData.setUnits(Arrays.asList(
-                new UnitDto("LB", "Libras", new BigDecimal("0.45359237")),
-                new UnitDto("KG", "Kilogramos", BigDecimal.ONE),
-                new UnitDto("QQ", "Quintales", new BigDecimal("45.359237"))
+                new ReferenceUnitDto("LB", "Libras", new BigDecimal("0.45359237")),
+                new ReferenceUnitDto("KG", "Kilogramos", BigDecimal.ONE),
+                new ReferenceUnitDto("QQ", "Quintales", new BigDecimal("45.359237"))
         ));
 
         // 2. Semi Products
@@ -299,7 +300,11 @@ public class IntegrationV1Service {
         List<CertificationTypeDto> certDtos = new ArrayList<>();
         if (certTypes != null && !certTypes.isEmpty()) {
             for (CertificationType ct : certTypes) {
-                certDtos.add(new CertificationTypeDto(ct.getId(), ct.getCode(), ct.getName()));
+                certDtos.add(new CertificationTypeDto(
+                        ct.getId(),
+                        LotCompositionService.trimOrNull(ct.getCode()),
+                        LotCompositionService.trimOrNull(ct.getName())
+                ));
             }
         } else {
             certDtos.add(new CertificationTypeDto(1L, "ORGANIC", "Orgánico"));
@@ -558,7 +563,7 @@ public class IntegrationV1Service {
         );
 
         if (lotCode != null && !lotCode.trim().isEmpty()) {
-            whereClause.append(" AND (LOWER(so.internalLotNumber) = :lotCode OR LOWER(so.qrCodeTag) = :lotCode OR LOWER(so.orderId) = :lotCode)");
+            whereClause.append(" AND (LOWER(TRIM(so.internalLotNumber)) = :lotCode OR LOWER(TRIM(so.qrCodeTag)) = :lotCode OR LOWER(TRIM(so.orderId)) = :lotCode)");
         }
         if (shipmentDateFrom != null) {
             whereClause.append(" AND (so.deliveryTime >= :dateFrom OR (so.deliveryTime IS NULL AND so.productionDate >= :dateFrom))");
@@ -635,10 +640,23 @@ public class IntegrationV1Service {
         return lotCompositionService.getComposition(shipment);
     }
 
+    private static final Set<String> VALID_DELETION_ENTITIES = Set.of("farmer", "plot", "delivery", "shipment");
+
     @Transactional(readOnly = true)
     public List<ApiDeletionIntegration> getDeletions(CustomUserDetails authUser, Long companyId, Instant updatedSince, String entityFilter) throws ApiException {
         if (updatedSince == null) {
             throw new ApiException(ApiStatus.INVALID_REQUEST, "Parameter 'updated_since' is required");
+        }
+        String normalizedEntity = (entityFilter != null && !entityFilter.trim().isEmpty())
+                ? entityFilter.trim().toLowerCase(Locale.ROOT)
+                : null;
+        if (normalizedEntity != null && !VALID_DELETION_ENTITIES.contains(normalizedEntity)) {
+            throw new ApiException(
+                    ApiStatus.INVALID_REQUEST,
+                    "Invalid 'entity' parameter: '" + entityFilter.trim() + "'. Allowed values: farmer, plot, delivery, shipment",
+                    null,
+                    "INVALID_ENTITY_FILTER"
+            );
         }
 
         List<Long> authorizedCompanyIds = getAuthorizedCompanyIds(authUser, companyId);

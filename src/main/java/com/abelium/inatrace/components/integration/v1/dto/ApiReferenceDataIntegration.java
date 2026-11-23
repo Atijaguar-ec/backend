@@ -10,7 +10,7 @@ public class ApiReferenceDataIntegration {
 
     @JsonProperty("units")
     @Schema(description = "Normalized mass units with exact kilogram conversion factors", requiredMode = Schema.RequiredMode.REQUIRED)
-    private List<UnitDto> units;
+    private List<ReferenceUnitDto> units;
 
     @JsonProperty("semi_products")
     @Schema(description = "Cocoa semi-products registered in INATrace", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -25,7 +25,7 @@ public class ApiReferenceDataIntegration {
     private List<CertificationTypeDto> certificationTypes;
 
     @Schema(name = "ReferenceUnitDto", description = "Measurement unit catalog entry with display label and exact kilogram factor")
-    public static class UnitDto {
+    public static class ReferenceUnitDto {
         @JsonProperty("code")
         @Schema(description = "Normalized unit code", allowableValues = {"LB", "KG", "QQ"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String code;
@@ -38,8 +38,8 @@ public class ApiReferenceDataIntegration {
         @Schema(description = "Exact multiplicative conversion factor to kilograms", requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal kgFactor;
 
-        public UnitDto() {}
-        public UnitDto(String code, String label, BigDecimal kgFactor) {
+        public ReferenceUnitDto() {}
+        public ReferenceUnitDto(String code, String label, BigDecimal kgFactor) {
             this.code = code;
             this.label = label;
             this.kgFactor = kgFactor;
@@ -135,8 +135,8 @@ public class ApiReferenceDataIntegration {
 
     public ApiReferenceDataIntegration() {}
 
-    public List<UnitDto> getUnits() { return units; }
-    public void setUnits(List<UnitDto> units) { this.units = units; }
+    public List<ReferenceUnitDto> getUnits() { return units; }
+    public void setUnits(List<ReferenceUnitDto> units) { this.units = units; }
 
     public List<SemiProductDto> getSemiProducts() { return semiProducts; }
     public void setSemiProducts(List<SemiProductDto> semiProducts) { this.semiProducts = semiProducts; }

@@ -25,7 +25,7 @@ public class ApiCompositionIntegration {
 
         @JsonProperty("lot_codes")
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-        private LotCodesDto lotCodes;
+        private CompositionLotCodesDto lotCodes;
 
         @JsonProperty("quantity")
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
@@ -33,11 +33,11 @@ public class ApiCompositionIntegration {
 
         @JsonProperty("unit")
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-        private UnitDto unit;
+        private UnitSummaryDto unit;
 
         public CompositionShipmentDto() {}
 
-        public CompositionShipmentDto(Long id, LotCodesDto lotCodes, BigDecimal quantity, UnitDto unit) {
+        public CompositionShipmentDto(Long id, CompositionLotCodesDto lotCodes, BigDecimal quantity, UnitSummaryDto unit) {
             this.id = id;
             this.lotCodes = lotCodes;
             this.quantity = quantity;
@@ -46,24 +46,24 @@ public class ApiCompositionIntegration {
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
-        public LotCodesDto getLotCodes() { return lotCodes; }
-        public void setLotCodes(LotCodesDto lotCodes) { this.lotCodes = lotCodes; }
+        public CompositionLotCodesDto getLotCodes() { return lotCodes; }
+        public void setLotCodes(CompositionLotCodesDto lotCodes) { this.lotCodes = lotCodes; }
         public BigDecimal getQuantity() { return quantity; }
         public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
-        public UnitDto getUnit() { return unit; }
-        public void setUnit(UnitDto unit) { this.unit = unit; }
+        public UnitSummaryDto getUnit() { return unit; }
+        public void setUnit(UnitSummaryDto unit) { this.unit = unit; }
     }
 
     @Schema(name = "CompositionLotCodesDto", description = "Primary lot identifiers for backward lineage summary")
-    public static class LotCodesDto {
+    public static class CompositionLotCodesDto {
         @JsonProperty("internal_lot_number")
         private String internalLotNumber;
 
         @JsonProperty("qr_code_tag")
         private String qrCodeTag;
 
-        public LotCodesDto() {}
-        public LotCodesDto(String internalLotNumber, String qrCodeTag) {
+        public CompositionLotCodesDto() {}
+        public CompositionLotCodesDto(String internalLotNumber, String qrCodeTag) {
             this.internalLotNumber = internalLotNumber;
             this.qrCodeTag = qrCodeTag;
         }
@@ -75,7 +75,7 @@ public class ApiCompositionIntegration {
     }
 
     @Schema(name = "UnitSummaryDto", description = "Normalized measurement unit and exact kilogram conversion factor")
-    public static class UnitDto {
+    public static class UnitSummaryDto {
         @JsonProperty("code")
         @Schema(allowableValues = {"LB", "KG", "QQ"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String code;
@@ -84,8 +84,8 @@ public class ApiCompositionIntegration {
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal kgFactor;
 
-        public UnitDto() {}
-        public UnitDto(String code, BigDecimal kgFactor) {
+        public UnitSummaryDto() {}
+        public UnitSummaryDto(String code, BigDecimal kgFactor) {
             this.code = code;
             this.kgFactor = kgFactor;
         }
@@ -120,13 +120,13 @@ public class ApiCompositionIntegration {
 
         @JsonProperty("unit")
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-        private UnitDto unit;
+        private UnitSummaryDto unit;
 
         public SourceDeliveryDto() {}
 
         public SourceDeliveryDto(Long deliveryId, Long farmerId, String farmerInternalId,
                                  String deliveryReceipt, LocalDate deliveryDate,
-                                 BigDecimal netQuantity, UnitDto unit) {
+                                 BigDecimal netQuantity, UnitSummaryDto unit) {
             this.deliveryId = deliveryId;
             this.farmerId = farmerId;
             this.farmerInternalId = farmerInternalId;
@@ -148,8 +148,8 @@ public class ApiCompositionIntegration {
         public void setDeliveryDate(LocalDate deliveryDate) { this.deliveryDate = deliveryDate; }
         public BigDecimal getNetQuantity() { return netQuantity; }
         public void setNetQuantity(BigDecimal netQuantity) { this.netQuantity = netQuantity; }
-        public UnitDto getUnit() { return unit; }
-        public void setUnit(UnitDto unit) { this.unit = unit; }
+        public UnitSummaryDto getUnit() { return unit; }
+        public void setUnit(UnitSummaryDto unit) { this.unit = unit; }
     }
 
     public ApiCompositionIntegration() {}

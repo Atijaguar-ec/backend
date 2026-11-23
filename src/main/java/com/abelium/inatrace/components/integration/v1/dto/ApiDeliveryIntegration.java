@@ -55,7 +55,7 @@ public class ApiDeliveryIntegration {
 
     @JsonProperty("unit")
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private UnitDto unit;
+    private UnitSummaryDto unit;
 
     @JsonProperty("gross_quantity")
     private BigDecimal grossQuantity;
@@ -129,7 +129,7 @@ public class ApiDeliveryIntegration {
     }
 
     @Schema(name = "UnitSummaryDto", description = "Normalized measurement unit and exact kilogram conversion factor")
-    public static class UnitDto {
+    public static class UnitSummaryDto {
         @JsonProperty("code")
         @Schema(allowableValues = {"LB", "KG", "QQ"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String code;
@@ -138,8 +138,8 @@ public class ApiDeliveryIntegration {
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal kgFactor;
 
-        public UnitDto() {}
-        public UnitDto(String code, BigDecimal kgFactor) {
+        public UnitSummaryDto() {}
+        public UnitSummaryDto(String code, BigDecimal kgFactor) {
             this.code = code;
             this.kgFactor = kgFactor;
         }
@@ -176,8 +176,8 @@ public class ApiDeliveryIntegration {
     public void setPlotId(Long plotId) { this.plotId = plotId; }
     public Boolean getOrganic() { return organic; }
     public void setOrganic(Boolean organic) { this.organic = organic; }
-    public UnitDto getUnit() { return unit; }
-    public void setUnit(UnitDto unit) { this.unit = unit; }
+    public UnitSummaryDto getUnit() { return unit; }
+    public void setUnit(UnitSummaryDto unit) { this.unit = unit; }
     public BigDecimal getGrossQuantity() { return grossQuantity; }
     public void setGrossQuantity(BigDecimal grossQuantity) { this.grossQuantity = grossQuantity; }
     public BigDecimal getTare() { return tare; }

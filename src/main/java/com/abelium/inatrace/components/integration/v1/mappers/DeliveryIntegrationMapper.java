@@ -2,6 +2,7 @@ package com.abelium.inatrace.components.integration.v1.mappers;
 
 import com.abelium.inatrace.components.integration.v1.dto.ApiDeliveryIntegration;
 import com.abelium.inatrace.components.integration.v1.dto.ApiDeliveryIntegration.*;
+import com.abelium.inatrace.components.integration.v1.services.LotCompositionService;
 import com.abelium.inatrace.db.entities.codebook.MeasureUnitType;
 import com.abelium.inatrace.db.entities.common.Plot;
 import com.abelium.inatrace.db.entities.stockorder.StockOrder;
@@ -15,22 +16,22 @@ public class DeliveryIntegrationMapper {
     private static final BigDecimal LB_KG_FACTOR = new BigDecimal("0.45359237");
     private static final BigDecimal QQ_KG_FACTOR = new BigDecimal("45.359237");
 
-    public static UnitDto resolveNormalizedUnit(MeasureUnitType mut, String defaultCode, BigDecimal defaultFactor) {
+    public static UnitSummaryDto resolveNormalizedUnit(MeasureUnitType mut, String defaultCode, BigDecimal defaultFactor) {
         if (mut == null) {
-            return new UnitDto(defaultCode, defaultFactor);
+            return new UnitSummaryDto(defaultCode, defaultFactor);
         }
         String rawCode = mut.getCode() != null ? mut.getCode().trim().toUpperCase() : defaultCode;
         if ("PESOLIBRA".equals(rawCode) || "LB".equals(rawCode) || "LIBRA".equals(rawCode) || "LIBRAS".equals(rawCode)) {
-            return new UnitDto("LB", LB_KG_FACTOR);
+            return new UnitSummaryDto("LB", LB_KG_FACTOR);
         }
         if ("PESOKG".equals(rawCode) || "PESOKILO".equals(rawCode) || "KG".equals(rawCode) || "KILO".equals(rawCode)) {
-            return new UnitDto("KG", BigDecimal.ONE);
+            return new UnitSummaryDto("KG", BigDecimal.ONE);
         }
         if ("QUINTALES".equals(rawCode) || "QUINTAL".equals(rawCode) || "QQ".equals(rawCode)) {
-            return new UnitDto("QQ", QQ_KG_FACTOR);
+            return new UnitSummaryDto("QQ", QQ_KG_FACTOR);
         }
         BigDecimal factor = mut.getWeight() != null ? mut.getWeight() : defaultFactor;
-        return new UnitDto(mut.getCode() != null ? mut.getCode() : defaultCode, factor);
+        return new UnitSummaryDto(mut.getCode() != null ? mut.getCode().trim() : defaultCode, factor);
     }
 
     public static ApiDeliveryIntegration toDto(StockOrder order) {
@@ -44,10 +45,10 @@ public class DeliveryIntegrationMapper {
 
         ApiDeliveryIntegration dto = new ApiDeliveryIntegration();
         dto.setId(order.getId());
-        dto.setDeliveryReceipt(order.getDeliveryReceipt());
+        dto.setDeliveryReceipt(LotCompositionService.trimOrNull(order.getDeliveryReceipt()));
 
         if (order.getCompany() != null) {
-            dto.setCompany(new IdNameDto(order.getCompany().getId(), order.getCompany().getName()));
+            dto.setCompany(new IdNameDto(order.getCompany().getId(), LotCompositionService.trimOrNull(order.getCompany().getName())));
         }
 
         if (order.getFacility() != null) {
@@ -56,7 +57,7 @@ public class DeliveryIntegrationMapper {
 
         if (order.getProducerUserCustomer() != null) {
             dto.setFarmerId(order.getProducerUserCustomer().getId());
-            dto.setFarmerInternalId(order.getProducerUserCustomer().getFarmerCompanyInternalId());
+            dto.setFarmerInternalId(LotCompositionService.trimOrNull(order.getProducerUserCustomer().getFarmerCompanyInternalId()));
         }
 
         dto.setDeliveryDate(order.getDeliveryTime() != null ? order.getDeliveryTime() : order.getProductionDate());
@@ -68,7 +69,7 @@ public class DeliveryIntegrationMapper {
         }
 
         // Variety
-        String varietyStr = order.getVariety();
+        String varietyStr = LotCompositionService.trimOrNull(order.getVariety());
         if (varietyStr != null) {
             if ("CCN51".equalsIgnoreCase(varietyStr) || "2".equals(varietyStr)) {
                 dto.setVariety(new CodeLabelDto("CCN51", "CCN-51"));
@@ -79,7 +80,7 @@ public class DeliveryIntegrationMapper {
             }
         }
 
-        dto.setParcelLot(order.getParcelLot());
+        dto.setParcelLot(LotCompositionService.trimOrNull(order.getParcelLot()));
 
         // Resolve plot_id from parcelLot
         List<Plot> plots = preloadedPlots != null ? preloadedPlots

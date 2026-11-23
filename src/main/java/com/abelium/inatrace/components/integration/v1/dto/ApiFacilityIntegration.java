@@ -25,14 +25,14 @@ public class ApiFacilityIntegration {
 
     @JsonProperty("location")
     @Schema(description = "Physical address and optional coordinates")
-    private LocationDto location;
+    private FacilityLocationDto location;
 
     @JsonProperty("updated_at")
     @Schema(description = "Last modification UTC timestamp (RFC 3339)")
     private Instant updatedAt;
 
     @Schema(name = "FacilityLocationDto", description = "Facility address and geographic coordinates")
-    public static class LocationDto {
+    public static class FacilityLocationDto {
         @JsonProperty("address")
         private String address;
 
@@ -48,9 +48,9 @@ public class ApiFacilityIntegration {
         @JsonProperty("longitude")
         private Double longitude;
 
-        public LocationDto() {}
+        public FacilityLocationDto() {}
 
-        public LocationDto(String address, String city, String state, Double latitude, Double longitude) {
+        public FacilityLocationDto(String address, String city, String state, Double latitude, Double longitude) {
             this.address = address;
             this.city = city;
             this.state = state;
@@ -88,8 +88,8 @@ public class ApiFacilityIntegration {
     public Boolean getIsCollectionCenter() { return isCollectionCenter; }
     public void setIsCollectionCenter(Boolean isCollectionCenter) { this.isCollectionCenter = isCollectionCenter; }
 
-    public LocationDto getLocation() { return location; }
-    public void setLocation(LocationDto location) { this.location = location; }
+    public FacilityLocationDto getLocation() { return location; }
+    public void setLocation(FacilityLocationDto location) { this.location = location; }
 
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }

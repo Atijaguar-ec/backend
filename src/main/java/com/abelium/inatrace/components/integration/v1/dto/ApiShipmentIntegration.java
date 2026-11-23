@@ -16,7 +16,7 @@ public class ApiShipmentIntegration {
 
     @JsonProperty("lot_codes")
     @Schema(description = "Identifiers printed on shipping documents, bags, and QR labels", requiredMode = Schema.RequiredMode.REQUIRED)
-    private LotCodesDto lotCodes;
+    private ShipmentLotCodesDto lotCodes;
 
     @JsonProperty("shipment_date")
     @Schema(description = "Production or dispatch date (YYYY-MM-DD)")
@@ -44,7 +44,7 @@ public class ApiShipmentIntegration {
 
     @JsonProperty("unit")
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private UnitDto unit;
+    private UnitSummaryDto unit;
 
     @JsonProperty("organic")
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
@@ -54,7 +54,7 @@ public class ApiShipmentIntegration {
     private Instant updatedAt;
 
     @Schema(name = "ShipmentLotCodesDto", description = "Identifiers printed on shipping documents, bags, and QR labels")
-    public static class LotCodesDto {
+    public static class ShipmentLotCodesDto {
         @JsonProperty("internal_lot_number")
         private String internalLotNumber;
 
@@ -68,7 +68,7 @@ public class ApiShipmentIntegration {
         @Schema(description = "Numbered sack identifiers (int32)")
         private List<Integer> sacNumbers;
 
-        public LotCodesDto() {}
+        public ShipmentLotCodesDto() {}
 
         public String getInternalLotNumber() { return internalLotNumber; }
         public void setInternalLotNumber(String internalLotNumber) { this.internalLotNumber = internalLotNumber; }
@@ -103,7 +103,7 @@ public class ApiShipmentIntegration {
     }
 
     @Schema(name = "UnitSummaryDto", description = "Normalized measurement unit and exact kilogram conversion factor")
-    public static class UnitDto {
+    public static class UnitSummaryDto {
         @JsonProperty("code")
         @Schema(allowableValues = {"LB", "KG", "QQ"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String code;
@@ -112,8 +112,8 @@ public class ApiShipmentIntegration {
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal kgFactor;
 
-        public UnitDto() {}
-        public UnitDto(String code, BigDecimal kgFactor) {
+        public UnitSummaryDto() {}
+        public UnitSummaryDto(String code, BigDecimal kgFactor) {
             this.code = code;
             this.kgFactor = kgFactor;
         }
@@ -128,8 +128,8 @@ public class ApiShipmentIntegration {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public LotCodesDto getLotCodes() { return lotCodes; }
-    public void setLotCodes(LotCodesDto lotCodes) { this.lotCodes = lotCodes; }
+    public ShipmentLotCodesDto getLotCodes() { return lotCodes; }
+    public void setLotCodes(ShipmentLotCodesDto lotCodes) { this.lotCodes = lotCodes; }
     public LocalDate getShipmentDate() { return shipmentDate; }
     public void setShipmentDate(LocalDate shipmentDate) { this.shipmentDate = shipmentDate; }
     public IdNameDto getFromCompany() { return fromCompany; }
@@ -142,8 +142,8 @@ public class ApiShipmentIntegration {
     public void setSemiProduct(IdNameDto semiProduct) { this.semiProduct = semiProduct; }
     public BigDecimal getQuantity() { return quantity; }
     public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
-    public UnitDto getUnit() { return unit; }
-    public void setUnit(UnitDto unit) { this.unit = unit; }
+    public UnitSummaryDto getUnit() { return unit; }
+    public void setUnit(UnitSummaryDto unit) { this.unit = unit; }
     public Boolean getOrganic() { return organic; }
     public void setOrganic(Boolean organic) { this.organic = organic; }
     public Instant getUpdatedAt() { return updatedAt; }

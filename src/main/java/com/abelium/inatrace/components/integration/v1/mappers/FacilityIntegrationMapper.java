@@ -1,7 +1,8 @@
 package com.abelium.inatrace.components.integration.v1.mappers;
 
 import com.abelium.inatrace.components.integration.v1.dto.ApiFacilityIntegration;
-import com.abelium.inatrace.components.integration.v1.dto.ApiFacilityIntegration.LocationDto;
+import com.abelium.inatrace.components.integration.v1.dto.ApiFacilityIntegration.FacilityLocationDto;
+import com.abelium.inatrace.components.integration.v1.services.LotCompositionService;
 import com.abelium.inatrace.db.entities.codebook.SemiProduct;
 import com.abelium.inatrace.db.entities.codebook.SemiProductTranslation;
 import com.abelium.inatrace.db.entities.facility.Facility;
@@ -15,7 +16,7 @@ public class FacilityIntegrationMapper {
             return null;
         }
         if (facility.getName() != null && !facility.getName().isBlank()) {
-            return facility.getName();
+            return facility.getName().trim();
         }
         try {
             if (facility.getFacilityTranslations() != null && !facility.getFacilityTranslations().isEmpty()) {
@@ -24,13 +25,14 @@ public class FacilityIntegrationMapper {
                 String anyName = null;
                 for (FacilityTranslation ft : facility.getFacilityTranslations()) {
                     if (ft != null && ft.getName() != null && !ft.getName().isBlank()) {
+                        String trimmed = ft.getName().trim();
                         if (anyName == null) {
-                            anyName = ft.getName();
+                            anyName = trimmed;
                         }
                         if (ft.getLanguage() == Language.ES) {
-                            esName = ft.getName();
+                            esName = trimmed;
                         } else if (ft.getLanguage() == Language.EN) {
-                            enName = ft.getName();
+                            enName = trimmed;
                         }
                     }
                 }
@@ -47,7 +49,7 @@ public class FacilityIntegrationMapper {
         } catch (Exception ignored) {
             // Ignore LazyInitializationException when detached without translations
         }
-        return facility.getName();
+        return LotCompositionService.trimOrNull(facility.getName());
     }
 
     public static String resolveSemiProductName(SemiProduct sp) {
@@ -55,7 +57,7 @@ public class FacilityIntegrationMapper {
             return null;
         }
         if (sp.getName() != null && !sp.getName().isBlank()) {
-            return sp.getName();
+            return sp.getName().trim();
         }
         try {
             if (sp.getSemiProductTranslations() != null && !sp.getSemiProductTranslations().isEmpty()) {
@@ -64,13 +66,14 @@ public class FacilityIntegrationMapper {
                 String anyName = null;
                 for (SemiProductTranslation st : sp.getSemiProductTranslations()) {
                     if (st != null && st.getName() != null && !st.getName().isBlank()) {
+                        String trimmed = st.getName().trim();
                         if (anyName == null) {
-                            anyName = st.getName();
+                            anyName = trimmed;
                         }
                         if (st.getLanguage() == Language.ES) {
-                            esName = st.getName();
+                            esName = trimmed;
                         } else if (st.getLanguage() == Language.EN) {
-                            enName = st.getName();
+                            enName = trimmed;
                         }
                     }
                 }
@@ -87,7 +90,7 @@ public class FacilityIntegrationMapper {
         } catch (Exception ignored) {
             // Ignore LazyInitializationException when detached without translations
         }
-        return sp.getName();
+        return LotCompositionService.trimOrNull(sp.getName());
     }
 
     public static ApiFacilityIntegration toDto(Facility facility) {
@@ -104,14 +107,14 @@ public class FacilityIntegrationMapper {
         dto.setIsCollectionCenter(Boolean.TRUE.equals(facility.getIsCollectionFacility()));
 
         if (facility.getFacilityLocation() != null) {
-            LocationDto loc = new LocationDto();
+            FacilityLocationDto loc = new FacilityLocationDto();
             loc.setLatitude(facility.getFacilityLocation().getLatitude());
             loc.setLongitude(facility.getFacilityLocation().getLongitude());
             if (facility.getFacilityLocation().getAddress() != null) {
                 var addr = facility.getFacilityLocation().getAddress();
-                loc.setAddress(addr.getAddress());
-                loc.setCity(addr.getCity());
-                loc.setState(addr.getState());
+                loc.setAddress(LotCompositionService.trimOrNull(addr.getAddress()));
+                loc.setCity(LotCompositionService.trimOrNull(addr.getCity()));
+                loc.setState(LotCompositionService.trimOrNull(addr.getState()));
             }
             dto.setLocation(loc);
         }

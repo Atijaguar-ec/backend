@@ -896,4 +896,273 @@ class IntegrationV1ControllerTest {
         assertEquals(1, comp.getSourceDeliveries().size());
         assertEquals(5001L, comp.getSourceDeliveries().get(0).getDeliveryId());
     }
+
+    @Test
+    @DisplayName("P0-1: Multi-stage 5-hop DAG (delivery -> baba -> fermented -> semi-dry -> dry -> repacked export) + cycle/canceled guard")
+    void testFiveHopMultiStageCompositionWithRepackingAndCycleProtection() {
+        Company c12 = new Company();
+        ReflectionTestUtils.setField(c12, "id", 12L);
+        c12.setName("UNOCACE");
+
+        UserCustomer f1 = new UserCustomer();
+        ReflectionTestUtils.setField(f1, "id", 101L);
+        f1.setFarmerCompanyInternalId("UN-101 ");
+
+        UserCustomer f2 = new UserCustomer();
+        ReflectionTestUtils.setField(f2, "id", 102L);
+        f2.setFarmerCompanyInternalId("UN-102");
+
+        MeasureUnitType lbType = new MeasureUnitType("PESOLIBRA", "Libra", new BigDecimal("2.20"));
+        MeasureUnitType kgType = new MeasureUnitType("PESOKG", "Kilogramo", BigDecimal.ONE);
+
+        // Stage 0: Primary farmer deliveries (PURCHASE_ORDER)
+        StockOrder del1 = new StockOrder();
+        ReflectionTestUtils.setField(del1, "id", 1001L);
+        del1.setOrderType(OrderType.PURCHASE_ORDER);
+        del1.setStatus(StockOrderStatus.ACTIVE);
+        del1.setProducerUserCustomer(f1);
+        del1.setDeliveryReceipt("000901 ");
+        del1.setDeliveryTime(LocalDate.parse("2026-05-01"));
+        del1.setNetQuantity(new BigDecimal("180.50"));
+        del1.setMeasurementUnitType(lbType);
+
+        StockOrder del2 = new StockOrder();
+        ReflectionTestUtils.setField(del2, "id", 1002L);
+        del2.setOrderType(OrderType.PURCHASE_ORDER);
+        del2.setStatus(StockOrderStatus.ACTIVE);
+        del2.setProducerUserCustomer(f2);
+        del2.setDeliveryReceipt("000902");
+        del2.setDeliveryTime(LocalDate.parse("2026-05-01"));
+        del2.setNetQuantity(new BigDecimal("220.00"));
+        del2.setMeasurementUnitType(lbType);
+
+        // Stage 1: Wet cocoa reception (Baba) + canceled transaction that must be ignored
+        StockOrder canceledDel = new StockOrder();
+        ReflectionTestUtils.setField(canceledDel, "id", 1003L);
+        canceledDel.setOrderType(OrderType.PURCHASE_ORDER);
+        canceledDel.setStatus(StockOrderStatus.ACTIVE);
+        canceledDel.setNetQuantity(new BigDecimal("999.00"));
+
+        Transaction txDel1 = new Transaction();
+        txDel1.setSourceStockOrder(del1);
+        txDel1.setStatus(com.abelium.inatrace.db.entities.stockorder.enums.TransactionStatus.EXECUTED);
+
+        Transaction txDel2 = new Transaction();
+        txDel2.setSourceStockOrder(del2);
+        txDel2.setStatus(com.abelium.inatrace.db.entities.stockorder.enums.TransactionStatus.EXECUTED);
+
+        Transaction txCanceled = new Transaction();
+        txCanceled.setSourceStockOrder(canceledDel);
+        txCanceled.setStatus(com.abelium.inatrace.db.entities.stockorder.enums.TransactionStatus.CANCELED);
+
+        ProcessingOrder poBaba = new ProcessingOrder();
+        ReflectionTestUtils.setField(poBaba, "id", 2001L);
+        poBaba.setInputTransactions(new HashSet<>(Arrays.asList(txDel1, txDel2, txCanceled)));
+
+        StockOrder babaLot = new StockOrder();
+        ReflectionTestUtils.setField(babaLot, "id", 3001L);
+        babaLot.setOrderType(OrderType.PROCESSING_ORDER);
+        babaLot.setProcessingOrder(poBaba);
+
+        // Stage 2: Fermented cocoa
+        Transaction txFerm = new Transaction();
+        txFerm.setSourceStockOrder(babaLot);
+        ProcessingOrder poFerm = new ProcessingOrder();
+        ReflectionTestUtils.setField(poFerm, "id", 2002L);
+        poFerm.setInputTransactions(Collections.singleton(txFerm));
+
+        StockOrder fermentedLot = new StockOrder();
+        ReflectionTestUtils.setField(fermentedLot, "id", 3002L);
+        fermentedLot.setOrderType(OrderType.PROCESSING_ORDER);
+        fermentedLot.setProcessingOrder(poFerm);
+
+        // Stage 3: Semi-dry cocoa (plus artificial back-edge cycle to fermentedLot)
+        Transaction txSemi = new Transaction();
+        txSemi.setSourceStockOrder(fermentedLot);
+        ProcessingOrder poSemi = new ProcessingOrder();
+        ReflectionTestUtils.setField(poSemi, "id", 2003L);
+        poSemi.setInputTransactions(Collections.singleton(txSemi));
+
+        StockOrder semiDryLot = new StockOrder();
+        ReflectionTestUtils.setField(semiDryLot, "id", 3003L);
+        semiDryLot.setOrderType(OrderType.PROCESSING_ORDER);
+        semiDryLot.setProcessingOrder(poSemi);
+
+        // Inject cycle edge on poFerm -> semiDryLot to verify cycle immunity
+        Transaction txCycle = new Transaction();
+        txCycle.setSourceStockOrder(semiDryLot);
+        poFerm.setInputTransactions(new HashSet<>(Arrays.asList(txFerm, txCycle)));
+
+        // Stage 4: Dry cocoa
+        Transaction txDry = new Transaction();
+        txDry.setSourceStockOrder(semiDryLot);
+        ProcessingOrder poDry = new ProcessingOrder();
+        ReflectionTestUtils.setField(poDry, "id", 2004L);
+        poDry.setInputTransactions(Collections.singleton(txDry));
+
+        StockOrder dryLot = new StockOrder();
+        ReflectionTestUtils.setField(dryLot, "id", 3004L);
+        dryLot.setOrderType(OrderType.PROCESSING_ORDER);
+        dryLot.setProcessingOrder(poDry);
+
+        // Stage 5: Export bagged shipment linked via repackedOriginStockOrderId
+        StockOrder exportLot = new StockOrder();
+        ReflectionTestUtils.setField(exportLot, "id", 3005L);
+        exportLot.setOrderType(OrderType.GENERAL_ORDER);
+        exportLot.setCompany(c12);
+        exportLot.setInternalLotNumber("SEMANA 7 NACIONAL ");
+        exportLot.setQrCodeTag("7e4d1c20-1111-4222-8333-444455556666");
+        exportLot.setTotalQuantity(new BigDecimal("690.00"));
+        exportLot.setMeasurementUnitType(kgType);
+        exportLot.setRepackedOriginStockOrderId("3004");
+
+        when(entityManager.find(StockOrder.class, 3004L)).thenReturn(dryLot);
+
+        ApiCompositionIntegration comp = lotCompositionService.getComposition(exportLot);
+        assertNotNull(comp);
+        assertEquals("SEMANA 7 NACIONAL", comp.getShipment().getLotCodes().getInternalLotNumber());
+        assertEquals("KG", comp.getShipment().getUnit().getCode());
+        assertEquals(2, comp.getSourceDeliveries().size());
+        assertEquals(1001L, comp.getSourceDeliveries().get(0).getDeliveryId());
+        assertEquals("UN-101", comp.getSourceDeliveries().get(0).getFarmerInternalId());
+        assertEquals("000901", comp.getSourceDeliveries().get(0).getDeliveryReceipt());
+        assertEquals(1002L, comp.getSourceDeliveries().get(1).getDeliveryId());
+    }
+
+    @Test
+    @DisplayName("P0-1: Historical orphan ProcessingOrders without Transaction rows recover upstream stage and primary deliveries")
+    void testHistoricalOrphanProcessingOrderRecovery() {
+        Company c11 = new Company();
+        ReflectionTestUtils.setField(c11, "id", 11L);
+        c11.setName("ASOC. LA FLORIDA");
+
+        SemiProduct spBaba = new SemiProduct();
+        ReflectionTestUtils.setField(spBaba, "id", 1L);
+        spBaba.setName("Cacao en Baba ");
+
+        SemiProduct spFerm = new SemiProduct();
+        ReflectionTestUtils.setField(spFerm, "id", 11L);
+        spFerm.setName("Cacao Fermentado ");
+
+        // Primary consumed purchase order
+        StockOrder purchase = new StockOrder();
+        ReflectionTestUtils.setField(purchase, "id", 440L);
+        purchase.setCompany(c11);
+        purchase.setOrderType(OrderType.PURCHASE_ORDER);
+        purchase.setStatus(StockOrderStatus.ACTIVE);
+        purchase.setTotalGrossQuantity(new BigDecimal("250.00"));
+        purchase.setTotalQuantity(new BigDecimal("85.00"));
+        purchase.setNetQuantity(new BigDecimal("85.00"));
+        purchase.setAvailableQuantity(BigDecimal.ZERO);
+        purchase.setDeliveryTime(LocalDate.parse("2026-02-17"));
+
+        // Baba reception slice (PO 30, TRANSFER, empty inputTransactions)
+        com.abelium.inatrace.db.entities.processingaction.ProcessingAction transferAction =
+                new com.abelium.inatrace.db.entities.processingaction.ProcessingAction();
+        transferAction.setType(com.abelium.inatrace.types.ProcessingActionType.TRANSFER);
+        transferAction.setInputSemiProduct(spBaba);
+
+        ProcessingOrder poTransfer = new ProcessingOrder();
+        ReflectionTestUtils.setField(poTransfer, "id", 30L);
+        poTransfer.setProcessingAction(transferAction);
+        poTransfer.setInputTransactions(Collections.emptySet());
+
+        StockOrder babaSlice = new StockOrder();
+        ReflectionTestUtils.setField(babaSlice, "id", 444L);
+        babaSlice.setCompany(c11);
+        babaSlice.setOrderType(OrderType.TRANSFER_ORDER);
+        babaSlice.setSemiProduct(spBaba);
+        babaSlice.setInternalLotNumber("SEMANA 7 NACIONAL /1");
+        babaSlice.setTotalQuantity(new BigDecimal("250.00"));
+        babaSlice.setDeliveryTime(LocalDate.parse("2026-02-17"));
+        babaSlice.setProcessingOrder(poTransfer);
+
+        // Fermented lot (PO 31, PROCESSING, empty inputTransactions)
+        com.abelium.inatrace.db.entities.processingaction.ProcessingAction fermAction =
+                new com.abelium.inatrace.db.entities.processingaction.ProcessingAction();
+        fermAction.setType(com.abelium.inatrace.types.ProcessingActionType.PROCESSING);
+        fermAction.setInputSemiProduct(spBaba);
+
+        ProcessingOrder poFerm = new ProcessingOrder();
+        ReflectionTestUtils.setField(poFerm, "id", 31L);
+        poFerm.setProcessingAction(fermAction);
+        poFerm.setInputTransactions(Collections.emptySet());
+
+        StockOrder fermented = new StockOrder();
+        ReflectionTestUtils.setField(fermented, "id", 458L);
+        fermented.setCompany(c11);
+        fermented.setOrderType(OrderType.PROCESSING_ORDER);
+        fermented.setSemiProduct(spFerm);
+        fermented.setInternalLotNumber("semana 7 nacional ");
+        fermented.setTotalQuantity(new BigDecimal("250.00"));
+        fermented.setProcessingOrder(poFerm);
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<StockOrder> stageQuery = mock(TypedQuery.class);
+        when(entityManager.createQuery(contains("AND so.semiProduct.id = :inSemiId"), eq(StockOrder.class)))
+                .thenReturn(stageQuery);
+        when(stageQuery.setParameter(anyString(), any())).thenReturn(stageQuery);
+        when(stageQuery.getResultList()).thenReturn(Collections.singletonList(babaSlice));
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<StockOrder> purchaseQuery = mock(TypedQuery.class);
+        when(entityManager.createQuery(contains("SELECT del FROM StockOrder del"), eq(StockOrder.class)))
+                .thenReturn(purchaseQuery);
+        when(purchaseQuery.setParameter(anyString(), any())).thenReturn(purchaseQuery);
+        when(purchaseQuery.getResultList()).thenReturn(Collections.singletonList(purchase));
+
+        ApiCompositionIntegration comp = lotCompositionService.getComposition(fermented);
+        assertNotNull(comp);
+        assertEquals(1, comp.getSourceDeliveries().size());
+        assertEquals(440L, comp.getSourceDeliveries().get(0).getDeliveryId());
+        assertEquals(new BigDecimal("85.00"), comp.getSourceDeliveries().get(0).getNetQuantity());
+    }
+
+    @Test
+    @DisplayName("P1-5 & P2-6c: Deletions rejects unknown entity with 400 and mappers trim trailing spaces")
+    void testInvalidDeletionEntityAndTrailingWhitespaceTrimming() {
+        Instant since = Instant.parse("2026-04-01T00:00:00Z");
+        ApiException ex = assertThrows(ApiException.class, () ->
+                controller.getDeletions(12L, since, "unknown_type", authUserUnocace)
+        );
+        assertEquals(ApiStatus.INVALID_REQUEST, ex.getApiStatus());
+        assertEquals("INVALID_ENTITY_FILTER", ex.getErrorDetails());
+
+        SemiProduct spWithSpace = new SemiProduct();
+        ReflectionTestUtils.setField(spWithSpace, "id", 5L);
+        spWithSpace.setName("Cacao ");
+        assertEquals("Cacao", com.abelium.inatrace.components.integration.v1.mappers.FacilityIntegrationMapper.resolveSemiProductName(spWithSpace));
+
+        StockOrder shWithSpace = new StockOrder();
+        ReflectionTestUtils.setField(shWithSpace, "id", 508L);
+        shWithSpace.setInternalLotNumber("SEMANA 7 NACIONAL ");
+        shWithSpace.setSemiProduct(spWithSpace);
+        ApiShipmentIntegration shDto = com.abelium.inatrace.components.integration.v1.mappers.ShipmentIntegrationMapper.toDto(shWithSpace);
+        assertEquals("SEMANA 7 NACIONAL", shDto.getLotCodes().getInternalLotNumber());
+        assertEquals("Cacao", shDto.getSemiProduct().getName());
+    }
+
+    @Test
+    @DisplayName("P0-2: Production blocks Swagger/OpenAPI and mieru-cacao-ro M2M client is restricted to GET /api/integration/v1/**")
+    void testProductionSwaggerLockdownAndReadOnlyM2MGuard() {
+        assertTrue(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isSwaggerBlockedForEnv("PROD"));
+        assertTrue(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isSwaggerBlockedForEnv(" prod "));
+        assertFalse(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isSwaggerBlockedForEnv("TEST"));
+        assertFalse(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isSwaggerBlockedForEnv("DEV"));
+
+        org.springframework.security.oauth2.jwt.Jwt mieruJwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("tok")
+                .header("alg", "RS256")
+                .claim("azp", "mieru-cacao-ro")
+                .claim("preferred_username", "service-account-mieru-cacao-ro")
+                .build();
+        org.springframework.security.authentication.UsernamePasswordAuthenticationToken mieruAuth =
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        authUserUnocace, mieruJwt, authUserUnocace.getAuthorities());
+
+        assertTrue(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isRestrictedMieruReadOnlyAuthentication(mieruAuth));
+        assertTrue(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isAllowedMieruReadOnlyRequest("GET", "/api/integration/v1/shipments", ""));
+        assertFalse(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isAllowedMieruReadOnlyRequest("POST", "/api/integration/v1/shipments", ""));
+        assertFalse(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isAllowedMieruReadOnlyRequest("PUT", "/api/chain/stock-order", ""));
+        assertFalse(com.abelium.inatrace.security.configuration.SpringSecurityConfig.isAllowedMieruReadOnlyRequest("GET", "/api/company/12", ""));
+    }
 }
