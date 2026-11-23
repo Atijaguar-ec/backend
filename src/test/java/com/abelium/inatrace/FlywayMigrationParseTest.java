@@ -34,7 +34,8 @@ class FlywayMigrationParseTest {
             "db/migration/V12__disable_quota_balance_for_fv.sql",
             "db/migration/V13__grant_mcp_ro_bi_schema.sql",
             "db/migration/V14__backfill_final_product_qrcodetag.sql",
-            "db/migration/V15__add_usercustomer_timestamps.sql"
+            "db/migration/V15__add_usercustomer_timestamps.sql",
+            "db/migration/V16__sync_postgresql_identity_sequences.sql"
         };
 
         for (String file : files) {
