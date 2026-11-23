@@ -1,19 +1,25 @@
 package com.abelium.inatrace.components.integration.v1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Authorized active organization in INATrace")
 public class ApiCompanyIntegration {
 
     @JsonProperty("id")
+    @Schema(description = "Unique organization ID", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
 
     @JsonProperty("name")
+    @Schema(description = "Organization or affiliate association name", requiredMode = Schema.RequiredMode.REQUIRED)
     private String name;
 
     @JsonProperty("business_name")
+    @Schema(description = "Registered legal business name")
     private String businessName;
 
     @JsonProperty("tax_id")
+    @Schema(description = "Ecuadorian 13-digit taxpayer ID (RUC)")
     private String taxId;
 
     public ApiCompanyIntegration() {}

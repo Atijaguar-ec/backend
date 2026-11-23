@@ -1,21 +1,27 @@
 package com.abelium.inatrace.components.integration.v1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Collections;
 import java.util.List;
 
+@Schema(description = "Deterministic paginated response wrapper")
 public class ApiIntegrationPage<T> {
 
     @JsonProperty("count")
+    @Schema(description = "Total number of matching records", minimum = "0", requiredMode = Schema.RequiredMode.REQUIRED)
     private long count;
 
     @JsonProperty("offset")
+    @Schema(description = "Zero-based page offset", minimum = "0", requiredMode = Schema.RequiredMode.REQUIRED)
     private int offset;
 
     @JsonProperty("limit")
+    @Schema(description = "Effective page size", minimum = "1", maximum = "500", requiredMode = Schema.RequiredMode.REQUIRED)
     private int limit;
 
     @JsonProperty("items")
+    @Schema(description = "Page records ordered by ascending ID", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<T> items;
 
     public ApiIntegrationPage() {

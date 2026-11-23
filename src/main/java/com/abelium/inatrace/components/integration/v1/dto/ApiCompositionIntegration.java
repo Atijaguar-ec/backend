@@ -1,29 +1,38 @@
 package com.abelium.inatrace.components.integration.v1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+@Schema(description = "Backward DAG lineage of primary farmer deliveries composing a lot")
 public class ApiCompositionIntegration {
 
     @JsonProperty("shipment")
+    @Schema(description = "Queried lot summary", requiredMode = Schema.RequiredMode.REQUIRED)
     private CompositionShipmentDto shipment;
 
     @JsonProperty("source_deliveries")
+    @Schema(description = "Contributing primary farmer deliveries (join delivery_id against /deliveries to obtain plot_id)", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<SourceDeliveryDto> sourceDeliveries;
 
+    @Schema(name = "CompositionShipmentDto", description = "Summary of the traced shipment lot")
     public static class CompositionShipmentDto {
         @JsonProperty("id")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private Long id;
 
         @JsonProperty("lot_codes")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private LotCodesDto lotCodes;
 
         @JsonProperty("quantity")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal quantity;
 
         @JsonProperty("unit")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private UnitDto unit;
 
         public CompositionShipmentDto() {}
@@ -45,6 +54,7 @@ public class ApiCompositionIntegration {
         public void setUnit(UnitDto unit) { this.unit = unit; }
     }
 
+    @Schema(name = "CompositionLotCodesDto", description = "Primary lot identifiers for backward lineage summary")
     public static class LotCodesDto {
         @JsonProperty("internal_lot_number")
         private String internalLotNumber;
@@ -64,11 +74,14 @@ public class ApiCompositionIntegration {
         public void setQrCodeTag(String qrCodeTag) { this.qrCodeTag = qrCodeTag; }
     }
 
+    @Schema(name = "UnitSummaryDto", description = "Normalized measurement unit and exact kilogram conversion factor")
     public static class UnitDto {
         @JsonProperty("code")
+        @Schema(allowableValues = {"LB", "KG", "QQ"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String code;
 
         @JsonProperty("kg_factor")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal kgFactor;
 
         public UnitDto() {}
@@ -83,8 +96,10 @@ public class ApiCompositionIntegration {
         public void setKgFactor(BigDecimal kgFactor) { this.kgFactor = kgFactor; }
     }
 
+    @Schema(name = "SourceDeliveryDto", description = "Primary farmer delivery contributing to the lot")
     public static class SourceDeliveryDto {
         @JsonProperty("delivery_id")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private Long deliveryId;
 
         @JsonProperty("farmer_id")
@@ -100,9 +115,11 @@ public class ApiCompositionIntegration {
         private LocalDate deliveryDate;
 
         @JsonProperty("net_quantity")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal netQuantity;
 
         @JsonProperty("unit")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private UnitDto unit;
 
         public SourceDeliveryDto() {}

@@ -1,46 +1,59 @@
 package com.abelium.inatrace.components.integration.v1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+@Schema(description = "Processed post-harvest cocoa lot or export shipment")
 public class ApiShipmentIntegration {
 
     @JsonProperty("id")
+    @Schema(description = "Unique shipment / lot ID in INATrace", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
 
     @JsonProperty("lot_codes")
+    @Schema(description = "Identifiers printed on shipping documents, bags, and QR labels", requiredMode = Schema.RequiredMode.REQUIRED)
     private LotCodesDto lotCodes;
 
     @JsonProperty("shipment_date")
+    @Schema(description = "Production or dispatch date (YYYY-MM-DD)")
     private LocalDate shipmentDate;
 
     @JsonProperty("from_company")
+    @Schema(description = "Originating organization", requiredMode = Schema.RequiredMode.REQUIRED)
     private IdNameDto fromCompany;
 
     @JsonProperty("from_facility")
+    @Schema(description = "Originating facility")
     private IdNameDto fromFacility;
 
     @JsonProperty("buyer")
+    @Schema(description = "Destination buyer (present on sales/export lots)")
     private IdNameDto buyer;
 
     @JsonProperty("semi_product")
+    @Schema(description = "Lot semi-product or final product")
     private IdNameDto semiProduct;
 
     @JsonProperty("quantity")
+    @Schema(description = "Total lot weight", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal quantity;
 
     @JsonProperty("unit")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private UnitDto unit;
 
     @JsonProperty("organic")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean organic;
 
     @JsonProperty("updated_at")
     private Instant updatedAt;
 
+    @Schema(name = "ShipmentLotCodesDto", description = "Identifiers printed on shipping documents, bags, and QR labels")
     public static class LotCodesDto {
         @JsonProperty("internal_lot_number")
         private String internalLotNumber;
@@ -52,6 +65,7 @@ public class ApiShipmentIntegration {
         private String qrCodeTag;
 
         @JsonProperty("sac_numbers")
+        @Schema(description = "Numbered sack identifiers (int32)")
         private List<Integer> sacNumbers;
 
         public LotCodesDto() {}
@@ -66,11 +80,14 @@ public class ApiShipmentIntegration {
         public void setSacNumbers(List<Integer> sacNumbers) { this.sacNumbers = sacNumbers; }
     }
 
+    @Schema(name = "IdNameDto", description = "Entity ID and display name")
     public static class IdNameDto {
         @JsonProperty("id")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private Long id;
 
         @JsonProperty("name")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private String name;
 
         public IdNameDto() {}
@@ -85,11 +102,14 @@ public class ApiShipmentIntegration {
         public void setName(String name) { this.name = name; }
     }
 
+    @Schema(name = "UnitSummaryDto", description = "Normalized measurement unit and exact kilogram conversion factor")
     public static class UnitDto {
         @JsonProperty("code")
+        @Schema(allowableValues = {"LB", "KG", "QQ"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String code;
 
         @JsonProperty("kg_factor")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal kgFactor;
 
         public UnitDto() {}

@@ -1,59 +1,78 @@
 package com.abelium.inatrace.components.integration.v1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
+@Schema(description = "Smallholder farmer profile, farm summary, and georeferenced GeoJSON plots (LOPDP sanitized)")
 public class ApiFarmerIntegration {
 
     @JsonProperty("id")
+    @Schema(description = "Unique farmer ID in INATrace", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
 
     @JsonProperty("farmer_internal_id")
+    @Schema(description = "Organization member code (e.g. MY0905176285)")
     private String farmerInternalId;
 
     @JsonProperty("name")
+    @Schema(description = "Farmer given names")
     private String name;
 
     @JsonProperty("surname")
+    @Schema(description = "Farmer surnames")
     private String surname;
 
     @JsonProperty("national_id")
+    @Schema(description = "Numeric national ID when stored as 10 to 13 digits without prefix")
     private String nationalId;
 
     @JsonProperty("gender")
+    @Schema(description = "Farmer gender", allowableValues = {"MALE", "FEMALE", "DIVERSE", "N_A"})
     private String gender;
 
     @JsonProperty("status")
+    @Schema(description = "Operational membership status", allowableValues = {"ACTIVE", "SUSPENDED", "RETIRED"}, requiredMode = Schema.RequiredMode.REQUIRED)
     private String status;
 
     @JsonProperty("companies")
+    @Schema(description = "Organizations to which the farmer is affiliated", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<FarmerCompanyDto> companies;
 
     @JsonProperty("location")
+    @Schema(description = "Address and coordinate public-visibility consent")
     private FarmerLocationDto location;
 
     @JsonProperty("farm")
+    @Schema(description = "Agronomic summary of the farmer's holding")
     private FarmDto farm;
 
     @JsonProperty("plots")
+    @Schema(description = "Georeferenced cocoa plots ordered by ascending ID", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<PlotDto> plots;
 
     @JsonProperty("created_at")
+    @Schema(description = "Creation UTC timestamp (RFC 3339)")
     private Instant createdAt;
 
     @JsonProperty("updated_at")
+    @Schema(description = "Last update UTC timestamp (RFC 3339)")
     private Instant updatedAt;
 
+    @Schema(name = "FarmerCompanyDto", description = "Farmer affiliation to an organization")
     public static class FarmerCompanyDto {
         @JsonProperty("id")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private Long id;
 
         @JsonProperty("name")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private String name;
 
         @JsonProperty("role")
+        @Schema(allowableValues = {"FARMER"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String role;
 
         public FarmerCompanyDto() {}
@@ -71,8 +90,10 @@ public class ApiFarmerIntegration {
         public void setRole(String role) { this.role = role; }
     }
 
+    @Schema(name = "FarmerLocationDto", description = "Farmer address and public coordinate visibility flag")
     public static class FarmerLocationDto {
         @JsonProperty("country_code")
+        @Schema(example = "EC")
         private String countryCode;
 
         @JsonProperty("address")
@@ -85,6 +106,7 @@ public class ApiFarmerIntegration {
         private String state;
 
         @JsonProperty("is_publicly_visible")
+        @Schema(description = "Consent flag for displaying coordinates on public consumer pages (fail-closed: false when omitted)", requiredMode = Schema.RequiredMode.REQUIRED)
         private Boolean isPubliclyVisible;
 
         public FarmerLocationDto() {}
@@ -108,14 +130,17 @@ public class ApiFarmerIntegration {
         public void setIsPubliclyVisible(Boolean isPubliclyVisible) { this.isPubliclyVisible = isPubliclyVisible; }
     }
 
+    @Schema(name = "FarmDto", description = "Farm area, organic status, and annual production estimate")
     public static class FarmDto {
         @JsonProperty("area_unit")
+        @Schema(example = "ha", requiredMode = Schema.RequiredMode.REQUIRED)
         private String areaUnit;
 
         @JsonProperty("total_area")
         private Double totalArea;
 
         @JsonProperty("organic")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private Boolean organic;
 
         @JsonProperty("max_production_quantity")
@@ -133,11 +158,14 @@ public class ApiFarmerIntegration {
         public void setMaxProductionQuantity(MaxProductionQuantityDto maxProductionQuantity) { this.maxProductionQuantity = maxProductionQuantity; }
     }
 
+    @Schema(name = "MaxProductionQuantityDto", description = "Annual estimated cocoa production in Ecuadorian quintales (QQ)")
     public static class MaxProductionQuantityDto {
         @JsonProperty("value")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal value;
 
         @JsonProperty("unit")
+        @Schema(description = "Unit code (maps to ReferenceUnitDto.code in /reference-data)", allowableValues = {"QQ"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String unit;
 
         public MaxProductionQuantityDto() {}
@@ -152,8 +180,10 @@ public class ApiFarmerIntegration {
         public void setUnit(String unit) { this.unit = unit; }
     }
 
+    @Schema(name = "PlotDto", description = "Georeferenced cocoa plot")
     public static class PlotDto {
         @JsonProperty("id")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private Long id;
 
         @JsonProperty("name")
@@ -166,6 +196,7 @@ public class ApiFarmerIntegration {
         private Double size;
 
         @JsonProperty("size_unit")
+        @Schema(example = "ha")
         private String sizeUnit;
 
         @JsonProperty("number_of_plants")
@@ -178,6 +209,7 @@ public class ApiFarmerIntegration {
         private CodeLabelDto certificationType;
 
         @JsonProperty("geo_id")
+        @Schema(description = "AgStack Asset Registry 64-char hex identifier")
         private String geoId;
 
         @JsonProperty("geometry")
@@ -212,11 +244,14 @@ public class ApiFarmerIntegration {
         public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
     }
 
+    @Schema(name = "CodeLabelDto", description = "Catalog code and human-readable label")
     public static class CodeLabelDto {
         @JsonProperty("code")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private String code;
 
         @JsonProperty("label")
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private String label;
 
         public CodeLabelDto() {}
@@ -231,11 +266,14 @@ public class ApiFarmerIntegration {
         public void setLabel(String label) { this.label = label; }
     }
 
+    @Schema(name = "GeoJsonGeometryDto", description = "RFC 7946 GeoJSON geometry in WGS84 (EPSG:4326) [longitude, latitude] order")
     public static class GeoJsonGeometryDto {
         @JsonProperty("type")
+        @Schema(description = "GeoJSON geometry type", allowableValues = {"Point", "Polygon"}, requiredMode = Schema.RequiredMode.REQUIRED)
         private String type;
 
         @JsonProperty("coordinates")
+        @Schema(description = "WGS84 coordinates: [lon, lat] for Point or [[[lon, lat], ...]] closed CCW ring for Polygon", requiredMode = Schema.RequiredMode.REQUIRED)
         private Object coordinates;
 
         public GeoJsonGeometryDto() {}
