@@ -33,7 +33,7 @@ public class Transaction extends TimestampEntity {
 	@Column
 	private Long initiationUserId;
 	
-	@OneToOne
+	@ManyToOne
 	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private StockOrder sourceStockOrder;
 
@@ -65,7 +65,7 @@ public class Transaction extends TimestampEntity {
 	@Column
 	private Long shipmentId;
 
-	@OneToOne
+	@ManyToOne
 	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private MeasureUnitType inputMeasureUnitType;
 	

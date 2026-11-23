@@ -78,7 +78,7 @@ public class StockOrder extends TimestampEntity {
 	private StockOrderLocation productionLocation;
 
 	// The company customer for which the stock order was placed
-	@OneToOne
+	@ManyToOne
 	@Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
 	private CompanyCustomer consumerCompanyCustomer;
 
